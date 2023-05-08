@@ -1,0 +1,41 @@
+version: '1'
+services:
+  ui:
+    build:
+      context: ./my-links
+      dockerfile: ./apps/ui/Dockerfile
+      args:
+        project: ui
+    ports:
+      - 8000:80
+    restart: on-failure
+    volumes:
+      - ui_vol:/usr/src/ui/
+      - node_modules:/usr/src/ui/node_modules/
+    networks:
+      - monorepo_net
+  server:
+    build:
+      context: ./my-links
+      dockerfile: ./apps/server/Dockerfile
+      args:
+        project: server
+    ports:
+      - 8003:3333
+    restart: on-failure
+    volumes:
+      - server_vol:/usr/src/server/
+      - node_modules:/usr/src/server/node_modules/
+    networks:
+      - monorepo_net
+
+volumes:
+  calypso_vol:
+  echo_vol:
+  ui_vol:
+  server_vol:
+  node_modules:
+
+networks:
+  monorepo_net:
+    driver: bridge
