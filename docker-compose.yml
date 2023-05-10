@@ -2,7 +2,7 @@ version: '1'
 services:
   ui:
     build:
-      context: ./my-links
+      context: ./book-space
       dockerfile: ./apps/ui/Dockerfile
       args:
         project: ui
@@ -16,7 +16,7 @@ services:
       - monorepo_net
   server:
     build:
-      context: ./my-links
+      context: ./book-space
       dockerfile: ./apps/server/Dockerfile
       args:
         project: server

@@ -17,7 +17,7 @@
           "error",
           {
             "type": "element",
-            "prefix": "my-links",
+            "prefix": "book-space",
             "style": "kebab-case"
           }
         ]

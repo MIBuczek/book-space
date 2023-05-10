@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "npmScope": "my-links",
+  "npmScope": "book-space",
   "tasksRunnerOptions": {
     "default": {
       "runner": "nx-cloud",

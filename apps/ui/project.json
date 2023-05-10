@@ -2,7 +2,7 @@
   "name": "ui",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "prefix": "my-links",
+  "prefix": "book-space",
   "sourceRoot": "apps/ui/src",
   "tags": [],
   "targets": {
