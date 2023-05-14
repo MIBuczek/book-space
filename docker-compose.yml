@@ -1,41 +1,31 @@
 version: '1'
+
 services:
+  # Angular App
   ui:
     build:
-      context: ./book-space
+      context: .
       dockerfile: ./apps/ui/Dockerfile
-      args:
-        project: ui
     ports:
-      - 8000:80
-    restart: on-failure
+      - "4200:4200"
+    environment:
+      - "DEV_PLATFORM=DOCKER"
     volumes:
-      - ui_vol:/usr/src/ui/
-      - node_modules:/usr/src/ui/node_modules/
-    networks:
-      - monorepo_net
-  server:
+      - "/app/node_modules"
+      - ".:/app"
+
+  # Express App
+  service:
     build:
-      context: ./book-space
+      context: .
       dockerfile: ./apps/server/Dockerfile
-      args:
-        project: server
     ports:
-      - 8003:3333
-    restart: on-failure
+      - "3000:3000"
+    environment:
+      - "DEV_PLATFORM=DOCKER"
     volumes:
-      - server_vol:/usr/src/server/
-      - node_modules:/usr/src/server/node_modules/
-    networks:
-      - monorepo_net
+      - "./:/app"
+      - "mono-node-modules:/app/node_modules"
 
 volumes:
-  calypso_vol:
-  echo_vol:
-  ui_vol:
-  server_vol:
-  node_modules:
-
-networks:
-  monorepo_net:
-    driver: bridge
+  mono-node-modules: null

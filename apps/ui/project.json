@@ -90,6 +90,10 @@
       "options": {
         "buildTarget": "ui:build"
       }
+    },
+    "docker-build": {
+      "dependsOn": ["build"],
+      "command": "docker build -f apps/ui/Dockerfile . -t ui"
     }
   }
 }

@@ -3,11 +3,12 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "start:ui": " nx serve ui",
-    "start:server": " nx serve server",
+    "start:ui": "nx serve ui",
+    "start:server": "nx serve server",
     "start:all": "nx run-many --target=serve --projects=ui,server",
+    "build:all": "nx affected:build",
     "format": "nx format:write",
-    "lint": "nx workspace-lint ui"
+    "lint": "nx workspace-lint && ng lint"
   },
   "private": true,
   "dependencies": {
