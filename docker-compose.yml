@@ -7,12 +7,12 @@ services:
       context: .
       dockerfile: ./apps/ui/Dockerfile
     ports:
-      - "4200:4200"
+      - '4200:4200'
     environment:
-      - "DEV_PLATFORM=DOCKER"
+      - 'DEV_PLATFORM=DOCKER'
     volumes:
-      - "/app/node_modules"
-      - ".:/app"
+      - '/app/node_modules'
+      - '.:/app'
 
   # Express App
   service:
@@ -20,12 +20,12 @@ services:
       context: .
       dockerfile: ./apps/server/Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      - "DEV_PLATFORM=DOCKER"
+      - 'DEV_PLATFORM=DOCKER'
     volumes:
-      - "./:/app"
-      - "mono-node-modules:/app/node_modules"
+      - './:/app'
+      - 'mono-node-modules:/app/node_modules'
 
 volumes:
   mono-node-modules: null
