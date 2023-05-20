@@ -2,12 +2,25 @@ import { Module } from '@nestjs/common';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LinksModule } from './links/links.module';
-import { NotificationModule } from "./notification/notification.module";
-import { AuthorizationModuleModule } from "./authorization/authorization.module";
+
+import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule } from '@nestjs/config';
+import { NotificationModule } from '@server/notify/notification.module';
+import { BookingsModule } from '@server/bookings/bookings.module';
+import { UsersModule } from '@server/users/users.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [LinksModule, NotificationModule, AuthorizationModuleModule],
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(process.env.DB_URI, { dbName: 'book_space' }),
+    BookingsModule,
+    NotificationModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
