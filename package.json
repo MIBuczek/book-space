@@ -8,7 +8,7 @@
     "start:all": "nx run-many --target=serve --projects=ui,server",
     "build:all": "nx affected:build",
     "format": "nx format:write",
-    "lint": "nx workspace-lint && ng lint"
+    "lint": "eslint --fix"
   },
   "private": true,
   "dependencies": {
