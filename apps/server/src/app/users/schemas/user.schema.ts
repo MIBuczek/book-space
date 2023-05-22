@@ -1,10 +1,7 @@
-import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { LoginUserDto } from '@server/users/models/login-user-dto';
 
 export type TUser = HydratedDocument<User>;
 

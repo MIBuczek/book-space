@@ -8,7 +8,6 @@ import { ConfigModule } from '@nestjs/config';
 import { NotificationModule } from '@server/notify/notification.module';
 import { BookingsModule } from '@server/bookings/bookings.module';
 import { UsersModule } from '@server/users/users.module';
-import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
