@@ -12,6 +12,7 @@ import {
 import { UserService } from '@server/users/service/user/user.service';
 import { TUser } from '@server/users/schemas/user.schema';
 import { AuthGuard } from '@nestjs/passport';
+import { UserDto } from '@server/users/models/user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -30,14 +31,14 @@ export class UsersController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createUser(@Body(new ValidationPipe()) newUser: TUser) {
+  createUser(@Body(new ValidationPipe()) newUser: UserDto) {
     return this.userService.createUser(newUser);
   }
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
   updateUser(
     @Param('_id') _id: string,
-    @Body(new ValidationPipe()) user: Partial<TUser>
+    @Body(new ValidationPipe()) user: Partial<UserDto>
   ) {
     return this.userService.updateUser(_id, user);
   }

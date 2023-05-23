@@ -1,11 +1,7 @@
 import { HydratedDocument } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import {
-  IPlace,
-  TClient,
-  TPayment,
-} from '@server/bookings/models/booking.model';
-import { TBookedTime } from '@server/bookings/schemas/single-booking-time.schemta';
+import { TBookedTime } from '@server/bookings/schemas/booked-time.schemta';
+import { TClient, TPayment, IPlace } from '@models/booking.model'
 import validator from 'validator';
 
 export type TBooking = HydratedDocument<Booking>;
