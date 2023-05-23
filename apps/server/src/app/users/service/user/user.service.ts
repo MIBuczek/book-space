@@ -3,12 +3,13 @@ import { handleAuthErrors } from '@server/utils/validation-error.fun';
 import { User } from '@server/users/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { UserDto } from '@server/users/models/user.dto';
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel('User') private userModel: Model<User>) {}
 
-  async createUser(user: User) {
+  async createUser(user: UserDto) {
     try {
       return await this.userModel.create(user);
     } catch (e) {
@@ -24,7 +25,7 @@ export class UserService {
     }
   }
 
-  async updateUser(_id: string, user: Partial<User>) {
+  async updateUser(_id: string, user: Partial<UserDto>) {
     try {
       return await this.userModel.updateOne({ _id }, user);
     } catch (e) {

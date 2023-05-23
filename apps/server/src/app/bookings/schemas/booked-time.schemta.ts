@@ -1,6 +1,6 @@
 import { HydratedDocument } from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { TSingleBookingStatus } from '@server/bookings/models/single-booking-time.model';
+import { TSingleBookingStatus } from '@models/booked-time.model';
 
 export type TBookedTime = HydratedDocument<BookedTime>;
 
