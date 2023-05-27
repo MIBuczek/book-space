@@ -5,7 +5,6 @@ import { Param } from '@nestjs/common';
 import { Post } from '@nestjs/common';
 import { Body } from '@nestjs/common';
 import { ValidationPipe } from '@nestjs/common';
-import { Booking } from '../schemas/booking.schema';
 import { Put } from '@nestjs/common';
 import { Delete } from '@nestjs/common';
 import { BookingDto } from '../models/booking.dto';

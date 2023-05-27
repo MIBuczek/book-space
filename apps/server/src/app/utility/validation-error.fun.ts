@@ -1,5 +1,13 @@
 import { IValidationError } from '@models/validation-error.model';
 
+class ValidationError{
+  constructor(private errors: Partial<IValidationError>) {
+    Object.keys(errors).forEach((key) => {
+      if (errors[key]) this[key] = errors[key]
+    })
+  }
+}
+
 const handleAuthErrors = (err: any) => {
   const errors: IValidationError = {
     nick: '',
@@ -26,7 +34,7 @@ const handleAuthErrors = (err: any) => {
   /* duplicate email error */
   if (err.code === 11000) {
     errors.email = 'That email is already registered';
-    return errors;
+    return new ValidationError(errors);
   }
 
   /* validation errors */
@@ -36,7 +44,7 @@ const handleAuthErrors = (err: any) => {
     });
   }
 
-  return errors;
+  return new ValidationError(errors);
 };
 
 export { handleAuthErrors };
