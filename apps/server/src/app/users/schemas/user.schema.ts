@@ -42,13 +42,13 @@ export class User {
     immutable: true,
     default: () => new Date(),
   })
-  created_at: Date;
+  createdAt: Date;
 
   @Prop({
     type: Date,
     default: () => new Date(),
   })
-  last_login: Date;
+  lastLogin: Date;
 }
 
 const userSchema = SchemaFactory.createForClass(User);

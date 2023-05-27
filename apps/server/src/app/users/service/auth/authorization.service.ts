@@ -6,6 +6,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { IValidationError } from '@models/validation-error.model';
 import { handleAuthErrors } from '@server/utils/validation-error.fun';
+import { ValidationError } from 'class-validator';
 
 @Injectable()
 export class AuthorizationService {
@@ -15,7 +16,7 @@ export class AuthorizationService {
    *
    * @param loginUserDto
    */
-  async signIn(loginUserDto: LoginUserDto): Promise<User | IValidationError> {
+  async signIn(loginUserDto: LoginUserDto): Promise<User | ValidationError> {
     try {
       const { email, password } = loginUserDto;
 
@@ -31,14 +32,20 @@ export class AuthorizationService {
         throw new Error('Incorrect password');
       }
 
+      currentUser.lastLogin = new Date()
+
       await this.userModel.updateOne(
         { _id: currentUser._id },
-        { last_login: new Date() }
+        { lastLogin : currentUser.lastLogin}
       );
 
       return currentUser;
     } catch (e) {
       return handleAuthErrors(e);
     }
+  }
+
+  async validateUser(cred : any){
+
   }
 }
