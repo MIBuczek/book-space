@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@models/*": ["./libs/models/*"],
+      "@server/auth/*": ["./apps/server/src/app/authorization/*"],
       "@server/bookings/*": ["./apps/server/src/app/bookings/*"],
       "@server/notify/*": ["./apps/server/src/app/notification/*"],
       "@server/strategy/*": ["./apps/server/src/app/strategy/*"],

@@ -6,4 +6,4 @@ interface IUser {
   lastName: string;
 }
 
-export { IUser };
+export {IUser};

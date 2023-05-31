@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { handleAuthErrors } from '@server/utils/validation-error.fun';
-import { User } from '@server/users/schemas/user.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { UserDto } from '@server/users/models/user.dto';
+import {Injectable} from '@nestjs/common';
+import {handleAuthErrors} from '@server/utils/validation-error.fun';
+import {User} from '@server/users/schemas/user.schema';
+import {InjectModel} from '@nestjs/mongoose';
+import {Model} from 'mongoose';
+import {UserDto} from '@server/users/models/user.dto';
 
 @Injectable()
 export class UserService {
@@ -19,7 +19,7 @@ export class UserService {
 
   async findUser(_id: string) {
     try {
-      return this.userModel.findOne({ _id });
+      return this.userModel.findOne({_id});
     } catch (e) {
       return new Error(e.message);
     }
@@ -27,7 +27,7 @@ export class UserService {
 
   async updateUser(_id: string, user: Partial<UserDto>) {
     try {
-      return await this.userModel.updateOne({ _id }, user);
+      return await this.userModel.updateOne({_id}, user);
     } catch (e) {
       return new Error(e.message);
     }
@@ -35,7 +35,7 @@ export class UserService {
 
   deleteUser(_id: string) {
     try {
-      return this.userModel.deleteOne({ _id });
+      return this.userModel.deleteOne({_id});
     } catch (e) {
       return new Error(e.message);
     }
