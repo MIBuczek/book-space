@@ -1,13 +1,3 @@
-import {IValidationError} from '@models/validation-error.model';
-
-class ValidationError {
-  constructor(private errors: Partial<IValidationError>) {
-    Object.keys(errors).forEach((key) => {
-      if (errors[key]) this[key] = errors[key];
-    });
-  }
-}
-
 const handleAuthErrors = (err: any): string => {
   /* incorrect email */
   if (err.message === 'Incorrect email') {

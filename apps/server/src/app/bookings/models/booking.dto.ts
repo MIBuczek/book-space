@@ -1,5 +1,5 @@
 import {TClientType, IPlace, TPayment} from '@models/booking.model';
-import {BookedTime, TBookedTime} from '../schemas/booked-time.schemta';
+import {TBookedTime} from '../schemas/booked-time.schemta';
 import {Booking} from '../schemas/booking.schema';
 import * as Validator from 'class-validator';
 

@@ -10,7 +10,6 @@ import {
   ValidationPipe
 } from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
-import {ClientDto} from '../../clients/models/client.dto';
 import {BuildingService} from '../service/building.service';
 import {BuildingDto} from '../models/building.dto';
 
