@@ -1,5 +1,4 @@
 import {Module} from '@nestjs/common';
-import {PassportModule} from '@nestjs/passport';
 
 import {MongooseModule} from '@nestjs/mongoose';
 import {UserSchema} from './schemas/user.schema';

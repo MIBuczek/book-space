@@ -4,9 +4,7 @@ import {LoginUserDto} from '../models/login-user-dto';
 import {User} from '@server/users/schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
-import {IValidationError} from '@models/validation-error.model';
 import {handleAuthErrors} from '@server/utils/validation-error.fun';
-import {ValidationError} from 'class-validator';
 import {JwtPayload} from '@models/jwt-payload.model';
 
 @Injectable()
