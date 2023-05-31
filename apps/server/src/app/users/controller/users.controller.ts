@@ -7,12 +7,12 @@ import {
   Post,
   Put,
   UseGuards,
-  ValidationPipe,
+  ValidationPipe
 } from '@nestjs/common';
-import { UserService } from '@server/users/service/user/user.service';
-import { TUser } from '@server/users/schemas/user.schema';
-import { AuthGuard } from '@nestjs/passport';
-import { UserDto } from '@server/users/models/user.dto';
+import {UserService} from '@server/users/service/user.service';
+import {TUser} from '@server/users/schemas/user.schema';
+import {AuthGuard} from '@nestjs/passport';
+import {UserDto} from '@server/users/models/user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -36,10 +36,7 @@ export class UsersController {
   }
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateUser(
-    @Param('_id') _id: string,
-    @Body(new ValidationPipe()) user: Partial<UserDto>
-  ) {
+  updateUser(@Param('_id') _id: string, @Body(new ValidationPipe()) user: Partial<UserDto>) {
     return this.userService.updateUser(_id, user);
   }
 

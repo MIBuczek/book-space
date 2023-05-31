@@ -1,4 +1,4 @@
 interface IValidationError {
   [x: string]: string;
 }
-export { IValidationError };
+export {IValidationError};

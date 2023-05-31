@@ -1,10 +1,10 @@
-type TClient = 'INDIVIDUAL' | 'COMPANY'
+type TClientType = 'INDIVIDUAL' | 'COMPANY';
 
-type TPayment = 'CASH' | 'TRANSFER' | 'CARD'
+type TPayment = 'CASH' | 'TRANSFER' | 'CARD';
 
 interface IPlace {
-  place : string;
-  city : string
+  place: string;
+  city: string;
 }
 
-export {TClient, TPayment,IPlace}
+export {TClientType, TPayment, IPlace};

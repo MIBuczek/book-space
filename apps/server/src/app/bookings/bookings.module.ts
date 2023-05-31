@@ -1,16 +1,17 @@
-import { Module } from '@nestjs/common';
-import { BookingController } from './controller/booking.controller';
-import { BookingService } from './service/booking.service';
-import { BookingSchema } from './schemas/booking.schema';
-import { PassportModule } from '@nestjs/passport';
-import { MongooseModule } from '@nestjs/mongoose';
+import {Module} from '@nestjs/common';
+import {BookingController} from './controller/booking.controller';
+import {BookingService} from './service/booking.service';
+import {BookingSchema} from './schemas/booking.schema';
+import {MongooseModule} from '@nestjs/mongoose';
+import {JwtStrategy} from '@server/strategy/jwt.strategy';
+import {AuthorizationModule} from '@server/auth/authorization.module';
 
 @Module({
   imports: [
-    PassportModule.register({ session: false }),
-    MongooseModule.forFeature([{ name: 'Booking', schema: BookingSchema }]),
+    AuthorizationModule,
+    MongooseModule.forFeature([{name: 'Booking', schema: BookingSchema}])
   ],
-  providers: [BookingService],
   controllers: [BookingController],
+  providers: [JwtStrategy, BookingService]
 })
-export class BookingsModule { }
+export class BookingsModule {}

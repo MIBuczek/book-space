@@ -1,7 +1,7 @@
-import { HydratedDocument } from 'mongoose';
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { TBookedTime } from '@server/bookings/schemas/booked-time.schemta';
-import { TClient, TPayment, IPlace } from '@models/booking.model'
+import {HydratedDocument} from 'mongoose';
+import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
+import {TBookedTime} from '@server/bookings/schemas/booked-time.schemta';
+import {TClientType, TPayment, IPlace} from '@models/booking.model';
 import validator from 'validator';
 
 export type TBooking = HydratedDocument<Booking>;
@@ -11,36 +11,36 @@ export class Booking {
   @Prop({
     type: String,
     required: [true, 'Please pick client type'],
-    uppercase: true,
+    uppercase: true
   })
-  type: TClient;
+  type: TClientType;
 
   @Prop({
     type: Object,
-    required: [true, 'Please add booked place'],
+    required: [true, 'Please add booked place']
   })
   place: IPlace;
 
   @Prop({
     type: String,
     required: [true, 'Please pick booked size'],
-    uppercase: true,
+    uppercase: true
   })
   size: string;
 
   @Prop({
-    type: String,
+    type: String
   })
   clientId: string;
 
   @Prop({
     type: String,
-    required: [true, 'Please add booked person name'],
+    required: [true, 'Please add booked person name']
   })
   personName: string;
 
   @Prop({
-    type: String,
+    type: String
   })
   personCompany: string;
 
@@ -48,49 +48,49 @@ export class Booking {
     type: String,
     required: [true, 'Please add booked person email address'],
     lowercase: true,
-    validate: [validator.isEmail, 'Please enter a valid email'],
+    validate: [validator.isEmail, 'Please enter a valid email']
   })
   personEmail: string;
 
   @Prop({
     type: String,
-    required: [true, 'Please add booked person phone number'],
+    required: [true, 'Please add booked person phone number']
   })
   personPhone: string;
 
   @Prop({
     type: Number,
-    required: [true, 'Please select month'],
+    required: [true, 'Please select month']
   })
   month: number;
 
   @Prop({
     type: Array,
-    required: [true, 'Please add at least one booked time'],
+    required: [true, 'Please add at least one booked time']
   })
-  bookedTimes: TBookedTime;
+  bookedTimes: Array<TBookedTime>;
 
   @Prop({
     type: Boolean,
-    required: [true],
+    required: [true]
   })
   accepted: boolean;
 
   @Prop({
-    type: String,
+    type: String
   })
   comments: string;
 
   @Prop({
     type: String,
-    required: [true, 'Please select payment method'],
+    required: [true, 'Please select payment method']
   })
   paymentMethod: TPayment;
 
   @Prop({
     type: Boolean,
     required: [true],
-    default: () => false,
+    default: () => false
   })
   archive: boolean;
 }

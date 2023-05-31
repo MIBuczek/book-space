@@ -1,50 +1,42 @@
-import { IValidationError } from '@models/validation-error.model';
+import {IValidationError} from '@models/validation-error.model';
 
-class ValidationError{
+class ValidationError {
   constructor(private errors: Partial<IValidationError>) {
     Object.keys(errors).forEach((key) => {
-      if (errors[key]) this[key] = errors[key]
-    })
+      if (errors[key]) this[key] = errors[key];
+    });
   }
 }
 
-const handleAuthErrors = (err: any) => {
-  const errors: IValidationError = {
-    nick: '',
-    email: '',
-    password: '',
-    recheck_password: '',
-  };
-
+const handleAuthErrors = (err: any): string => {
   /* incorrect email */
   if (err.message === 'Incorrect email') {
-    errors.email = 'That email is not registered';
+    return 'That email is not registered';
   }
 
   /* incorrect password */
   if (err.message === 'Incorrect password') {
-    errors.password = 'That password is incorrect';
+    return 'That password is incorrect';
   }
 
   /* incorrect password match */
   if (err.message === 'Incorrect recheck_password') {
-    errors.recheck_password = 'Passwords not match each other';
+    return 'Passwords not match each other';
   }
 
   /* duplicate email error */
   if (err.code === 11000) {
-    errors.email = 'That email is already registered';
-    return new ValidationError(errors);
+    return 'That email is already registered';
   }
 
   /* validation errors */
   if (err.message.includes('user validation failed')) {
-    Object.values(err.errors as any[]).forEach(({ properties }) => {
-      errors[properties.path] = properties.message;
-    });
+    return Object.values(err.errors as any[])
+      .map(({properties}) => {
+        return properties.message;
+      })
+      .join(',');
   }
-
-  return new ValidationError(errors);
 };
 
-export { handleAuthErrors };
+export {handleAuthErrors};

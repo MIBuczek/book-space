@@ -1,6 +1,6 @@
-import { HydratedDocument } from 'mongoose';
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { TSingleBookingStatus } from '@models/booked-time.model';
+import {HydratedDocument} from 'mongoose';
+import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
+import {TSingleBookingStatus} from '@models/booked-time.model';
 
 export type TBookedTime = HydratedDocument<BookedTime>;
 
@@ -8,35 +8,35 @@ export type TBookedTime = HydratedDocument<BookedTime>;
 export class BookedTime {
   @Prop({
     type: Date,
-    required: [true, 'Please pick booked time day'],
+    required: [true, 'Please pick booked time day']
   })
   day: Date;
 
   @Prop({
     type: Date,
-    required: [true, 'Please pick booked time start hours'],
+    required: [true, 'Please pick booked time start hours']
   })
   startHours: Date;
 
   @Prop({
     type: Date,
-    required: [true, 'Please pick booked time end hours'],
+    required: [true, 'Please pick booked time end hours']
   })
   endHours: Date;
 
   @Prop({
-    type: String,
+    type: String
   })
   comments: string;
 
   @Prop({
-    type: String,
+    type: String
   })
   participants: string;
 
   @Prop({
     type: String,
-    required: [true, 'Please add booked time status'],
+    required: [true, 'Please add booked time status']
   })
   status: TSingleBookingStatus;
 }

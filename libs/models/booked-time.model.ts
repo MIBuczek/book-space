@@ -1,4 +1,3 @@
+type TSingleBookingStatus = 'INITIAL' | 'DONE' | 'CANCELED';
 
-type TSingleBookingStatus = "INITIAL" | "DONE" | "CANCELED"
-
-export {TSingleBookingStatus}
+export {TSingleBookingStatus};
