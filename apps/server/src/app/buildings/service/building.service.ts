@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {HttpException, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {Building} from '../schemas/building.schema';
@@ -11,7 +11,7 @@ export class BuildingService {
     try {
       return await this.buildingModel.create(building);
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -19,7 +19,7 @@ export class BuildingService {
     try {
       return await this.buildingModel.updateOne({_id}, building);
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -27,7 +27,7 @@ export class BuildingService {
     try {
       return await this.buildingModel.deleteOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -35,7 +35,7 @@ export class BuildingService {
     try {
       return await this.buildingModel.findOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -43,7 +43,7 @@ export class BuildingService {
     try {
       return await this.buildingModel.find({});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 }

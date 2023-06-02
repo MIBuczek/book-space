@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {HttpException, Injectable} from '@nestjs/common';
 import {handleAuthErrors} from '@server/utils/validation-error.fun';
 import {User} from '@server/users/schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
@@ -13,7 +13,7 @@ export class UserService {
     try {
       return await this.userModel.create(user);
     } catch (e) {
-      return handleAuthErrors(e);
+      throw new HttpException(handleAuthErrors(e), e.status);
     }
   }
 
@@ -21,7 +21,7 @@ export class UserService {
     try {
       return this.userModel.findOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -29,7 +29,7 @@ export class UserService {
     try {
       return await this.userModel.updateOne({_id}, user);
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -37,11 +37,15 @@ export class UserService {
     try {
       return this.userModel.deleteOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
   async findAllUser(): Promise<User[]> {
-    return this.userModel.find({});
+    try {
+      return this.userModel.find({});
+    } catch (e) {
+      throw new HttpException(e.message, e.status);
+    }
   }
 }
