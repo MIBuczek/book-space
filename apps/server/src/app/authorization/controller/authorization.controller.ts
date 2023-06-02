@@ -14,7 +14,7 @@ export class AuthorizationController {
   @Post('sign-in')
   async signIn(@Body(new ValidationPipe()) loginUserDto: LoginUserDto) {
     const user = await this.autService.signIn(loginUserDto);
-    const payload = {userEmail: user.email, _id: user['_id']};
+    const payload = {email: user.email, _id: user['_id']};
     const token = await this.jwtService.signAsync(payload);
     return {user, token};
   }

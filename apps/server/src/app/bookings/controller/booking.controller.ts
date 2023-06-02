@@ -9,6 +9,7 @@ import {Put} from '@nestjs/common';
 import {Delete} from '@nestjs/common';
 import {BookingDto} from '../models/booking.dto';
 import {AuthGuard} from '@nestjs/passport';
+import {BookedTimeDto} from '@server/bookings/models/booked-time.dto';
 
 @Controller('bookings')
 export class BookingController {
@@ -41,7 +42,16 @@ export class BookingController {
     return this.bookingService.updateBooking(_id, booking);
   }
 
-  @Delete('_id')
+  @Put(':_id/booked_times')
+  @UseGuards(AuthGuard('jwt'))
+  updateBookedTimes(
+    @Param('_id') _id: string,
+    @Body(new ValidationPipe()) bookedTimes: Partial<BookedTimeDto>
+  ) {
+    return this.bookingService.updateBookedTimes(_id, bookedTimes);
+  }
+
+  @Delete(':_id')
   @UseGuards(AuthGuard('jwt'))
   deleteBooking(@Param('_id') _id: string) {
     return this.bookingService.deleteBooking(_id);

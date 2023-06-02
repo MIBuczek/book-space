@@ -22,13 +22,13 @@ export class AuthorizationService {
       let currentUser = await this.userModel.findOne({email});
 
       if (!currentUser) {
-        new HttpException('Incorrect email', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Incorrect email', HttpStatus.UNAUTHORIZED);
       }
 
       const pass_auth = await bcrypt.compare(password, currentUser.password);
 
       if (!pass_auth) {
-        new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
       }
 
       currentUser.lastLogin = new Date();
@@ -38,12 +38,22 @@ export class AuthorizationService {
       return currentUser;
     } catch (e) {
       const message = handleAuthErrors(e);
-      new HttpException(message, HttpStatus.UNAUTHORIZED);
+
+      throw new HttpException(message, HttpStatus.UNAUTHORIZED);
     }
   }
 
+  /**
+   * Validate user by given JWT token.
+   *
+   * @param {JwtPayload} payload
+   */
   async validateUser(payload: JwtPayload) {
-    const {_id} = payload;
-    this.userModel.findOne({_id});
+    const {_id, email} = payload;
+    const user = await this.userModel.findOne({_id});
+    if (user.email !== email) {
+      throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+    }
+    return user;
   }
 }

@@ -15,35 +15,35 @@ export class BookingDto implements Booking {
   place: IPlace;
 
   @Validator.Length(3, 3, {
-    message: 'Size has strict string pattern X/X'
+    message: 'Size has strict string pattern X/X.'
   })
   size: string;
 
-  @Validator.Length(9, 20, {
-    message: 'Client id need to be between 9 to 20 characters.'
+  @Validator.Length(9, 50, {
+    message: 'Client id need to be between 9 to 50 characters.'
   })
   clientId: string;
 
   @Validator.Length(3, 125, {
-    message: 'Number of characters need to be between 3 and 125'
+    message: 'Person name can have between 3 and 125 characters.'
   })
   personName: string;
 
-  @Validator.Length(3, 125, {
-    message: 'Number of characters need to be between 3 and 125'
+  @Validator.MaxLength(125, {
+    message: 'Person company can have maximal 125 characters.'
   })
   personCompany: string;
 
   @Validator.IsEmail(undefined, {
-    message: 'E-mail address need to contains correct pattern'
+    message: 'E-mail address need to contains correct pattern.'
   })
   @Validator.Length(3, 125, {
-    message: 'Number of characters need to be between 3 and 125'
+    message: 'Person e- mail can have between 3 and 125 characters.'
   })
   personEmail: string;
 
   @Validator.Length(9, 15, {
-    message: 'Number of characters need to be between 9 and 15'
+    message: 'Person phone can have between 9 and 15 characters.'
   })
   personPhone: string;
 
@@ -64,12 +64,12 @@ export class BookingDto implements Booking {
   bookedTimes: TBookedTime[];
 
   @Validator.IsBoolean({
-    message: 'Value need to be boolean type.'
+    message: 'Accepted value need to be boolean type.'
   })
   accepted: boolean;
 
-  @Validator.Length(3, 525, {
-    message: 'Number of characters need to be between 3 and 525'
+  @Validator.MaxLength(525, {
+    message: 'Comments can have maximal 525 characters.'
   })
   comments: string;
 
@@ -79,7 +79,7 @@ export class BookingDto implements Booking {
   paymentMethod: TPayment;
 
   @Validator.IsBoolean({
-    message: 'Value need to be boolean type.'
+    message: 'Archive value need to be boolean type.'
   })
   archive: boolean;
 }

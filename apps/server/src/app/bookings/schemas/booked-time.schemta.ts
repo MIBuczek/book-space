@@ -30,9 +30,9 @@ export class BookedTime {
   comments: string;
 
   @Prop({
-    type: String
+    type: Number
   })
-  participants: string;
+  participants: number;
 
   @Prop({
     type: String,

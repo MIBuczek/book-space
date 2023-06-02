@@ -27,15 +27,15 @@ export class BookedTimeDto implements BookedTime {
     message: 'Value need to be integer.'
   })
   @Validator.Min(0, {
-    message: 'Minimal value can not be lower then 0.'
+    message: 'Minimal value of participants can not be lower then 0.'
   })
   @Validator.Max(50, {
-    message: 'Minimal value can not be lower then 50.'
+    message: 'Minimal value of participants can not be higher then 50.'
   })
-  participants: string;
+  participants: number;
 
-  @Validator.Length(3, 525, {
-    message: 'Number of characters need to be between 3 and 525'
+  @Validator.MaxLength(525, {
+    message: 'Comments can have maximal 525 characters'
   })
   comments: string;
 }
