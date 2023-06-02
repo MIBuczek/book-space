@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {HttpException, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {Client} from '../schemas/client.schema';
@@ -11,7 +11,7 @@ export class ClientService {
     try {
       return await this.clientModel.create(client);
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -19,7 +19,7 @@ export class ClientService {
     try {
       return await this.clientModel.updateOne({_id}, client);
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -27,7 +27,7 @@ export class ClientService {
     try {
       return await this.clientModel.deleteOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -35,7 +35,7 @@ export class ClientService {
     try {
       return await this.clientModel.findOne({_id});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 
@@ -43,7 +43,7 @@ export class ClientService {
     try {
       return await this.clientModel.find({});
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, e.status);
     }
   }
 }

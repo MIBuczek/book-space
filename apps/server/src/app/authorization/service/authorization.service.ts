@@ -37,9 +37,7 @@ export class AuthorizationService {
 
       return currentUser;
     } catch (e) {
-      const message = handleAuthErrors(e);
-
-      throw new HttpException(message, HttpStatus.UNAUTHORIZED);
+      throw new HttpException(handleAuthErrors(e), HttpStatus.UNAUTHORIZED);
     }
   }
 
@@ -49,11 +47,15 @@ export class AuthorizationService {
    * @param {JwtPayload} payload
    */
   async validateUser(payload: JwtPayload) {
-    const {_id, email} = payload;
-    const user = await this.userModel.findOne({_id});
-    if (user.email !== email) {
-      throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+    try {
+      const {_id, email} = payload;
+      const user = await this.userModel.findOne({_id});
+      if (user.email !== email) {
+        throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+      }
+      return user;
+    } catch (e) {
+      throw new HttpException(e.message, e.status);
     }
-    return user;
   }
 }
