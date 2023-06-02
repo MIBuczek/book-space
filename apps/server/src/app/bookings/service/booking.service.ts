@@ -1,7 +1,8 @@
-import {Injectable} from '@nestjs/common';
+import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
+import {BookedTime} from '@server/bookings/schemas/booked-time.schemta';
 
 @Injectable()
 export class BookingService {
@@ -9,41 +10,73 @@ export class BookingService {
 
   async createBooking(booking: Booking) {
     try {
-      return await this.bookingModel.create(booking);
+      const resp = await this.bookingModel.create(booking);
+      if(!resp){
+        throw new HttpException('Could not create data', HttpStatus.BAD_REQUEST);
+      }
+      return resp
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 
   async updateBooking(_id: string, booking: Partial<Booking>) {
     try {
-      return await this.bookingModel.updateOne({_id}, booking);
+      const resp = await this.bookingModel.updateOne({_id}, booking);
+      if(!resp){
+        throw new HttpException('Could not update data', HttpStatus.BAD_REQUEST);
+      }
+      return resp
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async updateBookedTimes (_id: string, bookedTimes: Partial<BookedTime>){
+    try {
+      const resp = await this.bookingModel.updateOne({_id}, {bookedTimes});
+      if(!resp){
+        throw new HttpException('Could not update data', HttpStatus.BAD_REQUEST);
+      }
+      return resp
+    } catch (e) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 
   async deleteBooking(_id: string) {
     try {
-      return await this.bookingModel.deleteOne({_id});
+      const resp = await this.bookingModel.deleteOne({_id});
+      if(!resp){
+        throw new HttpException('Could not delete data', HttpStatus.BAD_REQUEST);
+      }
+      return resp
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 
   async findBooking(_id: string) {
     try {
-      return await this.bookingModel.findOne({_id});
+      const resp = await this.bookingModel.findOne({_id});
+      if (!resp) {
+        throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+      }
+      return resp;
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 
   async findAllBooking() {
     try {
-      return await this.bookingModel.find({});
+      const resp = await this.bookingModel.find({});
+      if(!resp){
+        throw new HttpException('Problem with servers', HttpStatus.BAD_GATEWAY);
+      }
+      return resp
     } catch (e) {
-      return new Error(e.message);
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
     }
   }
 }
