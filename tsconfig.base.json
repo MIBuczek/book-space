@@ -14,7 +14,15 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@models/*": ["./libs/models/*"],
+      "@server/auth/*": ["./apps/server/src/app/authorization/*"],
+      "@server/bookings/*": ["./apps/server/src/app/bookings/*"],
+      "@server/notify/*": ["./apps/server/src/app/notification/*"],
+      "@server/strategy/*": ["./apps/server/src/app/strategy/*"],
+      "@server/users/*": ["./apps/server/src/app/users/*"],
+      "@server/utils/*": ["./apps/server/src/app/utility/*"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
