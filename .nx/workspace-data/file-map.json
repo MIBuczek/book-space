@@ -1,0 +1,646 @@
+{
+  "version": "6.0",
+  "nxVersion": "20.0.12",
+  "pathMappings": {
+    "@models/*": [
+      "./libs/models/*"
+    ],
+    "@server/auth/*": [
+      "./apps/server/src/app/authorization/*"
+    ],
+    "@server/bookings/*": [
+      "./apps/server/src/app/bookings/*"
+    ],
+    "@server/notify/*": [
+      "./apps/server/src/app/notification/*"
+    ],
+    "@server/strategy/*": [
+      "./apps/server/src/app/strategy/*"
+    ],
+    "@server/users/*": [
+      "./apps/server/src/app/users/*"
+    ],
+    "@server/utils/*": [
+      "./apps/server/src/app/utility/*"
+    ]
+  },
+  "nxJsonPlugins": [],
+  "fileMap": {
+    "nonProjectFiles": [
+      {
+        "file": ".dockerignore",
+        "hash": "7663861978715868291"
+      },
+      {
+        "file": ".editorconfig",
+        "hash": "5443105041930014821"
+      },
+      {
+        "file": ".eslintignore",
+        "hash": "7663861978715868291"
+      },
+      {
+        "file": ".eslintrc.json",
+        "hash": "18315524891129148814"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "2178144051909739023"
+      },
+      {
+        "file": ".prettierignore",
+        "hash": "7848693104264504795"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "13711403461813224761"
+      },
+      {
+        "file": "README.md",
+        "hash": "9533604211283716373"
+      },
+      {
+        "file": "apps/.gitkeep",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "docker-compose.yml",
+        "hash": "3908024544938362239"
+      },
+      {
+        "file": "jest.config.ts",
+        "hash": "12333515226966617182"
+      },
+      {
+        "file": "jest.preset.js",
+        "hash": "9430166341120122740"
+      },
+      {
+        "file": "libs/.gitkeep",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "libs/models/booked-time.model.ts",
+        "hash": "1872968344428556130"
+      },
+      {
+        "file": "libs/models/booking.model.ts",
+        "hash": "3597088271906159685"
+      },
+      {
+        "file": "libs/models/jwt-payload.model.ts",
+        "hash": "14986140374423033359"
+      },
+      {
+        "file": "libs/models/user.model.ts",
+        "hash": "13143227180861108098"
+      },
+      {
+        "file": "libs/models/validation-error.model.ts",
+        "hash": "6512185151171270303"
+      },
+      {
+        "file": "nx.json",
+        "hash": "18222399736818808691"
+      },
+      {
+        "file": "package-lock.json",
+        "hash": "10084429817442082234"
+      },
+      {
+        "file": "package.json",
+        "hash": "11433084313669379430"
+      },
+      {
+        "file": "tools/tsconfig.tools.json",
+        "hash": "16088922570277978783"
+      },
+      {
+        "file": "tsconfig.base.json",
+        "hash": "15923639156287050083"
+      }
+    ],
+    "projectFileMap": {
+      "server": [
+        {
+          "file": "apps/server/.env",
+          "hash": "715184395303982677"
+        },
+        {
+          "file": "apps/server/.eslintrc.json",
+          "hash": "13800677001662881425"
+        },
+        {
+          "file": "apps/server/Dockerfile",
+          "hash": "6195302221165799746"
+        },
+        {
+          "file": "apps/server/jest.config.ts",
+          "hash": "4920721498772935253"
+        },
+        {
+          "file": "apps/server/project.json",
+          "hash": "6907978984073993669"
+        },
+        {
+          "file": "apps/server/src/app/app.controller.spec.ts",
+          "hash": "9499997688052526633",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/app.controller.ts",
+          "hash": "9005150069945785676",
+          "deps": [
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/app.module.ts",
+          "hash": "3684807869419318765",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose",
+            "npm:@nestjs/config",
+            "npm:@nestjs/jwt",
+            "npm:@nestjs/passport"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/app.service.spec.ts",
+          "hash": "8587461140686713758",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/app.service.ts",
+          "hash": "9967902337593410053",
+          "deps": [
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/authorization.module.ts",
+          "hash": "14425356527053018160",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/passport",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/controller/authorization.controller.spec.ts",
+          "hash": "8370884782809381794",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/controller/authorization.controller.ts",
+          "hash": "11888538521486644136",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:express",
+            "npm:@nestjs/jwt"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/models/login-user-dto.ts",
+          "hash": "11358240295946373577",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/service/authorization.service.spec.ts",
+          "hash": "2390698205832853988",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/authorization/service/authorization.service.ts",
+          "hash": "8492433700851118107",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:bcrypt",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/bookings.module.ts",
+          "hash": "5585803536229241644",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/controller/booking.controller.spec.ts",
+          "hash": "2634604055766740374",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/controller/booking.controller.ts",
+          "hash": "11675325372227582498",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/passport"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/models/booked-time.dto.ts",
+          "hash": "2387696055108843241",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/models/booking.dto.ts",
+          "hash": "4876536092670252564",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/schemas/booked-time.schemta.ts",
+          "hash": "9468707612063661872",
+          "deps": [
+            "npm:mongoose",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/schemas/booking.schema.ts",
+          "hash": "8583957432018888729",
+          "deps": [
+            "npm:mongoose",
+            "npm:@nestjs/mongoose",
+            "npm:validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/service/booking.service.spec.ts",
+          "hash": "12270611658951135359",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/bookings/service/booking.service.ts",
+          "hash": "13481054902089008354",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/building.module.ts",
+          "hash": "4111968193635258322",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/controller/building.controller.spec.ts",
+          "hash": "2998525469467594153",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/controller/building.controller.ts",
+          "hash": "16687179603713436034",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/passport"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/models/building.dto.ts",
+          "hash": "14389515282016826716",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/schemas/building.schema.ts",
+          "hash": "5951757916883883182",
+          "deps": [
+            "npm:mongoose",
+            "npm:@nestjs/mongoose",
+            "npm:validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/service/building.service.spec.ts",
+          "hash": "2238869611327446108",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/buildings/service/building.service.ts",
+          "hash": "10419978039880704123",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/client.module.ts",
+          "hash": "10128830662954342070",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/controller/client.controller.spec.ts",
+          "hash": "11751272674559760952",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/controller/client.controller.ts",
+          "hash": "14500368864083871483",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/passport"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/models/client.dto.ts",
+          "hash": "16991597332828261818",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/schemas/client.schema.ts",
+          "hash": "14580251417431955042",
+          "deps": [
+            "npm:@nestjs/mongoose",
+            "npm:mongoose",
+            "npm:validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/service/client.service.spec.ts",
+          "hash": "4266170563254401627",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/clients/service/client.service.ts",
+          "hash": "13207387923937436267",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/notification/controller/notification.controller.spec.ts",
+          "hash": "7730093660521603771",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/notification/controller/notification.controller.ts",
+          "hash": "11376377934072922806",
+          "deps": [
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/notification/notification.module.ts",
+          "hash": "14696122611898696782",
+          "deps": [
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/notification/service/notification.service.spec.ts",
+          "hash": "3227018914221349758",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/notification/service/notification.service.ts",
+          "hash": "3246922946128865083",
+          "deps": [
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/strategy/jwt.strategy.ts",
+          "hash": "16276539880890746912",
+          "deps": [
+            "npm:@nestjs/passport",
+            "npm:passport-jwt",
+            "npm:@nestjs/common"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/controller/users.controller.spec.ts",
+          "hash": "11913523935177964357",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/controller/users.controller.ts",
+          "hash": "17695510083294476056",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/passport"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/models/user.dto.ts",
+          "hash": "16062427503364185899",
+          "deps": [
+            "npm:class-validator"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/schemas/user.schema.ts",
+          "hash": "15143039149662985233",
+          "deps": [
+            "npm:bcrypt",
+            "npm:validator",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/service/user.service.spec.ts",
+          "hash": "9284808878201949835",
+          "deps": [
+            "npm:@nestjs/testing"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/service/user.service.ts",
+          "hash": "7069929450419986565",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose",
+            "npm:mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/users/users.module.ts",
+          "hash": "18026849244855772273",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/mongoose"
+          ]
+        },
+        {
+          "file": "apps/server/src/app/utility/validation-error.fun.ts",
+          "hash": "6971655258119659200"
+        },
+        {
+          "file": "apps/server/src/assets/.gitkeep",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/server/src/main.ts",
+          "hash": "203552461747396728",
+          "deps": [
+            "npm:@nestjs/common",
+            "npm:@nestjs/core",
+            "npm:cookie-parser"
+          ]
+        },
+        {
+          "file": "apps/server/tsconfig.app.json",
+          "hash": "6765305502431892945"
+        },
+        {
+          "file": "apps/server/tsconfig.json",
+          "hash": "3490524966360018312"
+        },
+        {
+          "file": "apps/server/tsconfig.spec.json",
+          "hash": "11550347367511341917"
+        },
+        {
+          "file": "apps/server/webpack.config.js",
+          "hash": "10619490397189790225",
+          "deps": [
+            "npm:@nx/webpack"
+          ]
+        }
+      ],
+      "ui": [
+        {
+          "file": "apps/ui/.eslintrc.json",
+          "hash": "8364514437566592435"
+        },
+        {
+          "file": "apps/ui/Dockerfile",
+          "hash": "6556911632252180665"
+        },
+        {
+          "file": "apps/ui/jest.config.ts",
+          "hash": "8317761645169182681"
+        },
+        {
+          "file": "apps/ui/project.json",
+          "hash": "5137369480053699839"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.html",
+          "hash": "3930842594397758815"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.ts",
+          "hash": "4661074131951710872",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/router",
+            "npm:@angular/common",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "apps/ui/src/app/app.config.ts",
+          "hash": "8993342557759126848",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/router"
+          ]
+        },
+        {
+          "file": "apps/ui/src/app/app.routes.ts",
+          "hash": "6185150965714414910",
+          "deps": [
+            "npm:@angular/router"
+          ]
+        },
+        {
+          "file": "apps/ui/src/assets/.gitkeep",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/ui/src/favicon.ico",
+          "hash": "9303420814833116677"
+        },
+        {
+          "file": "apps/ui/src/index.html",
+          "hash": "18384336201794130837"
+        },
+        {
+          "file": "apps/ui/src/main.ts",
+          "hash": "16635586463787978962",
+          "deps": [
+            "npm:@angular/platform-browser"
+          ]
+        },
+        {
+          "file": "apps/ui/src/styles.scss",
+          "hash": "5195668842064076916"
+        },
+        {
+          "file": "apps/ui/src/test-setup.ts",
+          "hash": "17711435995618823417"
+        },
+        {
+          "file": "apps/ui/tsconfig.app.json",
+          "hash": "8365644956319658761"
+        },
+        {
+          "file": "apps/ui/tsconfig.editor.json",
+          "hash": "17511610827034788226"
+        },
+        {
+          "file": "apps/ui/tsconfig.json",
+          "hash": "12094030803572703611"
+        },
+        {
+          "file": "apps/ui/tsconfig.spec.json",
+          "hash": "2927375835638640771"
+        }
+      ]
+    }
+  }
+}
