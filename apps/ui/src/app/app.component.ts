@@ -12,7 +12,7 @@ import {map, take} from 'rxjs';
 })
 export class AppComponent implements OnInit {
   title = 'frontend';
-  ocean = '';
+  ocean = 'Things';
 
   constructor(private readonly http: HttpClient) {}
 

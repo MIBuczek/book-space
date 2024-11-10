@@ -15,7 +15,7 @@ export class AuthorizationController {
   async signIn(@Body(new ValidationPipe()) loginUserDto: LoginUserDto) {
     const user = await this.autService.signIn(loginUserDto);
     const payload = {email: user.email, _id: user['_id']};
-    const token = await this.jwtService.signAsync(payload);
+    const token = await this.jwtService.signAsync(payload,{secret : 'REPLACE_WITH_A_LONG_RANDOM_SECRET'});
     return {user, token};
   }
 

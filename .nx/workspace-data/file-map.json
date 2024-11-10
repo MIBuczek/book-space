@@ -45,7 +45,7 @@
       },
       {
         "file": ".gitignore",
-        "hash": "2178144051909739023"
+        "hash": "16154990707783092283"
       },
       {
         "file": ".prettierignore",
@@ -121,6 +121,100 @@
       }
     ],
     "projectFileMap": {
+      "ui": [
+        {
+          "file": "apps/ui/.eslintrc.json",
+          "hash": "8364514437566592435"
+        },
+        {
+          "file": "apps/ui/Dockerfile",
+          "hash": "6556911632252180665"
+        },
+        {
+          "file": "apps/ui/jest.config.ts",
+          "hash": "8317761645169182681"
+        },
+        {
+          "file": "apps/ui/project.json",
+          "hash": "5137369480053699839"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.html",
+          "hash": "3930842594397758815"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/ui/src/app/app.component.ts",
+          "hash": "16539256946417787442",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/router",
+            "npm:@angular/common",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "apps/ui/src/app/app.config.ts",
+          "hash": "8993342557759126848",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/router"
+          ]
+        },
+        {
+          "file": "apps/ui/src/app/app.routes.ts",
+          "hash": "6185150965714414910",
+          "deps": [
+            "npm:@angular/router"
+          ]
+        },
+        {
+          "file": "apps/ui/src/assets/.gitkeep",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/ui/src/favicon.ico",
+          "hash": "9303420814833116677"
+        },
+        {
+          "file": "apps/ui/src/index.html",
+          "hash": "18384336201794130837"
+        },
+        {
+          "file": "apps/ui/src/main.ts",
+          "hash": "16635586463787978962",
+          "deps": [
+            "npm:@angular/platform-browser"
+          ]
+        },
+        {
+          "file": "apps/ui/src/styles.scss",
+          "hash": "5195668842064076916"
+        },
+        {
+          "file": "apps/ui/src/test-setup.ts",
+          "hash": "17711435995618823417"
+        },
+        {
+          "file": "apps/ui/tsconfig.app.json",
+          "hash": "8365644956319658761"
+        },
+        {
+          "file": "apps/ui/tsconfig.editor.json",
+          "hash": "17511610827034788226"
+        },
+        {
+          "file": "apps/ui/tsconfig.json",
+          "hash": "12094030803572703611"
+        },
+        {
+          "file": "apps/ui/tsconfig.spec.json",
+          "hash": "2927375835638640771"
+        }
+      ],
       "server": [
         {
           "file": "apps/server/.env",
@@ -199,7 +293,7 @@
         },
         {
           "file": "apps/server/src/app/authorization/controller/authorization.controller.ts",
-          "hash": "11888538521486644136",
+          "hash": "8231132977588453802",
           "deps": [
             "npm:@nestjs/common",
             "npm:express",
@@ -222,7 +316,7 @@
         },
         {
           "file": "apps/server/src/app/authorization/service/authorization.service.ts",
-          "hash": "8492433700851118107",
+          "hash": "7206173403547315079",
           "deps": [
             "npm:@nestjs/common",
             "npm:bcrypt",
@@ -447,10 +541,11 @@
         },
         {
           "file": "apps/server/src/app/strategy/jwt.strategy.ts",
-          "hash": "16276539880890746912",
+          "hash": "17914206044175545359",
           "deps": [
             "npm:@nestjs/passport",
             "npm:passport-jwt",
+            "npm:passport-local",
             "npm:@nestjs/common"
           ]
         },
@@ -545,100 +640,6 @@
           "deps": [
             "npm:@nx/webpack"
           ]
-        }
-      ],
-      "ui": [
-        {
-          "file": "apps/ui/.eslintrc.json",
-          "hash": "8364514437566592435"
-        },
-        {
-          "file": "apps/ui/Dockerfile",
-          "hash": "6556911632252180665"
-        },
-        {
-          "file": "apps/ui/jest.config.ts",
-          "hash": "8317761645169182681"
-        },
-        {
-          "file": "apps/ui/project.json",
-          "hash": "5137369480053699839"
-        },
-        {
-          "file": "apps/ui/src/app/app.component.html",
-          "hash": "3930842594397758815"
-        },
-        {
-          "file": "apps/ui/src/app/app.component.scss",
-          "hash": "3244421341483603138"
-        },
-        {
-          "file": "apps/ui/src/app/app.component.ts",
-          "hash": "4661074131951710872",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router",
-            "npm:@angular/common",
-            "npm:rxjs"
-          ]
-        },
-        {
-          "file": "apps/ui/src/app/app.config.ts",
-          "hash": "8993342557759126848",
-          "deps": [
-            "npm:@angular/core",
-            "npm:@angular/router"
-          ]
-        },
-        {
-          "file": "apps/ui/src/app/app.routes.ts",
-          "hash": "6185150965714414910",
-          "deps": [
-            "npm:@angular/router"
-          ]
-        },
-        {
-          "file": "apps/ui/src/assets/.gitkeep",
-          "hash": "3244421341483603138"
-        },
-        {
-          "file": "apps/ui/src/favicon.ico",
-          "hash": "9303420814833116677"
-        },
-        {
-          "file": "apps/ui/src/index.html",
-          "hash": "18384336201794130837"
-        },
-        {
-          "file": "apps/ui/src/main.ts",
-          "hash": "16635586463787978962",
-          "deps": [
-            "npm:@angular/platform-browser"
-          ]
-        },
-        {
-          "file": "apps/ui/src/styles.scss",
-          "hash": "5195668842064076916"
-        },
-        {
-          "file": "apps/ui/src/test-setup.ts",
-          "hash": "17711435995618823417"
-        },
-        {
-          "file": "apps/ui/tsconfig.app.json",
-          "hash": "8365644956319658761"
-        },
-        {
-          "file": "apps/ui/tsconfig.editor.json",
-          "hash": "17511610827034788226"
-        },
-        {
-          "file": "apps/ui/tsconfig.json",
-          "hash": "12094030803572703611"
-        },
-        {
-          "file": "apps/ui/tsconfig.spec.json",
-          "hash": "2927375835638640771"
         }
       ]
     }

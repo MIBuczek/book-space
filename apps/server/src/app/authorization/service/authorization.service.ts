@@ -19,7 +19,7 @@ export class AuthorizationService {
     try {
       const {email, password} = loginUserDto;
 
-      let currentUser = await this.userModel.findOne({email});
+      const currentUser = await this.userModel.findOne({email});
 
       if (!currentUser) {
         throw new HttpException('Incorrect email', HttpStatus.UNAUTHORIZED);

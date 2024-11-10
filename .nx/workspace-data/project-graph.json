@@ -14133,6 +14133,11 @@
       },
       {
         "source": "server",
+        "target": "npm:passport-local",
+        "type": "static"
+      },
+      {
+        "source": "server",
         "target": "npm:@nestjs/core",
         "type": "static"
       },
