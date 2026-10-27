@@ -23,6 +23,26 @@ All 32 issues are created on `MIBuczek/book-space`:
 same route fix. Exactly one should remain open; both are currently open so the maintainer
 chooses rather than the choice being made silently.
 
+## Milestones
+
+Each stage is a milestone, so progress is visible per stage rather than as one 32-issue block:
+
+| Milestone | Title | Issues |
+|-----------|-------|--------|
+| #10 | 002 Stage 0 - Pin and prune (Node 24) | U001–U005 |
+| #11 | 002 Stage 1 - Nx 16 to 23.3.1 | U006–U009 |
+| #12 | 002 Stage 2 - TypeScript 5.0 to 6.0 | U010–U011 |
+| #13 | 002 Stage 3 - Angular 16 to 22 | U012–U016 |
+| #14 | 002 Stage 4 - NestJS 9 to 11.2.8 | U017–U020 |
+| #15 | 002 Stage 5 - ESLint 10, Jest 30, Cypress 16 | U021–U025 |
+| #16 | 002 Code fixes | U026–U027 |
+| #17 | 002 Verification and documentation | U028–U032 |
+
+These are deliberately separate from the `001-booking-platform-rewrite` milestones
+(#2–#9, one per rewrite phase). The two features are independent workstreams and should
+not share a milestone. This feature should complete **before** the `001` Phase 6 UI work
+begins, because the Angular migration is cheap while `apps/ui` is still the starter shell.
+
 A task is complete only when its acceptance criteria pass and the CI gate is green.
 
 ---
