@@ -6,6 +6,23 @@ Each task becomes one GitHub issue. Identifiers are stable and used as the issue
 prefix (`U001: …`). `[P]` marks a task that can run in parallel with its siblings.
 `[S#]` maps the task to its stage in `plan.md`.
 
+All 32 issues are created on `MIBuczek/book-space`:
+
+| Task | Issue | Task | Issue | Task | Issue | Task | Issue |
+|------|-------|------|-------|------|-------|------|-------|
+| U001 | #62 | U009 | #70 | U017 | #78 | U025 | #86 |
+| U002 | #63 | U010 | #71 | U018 | #79 | U026 | #87 |
+| U003 | #64 | U011 | #72 | U019 | #80 | U027 | #88 |
+| U004 | #65 | U012 | #73 | U020 | #81 | U028 | #89 |
+| U005 | #66 | U013 | #74 | U021 | #82 | U029 | #90 |
+| U006 | #67 | U014 | #75 | U022 | #83 | U030 | #91 |
+| U007 | #68 | U015 | #76 | U023 | #84 | U031 | #92 |
+| U008 | #69 | U016 | #77 | U024 | #85 | U032 | #93 |
+
+**Known duplicate**: U027 (#88) and `001-booking-platform-rewrite` T024 (#28) describe the
+same route fix. Exactly one should remain open; both are currently open so the maintainer
+chooses rather than the choice being made silently.
+
 A task is complete only when its acceptance criteria pass and the CI gate is green.
 
 ---
