@@ -13,12 +13,14 @@ import {ClientModule} from './clients/client.module';
 import {BuildingModule} from './buildings/building.module';
 import {PassportModule} from '@nestjs/passport';
 import {AuthorizationModule} from './authorization/authorization.module';
+import {validateEnv} from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: '.env',
-      isGlobal: true
+      isGlobal: true,
+      validate: validateEnv
     }),
     JwtModule.register({
       global: true,

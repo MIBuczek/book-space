@@ -97,6 +97,15 @@ jobs:
             exit 1
           fi
           echo "No credential found in dist/apps/ui."
+      # The client-bundle scan above cannot see a committed .env, which is exactly
+      # how a live MongoDB password and JWT secret leaked into this repo's history.
+      - name: Fail if a credential is committed to the working tree
+        run: |
+          if git ls-files --error-unmatch apps/server/.env >/dev/null 2>&1; then
+            echo "::error::apps/server/.env is tracked. It must never be committed."
+            exit 1
+          fi
+          node tools/scan-secrets.js
 
   # Single required check for branch protection. It fails unless every job above
   # succeeded, which keeps the ruleset stable when jobs are added or renamed.
