@@ -10,11 +10,31 @@
 
 ## Why
 
-`book-space` is pinned to a stack that is one to six years behind current releases:
-Nx 16.1.2, Angular 16.0, NestJS 9.1, Mongoose 7.1, TypeScript 5.0.2, ESLint 8.15,
-Jest 29.4, Cypress 12.11, Node 18. Angular 16 left support in November 2024. Every
-one of these lines is past its support window, so security patches are no longer
-being issued for them.
+`book-space` is pinned to a stack that is two to three years behind current
+releases: Nx 16.1.2, Angular 16.0, NestJS 9.1, Mongoose 7.1, TypeScript 5.0.2,
+ESLint 8.15, Jest 29.4, Cypress 12.11, Node 18. The last release on each of these
+lines, from the npm registry:
+
+| Line | Last release | Date |
+|------|--------------|------|
+| Angular 16 | 16.2.12 | 2023-11-02 |
+| Nx 16 | 16.10.0 | 2023-10-04 |
+| NestJS 9 | 9.4.3 | 2023-06-12 |
+| TypeScript 5.0 | 5.0.4 | 2023-04-07 |
+| Jest 29 | 29.7.0 | 2023-09-12 |
+| ESLint 8 | 8.57.1 | 2024-09-16 |
+| Node 18 | 18.20.8 | 2025-03-28 |
+
+Node 18 reached end-of-life on 30 April 2025. Angular 16 has been out of support
+since November 2024; under Angular's six-months-active plus twelve-months-LTS policy
+the oldest still-supported line is Angular 20. ESLint 8 and Jest 29 have both been
+superseded by two majors. These lines are no longer receiving fixes for newly
+disclosed vulnerabilities.
+
+One exception worth stating plainly: **Mongoose 7.8.13 was published on 2026-10-23**,
+so the Mongoose 7 line is still receiving maintenance releases. The Mongoose upgrade
+is therefore driven by the NestJS upgrade (which requires `@nestjs/mongoose` 11),
+not by Mongoose 7 being abandoned.
 
 The window to do this cheaply is now. `apps/ui` is still the Nx starter shell (65
 lines, no feature code) and `apps/server` is 1851 lines across 6 controllers. The
