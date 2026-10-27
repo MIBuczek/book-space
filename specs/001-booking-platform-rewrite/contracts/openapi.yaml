@@ -1,0 +1,820 @@
+openapi: 3.0.3
+info:
+  title: Book Space API
+  description: >
+    REST API for the municipal sports facility booking platform. Global prefix `/api`.
+    Existing endpoints reflect `MIBuczek/book-space`; endpoints marked
+    `x-status: to-build` do not exist yet and are required by the specification.
+  version: 0.1.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+tags:
+  - name: auth
+  - name: users
+  - name: clients
+  - name: buildings
+  - name: bookings
+  - name: reporting
+  - name: notifications
+
+paths:
+  /:
+    get:
+      tags: [system]
+      summary: Health message
+      responses:
+        '200':
+          description: Service banner
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: Hello API}
+
+  /auth/sign-in:
+    post:
+      tags: [auth]
+      summary: Sign in a staff user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginUserDto'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: {$ref: '#/components/schemas/User'}
+                  token: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/sign-out:
+    get:
+      tags: [auth]
+      summary: Sign out (stateless; retained for compatibility)
+      responses:
+        '200': {description: Acknowledged}
+
+  /auth/me:
+    get:
+      tags: [auth]
+      x-status: to-build
+      summary: Return the current user with resolved role and assignments
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/User'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users:
+    get:
+      tags: [users]
+      x-status: to-build
+      summary: List staff users (administrator only)
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/User'}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [users]
+      x-status: to-build
+      summary: Create a staff user (administrator only)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UserDto'}
+      responses:
+        '201': {description: Created}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/{_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [users]
+      x-status: to-build
+      summary: Get a staff user (administrator only)
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/User'}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [users]
+      x-status: to-build
+      summary: Update a staff user (administrator only)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UserDto'}
+      responses:
+        '200': {description: Updated}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [users]
+      x-status: to-build
+      summary: Deactivate or delete a staff user (administrator only)
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Deleted}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /clients:
+    get:
+      tags: [clients]
+      summary: List clients (office or administrator)
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Client'}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [clients]
+      summary: Create a client (administrator)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ClientDto'}
+      responses:
+        '201': {description: Created}
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /clients/{_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [clients]
+      summary: Get a client
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Client
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Client'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [clients]
+      summary: Update a client (administrator)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ClientDto'}
+      responses:
+        '200': {description: Updated}
+    delete:
+      tags: [clients]
+      x-status: fix-route
+      summary: Delete a client (administrator). Current route is `@Delete('_id')` and never matches.
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Deleted}
+
+  /buildings:
+    get:
+      tags: [buildings]
+      summary: List facilities with city, sizes and options
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Facilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Building'}
+    post:
+      tags: [buildings]
+      x-status: to-build
+      summary: Create a facility (administrator)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BuildingDto'}
+      responses:
+        '201': {description: Created}
+
+  /buildings/{_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [buildings]
+      summary: Get a facility
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Facility
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Building'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [buildings]
+      summary: Update a facility (administrator)
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Updated}
+    delete:
+      tags: [buildings]
+      x-status: fix-route
+      summary: Delete a facility (administrator). Current route is `@Delete('_id')`.
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Deleted}
+
+  /bookings:
+    get:
+      tags: [bookings]
+      summary: List bookings for a period
+      description: >
+        A public caller receives only accepted, non-archived bookings with personal
+        fields removed. Staff receive the full record within their scope.
+      security: []
+      parameters:
+        - name: from
+          in: query
+          schema: {type: string, format: date-time}
+        - name: to
+          in: query
+          schema: {type: string, format: date-time}
+        - name: city
+          in: query
+          schema: {type: string}
+        - name: building
+          in: query
+          schema: {type: string}
+        - name: accepted
+          in: query
+          schema: {type: boolean}
+        - name: archive
+          in: query
+          schema: {type: boolean, default: false}
+        - name: clientId
+          in: query
+          schema: {type: string}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      responses:
+        '200':
+          description: Paged bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Booking'}
+                  total: {type: integer}
+                  page: {type: integer}
+                  limit: {type: integer}
+    post:
+      tags: [bookings]
+      summary: Create a booking request (public)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BookingDto'}
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bookings/{_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [bookings]
+      summary: Get a booking
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Booking
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [bookings]
+      summary: Update a booking (owner, office or administrator)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BookingDto'}
+      responses:
+        '200': {description: Updated}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [bookings]
+      summary: Delete a booking (owner, office or administrator)
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Deleted}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bookings/{_id}/booked-times:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [bookings]
+      summary: Replace or update the time slots of a booking
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: {$ref: '#/components/schemas/BookedTimeDto'}
+      responses:
+        '200': {description: Updated}
+
+  /bookings/{_id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [bookings]
+      x-status: to-build
+      summary: Approve or unapprove a booking (administrator)
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accepted]
+              properties:
+                accepted: {type: boolean}
+                force: {type: boolean, description: Confirm despite detected conflicts}
+      responses:
+        '200':
+          description: Updated booking, with conflicts reported when not forced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking: {$ref: '#/components/schemas/Booking'}
+                  conflicts:
+                    type: array
+                    items: {$ref: '#/components/schemas/Booking'}
+        '409':
+          description: Conflicts detected and `force` was not set
+
+  /bookings/{_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [bookings]
+      x-status: to-build
+      summary: Archive or restore a booking (administrator)
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Updated}
+
+  /bookings/conflicts:
+    get:
+      tags: [bookings]
+      x-status: to-build
+      summary: Return conflicting unaccepted bookings for a facility and month
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema: {type: string}
+        - name: building
+          in: query
+          required: true
+          schema: {type: string}
+        - name: month
+          in: query
+          required: true
+          schema: {type: integer, minimum: 0, maximum: 11}
+      responses:
+        '200':
+          description: Booking identifiers in conflict
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {type: string}
+
+  /reporting/summary:
+    get:
+      tags: [reporting]
+      x-status: to-build
+      summary: Per-client rental summary grouped by city (office or administrator)
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: clientId
+          in: query
+          required: true
+          schema: {type: string}
+        - name: fromMonth
+          in: query
+          schema: {type: string, format: date}
+        - name: toMonth
+          in: query
+          schema: {type: string, format: date}
+        - name: fromTheBeginning
+          in: query
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Summary grouped by city
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ClientSummary'}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reporting/summary.csv:
+    get:
+      tags: [reporting]
+      x-status: to-build
+      summary: CSV export of the summary (one client, or all clients)
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: clientId
+          in: query
+          schema: {type: string}
+        - name: fromMonth
+          in: query
+          schema: {type: string, format: date}
+        - name: toMonth
+          in: query
+          schema: {type: string, format: date}
+        - name: fromTheBeginning
+          in: query
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: CSV file, `;` separated, UTF-8 with BOM
+          content:
+            text/csv:
+              schema: {type: string}
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /notifications/booking:
+    post:
+      tags: [notifications]
+      x-status: to-build
+      summary: Send a booking notification to the facility or to SISK staff
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingId, audience]
+              properties:
+                bookingId: {type: string}
+                audience: {type: string, enum: [FACILITY, STAFF]}
+      responses:
+        '202': {description: Queued or sent}
+        '502': {description: Provider failure; the booking is unaffected}
+
+  /notifications/message:
+    post:
+      tags: [notifications]
+      x-status: to-build
+      summary: Send a contact-form or facility-employee message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person, email, message]
+              properties:
+                person: {type: string}
+                email: {type: string, format: email}
+                phone: {type: string}
+                message: {type: string}
+                recipient: {type: string, format: email}
+      responses:
+        '202': {description: Accepted}
+        '502': {description: Provider failure}
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: _id
+      in: path
+      required: true
+      schema: {type: string}
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: Authenticated but not permitted
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    ValidationError:
+      description: One or more fields failed validation
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ValidationError'}
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        statusCode: {type: integer}
+        message: {type: string}
+        error: {type: string}
+
+    ValidationError:
+      type: object
+      properties:
+        statusCode: {type: integer, example: 422}
+        message:
+          type: array
+          items: {type: string}
+          example: ['E-mail address need to contains correct pattern.']
+        error: {type: string, example: Unprocessable Entity}
+
+    LoginUserDto:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string, minLength: 6, maxLength: 30}
+
+    UserDto:
+      type: object
+      required: [firstName, lastName, password, email, role]
+      properties:
+        firstName: {type: string, minLength: 3, maxLength: 125}
+        lastName: {type: string, minLength: 3, maxLength: 125}
+        password: {type: string, minLength: 6, maxLength: 30}
+        recheckPassword: {type: string}
+        email: {type: string, format: email}
+        role: {type: string, enum: [ADMIN, OFFICE, EMPLOYEE]}
+        city: {type: string}
+        buildings:
+          type: array
+          items: {type: string}
+        active: {type: boolean, default: true}
+
+    User:
+      allOf:
+        - $ref: '#/components/schemas/UserDto'
+        - type: object
+          properties:
+            _id: {type: string}
+            createdAt: {type: string, format: date-time}
+            lastLogin: {type: string, format: date-time}
+
+    ClientDto:
+      type: object
+      required: [type, name, contactPerson, phone, email, street, city, zipCode]
+      properties:
+        type: {type: string, enum: [INDIVIDUAL, COMPANY]}
+        name: {type: string, minLength: 3, maxLength: 125}
+        nick: {type: string}
+        contactPerson: {type: string, minLength: 3, maxLength: 125}
+        phone: {type: string, minLength: 3, maxLength: 15}
+        email: {type: string, format: email}
+        street: {type: string, minLength: 3, maxLength: 125}
+        city: {type: string, minLength: 3, maxLength: 125}
+        zipCode: {type: string, pattern: '^[\\d./-]+$', minLength: 6, maxLength: 6}
+        nip: {type: string, description: Required when type is COMPANY}
+
+    Client:
+      allOf:
+        - $ref: '#/components/schemas/ClientDto'
+        - type: object
+          properties:
+            _id: {type: string}
+
+    BuildingDto:
+      type: object
+      required: [name, property, city, sizes, email, phone, street, zipCode]
+      properties:
+        name: {type: string, minLength: 3, maxLength: 125}
+        property: {type: string}
+        city: {type: string, enum: [siechnice, radwanice, swieta-katarzyna, zerniki-wroclawskie]}
+        sizes:
+          type: array
+          items: {type: string, enum: ['1/1', '1/2', '1/3', '2/3', '1/4', '3/4']}
+        lighting: {type: boolean}
+        toilets: {type: boolean}
+        email: {type: string, format: email}
+        phone: {type: string, minLength: 3, maxLength: 15}
+        street: {type: string}
+        zipCode: {type: string, minLength: 6, maxLength: 6}
+        employees:
+          type: array
+          items: {type: string}
+
+    Building:
+      allOf:
+        - $ref: '#/components/schemas/BuildingDto'
+        - type: object
+          properties:
+            _id: {type: string}
+
+    BookedTimeDto:
+      type: object
+      required: [day, startHours, endHours, status]
+      properties:
+        day: {type: string, format: date-time}
+        startHours: {type: string, format: date-time}
+        endHours: {type: string, format: date-time}
+        status: {type: string, enum: [INITIAL, DONE, CANCELED]}
+        participants: {type: integer, minimum: 0, maximum: 50}
+        comments: {type: string, maxLength: 525}
+
+    SelectedExtraOption:
+      type: object
+      required: [options, fromHour, toHour]
+      properties:
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              lights: {type: boolean}
+              toilets: {type: boolean}
+        fromHour: {type: string, format: date-time}
+        toHour: {type: string, format: date-time}
+
+    BookingDto:
+      type: object
+      required:
+        - type
+        - place
+        - size
+        - nick
+        - personName
+        - personEmail
+        - personPhone
+        - month
+        - bookedTimes
+        - paymentMethod
+      properties:
+        type: {type: string, enum: [INDIVIDUAL, COMPANY]}
+        place:
+          type: object
+          required: [place, city]
+          properties:
+            place: {type: string, description: 'Facility property key, e.g. hala-sportowa'}
+            city: {type: string}
+        size: {type: string, pattern: '^[0-9]/[0-9]$'}
+        clientId: {type: string}
+        nick: {type: string, minLength: 3, maxLength: 100}
+        personName: {type: string, minLength: 3, maxLength: 125}
+        personCompany: {type: string, maxLength: 125}
+        personEmail: {type: string, format: email}
+        personPhone: {type: string, minLength: 9, maxLength: 15}
+        month: {type: integer, minimum: 0, maximum: 11}
+        bookedTimes:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/BookedTimeDto'}
+        accepted: {type: boolean, default: false}
+        archive: {type: boolean, default: false}
+        comments: {type: string, maxLength: 525}
+        paymentMethod: {type: string, enum: [CASH, TRANSFER, FREE]}
+        discount: {type: string, pattern: '^[0-9]{1,3}%$'}
+        selectedOptions:
+          type: array
+          items: {$ref: '#/components/schemas/SelectedExtraOption'}
+
+    Booking:
+      allOf:
+        - $ref: '#/components/schemas/BookingDto'
+        - type: object
+          properties:
+            _id: {type: string}
+            createdBy: {type: string}
+            createdAt: {type: string, format: date-time}
+            modifiedBy: {type: string}
+            modifiedAt: {type: string, format: date-time}
+            conflicts:
+              type: array
+              items: {type: string}
+              description: Identifier of each booking this one conflicts with
+
+    ClientSummary:
+      type: object
+      properties:
+        client: {$ref: '#/components/schemas/Client'}
+        siechnice:
+          type: array
+          items: {$ref: '#/components/schemas/BookedTimeSummary'}
+        radwanice:
+          type: array
+          items: {$ref: '#/components/schemas/BookedTimeSummary'}
+        swieta-katarzyna:
+          type: array
+          items: {$ref: '#/components/schemas/BookedTimeSummary'}
+        zerniki-wroclawskie:
+          type: array
+          items: {$ref: '#/components/schemas/BookedTimeSummary'}
+
+    BookedTimeSummary:
+      type: object
+      properties:
+        generalBookingDetails:
+          type: object
+          properties:
+            payment: {type: string}
+            discount: {type: string}
+            extraOptions: {type: boolean}
+            selectedOptions:
+              type: array
+              items: {$ref: '#/components/schemas/SelectedExtraOption'}
+            comments: {type: string}
+            size: {type: string}
+            building: {type: string}
+        bookingTimeDetails:
+          type: array
+          items: {$ref: '#/components/schemas/BookedTimeDto'}
