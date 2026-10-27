@@ -1,4 +1,4 @@
-import {User} from '@server/users/schemas/user.schema';
+import {User} from '../../users/schemas/user.schema';
 import * as Validator from 'class-validator';
 
 export class LoginUserDto implements Pick<User, 'email' | 'password'> {
