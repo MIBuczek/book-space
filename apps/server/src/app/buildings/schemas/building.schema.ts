@@ -1,7 +1,7 @@
 import {HydratedDocument} from 'mongoose';
 import {Prop, SchemaFactory} from '@nestjs/mongoose';
 import validator from 'validator';
-import {TUser} from '@server/users/schemas/user.schema';
+import {TUser} from '../../users/schemas/user.schema';
 
 export type TBuilding = HydratedDocument<Building>;
 export class Building {

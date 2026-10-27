@@ -3,10 +3,9 @@
   "npmScope": "book-space",
   "tasksRunnerOptions": {
     "default": {
-      "runner": "nx-cloud",
+      "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": ["build", "lint", "test", "e2e"],
-        "accessToken": "YzVkNDE2ODYtMjE5YS00MjlkLTg1NDEtZGVkMWQ4MjQ2YzA0fHJlYWQtd3JpdGU="
+        "cacheableOperations": ["build", "lint", "test", "e2e"]
       }
     }
   },

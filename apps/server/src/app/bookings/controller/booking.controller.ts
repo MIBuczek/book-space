@@ -9,7 +9,7 @@ import {Put} from '@nestjs/common';
 import {Delete} from '@nestjs/common';
 import {BookingDto} from '../models/booking.dto';
 import {AuthGuard} from '@nestjs/passport';
-import {BookedTimeDto} from '@server/bookings/models/booked-time.dto';
+import {BookedTimeDto} from '../models/booked-time.dto';
 
 @Controller('bookings')
 export class BookingController {

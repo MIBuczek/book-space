@@ -1,4 +1,4 @@
-import {BookedTime} from '@server/bookings/schemas/booked-time.schemta';
+import {BookedTime} from '../schemas/booked-time.schemta';
 import {TSingleBookingStatus} from '@models/booked-time.model';
 import * as Validator from 'class-validator';
 

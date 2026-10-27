@@ -1,5 +1,5 @@
 import {Building} from '../schemas/building.schema';
-import {TUser} from '@server/users/schemas/user.schema';
+import {TUser} from '../../users/schemas/user.schema';
 import * as Validator from 'class-validator';
 
 export class BuildingDto implements Building {
