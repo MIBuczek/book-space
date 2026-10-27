@@ -107,12 +107,14 @@ jobs:
     needs: [lint, test, build, secrets]
     steps:
       - name: Check every job succeeded
+        env:
+          # Order follows the `needs` list above. Requiring an exact match means a
+          # skipped job also fails the gate, which a `contains(..., 'failure')`
+          # check would miss.
+          RESULTS: ${{ join(needs.*.result, ',') }}
         run: |
-          echo "lint=${{ needs.lint.result }}"
-          echo "test=${{ needs.test.result }}"
-          echo "build=${{ needs.build.result }}"
-          echo "secrets=${{ needs.secrets.result }}"
-          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+          echo "results: $RESULTS"
+          if [ "$RESULTS" != "success,success,success,success" ]; then
             echo "::error::One or more required jobs did not succeed."
             exit 1
           fi
