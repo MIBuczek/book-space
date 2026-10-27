@@ -3,8 +3,8 @@ import {BookingController} from './controller/booking.controller';
 import {BookingService} from './service/booking.service';
 import {BookingSchema} from './schemas/booking.schema';
 import {MongooseModule} from '@nestjs/mongoose';
-import {JwtStrategy} from '@server/strategy/jwt.strategy';
-import {AuthorizationModule} from '@server/auth/authorization.module';
+import {JwtStrategy} from '../strategy/jwt.strategy';
+import {AuthorizationModule} from '../authorization/authorization.module';
 
 @Module({
   imports: [

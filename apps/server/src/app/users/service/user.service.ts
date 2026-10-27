@@ -1,9 +1,9 @@
 import {HttpException, Injectable} from '@nestjs/common';
-import {handleAuthErrors} from '@server/utils/validation-error.fun';
-import {User} from '@server/users/schemas/user.schema';
+import {handleAuthErrors} from '../../utility/validation-error.fun';
+import {User} from '../schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
-import {UserDto} from '@server/users/models/user.dto';
+import {UserDto} from '../models/user.dto';
 
 @Injectable()
 export class UserService {

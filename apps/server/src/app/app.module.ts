@@ -5,14 +5,14 @@ import {AppService} from './app.service';
 
 import {MongooseModule} from '@nestjs/mongoose';
 import {ConfigModule} from '@nestjs/config';
-import {NotificationModule} from '@server/notify/notification.module';
-import {BookingsModule} from '@server/bookings/bookings.module';
-import {UsersModule} from '@server/users/users.module';
+import {NotificationModule} from './notification/notification.module';
+import {BookingsModule} from './bookings/bookings.module';
+import {UsersModule} from './users/users.module';
 import {JwtModule} from '@nestjs/jwt';
 import {ClientModule} from './clients/client.module';
 import {BuildingModule} from './buildings/building.module';
 import {PassportModule} from '@nestjs/passport';
-import {AuthorizationModule} from '@server/auth/authorization.module';
+import {AuthorizationModule} from './authorization/authorization.module';
 
 @Module({
   imports: [

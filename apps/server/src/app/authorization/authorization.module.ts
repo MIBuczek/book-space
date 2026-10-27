@@ -1,8 +1,8 @@
 import {Module} from '@nestjs/common';
 import {PassportModule} from '@nestjs/passport';
 import {MongooseModule} from '@nestjs/mongoose';
-import {UserSchema} from '@server/users/schemas/user.schema';
-import {JwtStrategy} from '@server/strategy/jwt.strategy';
+import {UserSchema} from '../users/schemas/user.schema';
+import {JwtStrategy} from '../strategy/jwt.strategy';
 import {AuthorizationService} from './service/authorization.service';
 import {AuthorizationController} from './controller/authorization.controller';
 
