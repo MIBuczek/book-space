@@ -1,0 +1,121 @@
+name: CI
+
+# Gate for every pull request: lint, unit test and build must all pass before a
+# pull request can be merged. Branch protection on `main` requires the single
+# `CI` check produced by the `gate` job below.
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+# A new push to a pull request cancels the run already in flight, so the status
+# reflects the latest commit only.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Nx Cloud is configured with a read-write token committed in nx.json. Never
+  # use it from CI: a read-write token in a public repository lets anyone poison
+  # the cache. Runs here are local-only.
+  NX_NO_CLOUD: 'true'
+  NX_DAEMON: 'false'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Nx needs the merge base to compute affected projects
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+      - run: yarn install --frozen-lockfile --non-interactive
+      - name: Lint all projects
+        run: yarn nx run-many --target=lint --all
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+      - run: yarn install --frozen-lockfile --non-interactive
+      - name: Run unit tests
+        run: yarn nx run-many --target=test --projects=server,ui --configuration=ci
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+      - run: yarn install --frozen-lockfile --non-interactive
+      - name: Build server and ui
+        run: yarn nx run-many --target=build --projects=server,ui --configuration=production
+      - name: Verify the built artefacts exist
+        run: |
+          test -f dist/apps/server/main.js || { echo "server bundle missing"; exit 1; }
+          test -f dist/apps/ui/index.html || { echo "ui bundle missing"; exit 1; }
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+      - run: yarn install --frozen-lockfile --non-interactive
+      - name: Build ui for scanning
+        run: yarn nx build ui --configuration=production
+      - name: Fail if a credential reached the client bundle
+        run: |
+          pattern='mongodb\+srv|AIza[0-9A-Za-z_-]{35}|service_[a-z0-9]{7}|JWT_SECRET|accessToken'
+          if grep -rInE "$pattern" dist/apps/ui; then
+            echo "::error::A credential or service identifier was found in the built client assets."
+            exit 1
+          fi
+          echo "No credential found in dist/apps/ui."
+
+  # Single required check for branch protection. It fails unless every job above
+  # succeeded, which keeps the ruleset stable when jobs are added or renamed.
+  gate:
+    name: CI
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, test, build, secrets]
+    steps:
+      - name: Check every job succeeded
+        env:
+          # Order follows the `needs` list above. Requiring an exact match means a
+          # skipped job also fails the gate, which a `contains(..., 'failure')`
+          # check would miss.
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          echo "results: $RESULTS"
+          if [ "$RESULTS" != "success,success,success,success" ]; then
+            echo "::error::One or more required jobs did not succeed."
+            exit 1
+          fi
+          echo "All required jobs succeeded."

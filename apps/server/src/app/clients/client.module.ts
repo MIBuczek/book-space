@@ -3,8 +3,8 @@ import {ClientService} from './service/client.service';
 import {ClientController} from './controller/client.controller';
 import {MongooseModule} from '@nestjs/mongoose';
 import {ClientSchema} from './schemas/client.schema';
-import {JwtStrategy} from '@server/strategy/jwt.strategy';
-import {AuthorizationModule} from '@server/auth/authorization.module';
+import {JwtStrategy} from '../strategy/jwt.strategy';
+import {AuthorizationModule} from '../authorization/authorization.module';
 
 @Module({
   imports: [

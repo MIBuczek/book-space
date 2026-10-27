@@ -2,7 +2,7 @@ import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
-import {BookedTime} from '@server/bookings/schemas/booked-time.schemta';
+import {BookedTime} from '../schemas/booked-time.schemta';
 
 @Injectable()
 export class BookingService {
