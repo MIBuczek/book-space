@@ -19,9 +19,10 @@ All 32 issues are created on `MIBuczek/book-space`:
 | U007 | #68 | U015 | #76 | U023 | #84 | U031 | #92 |
 | U008 | #69 | U016 | #77 | U024 | #85 | U032 | #93 |
 
-**Known duplicate**: U027 (#88) and `001-booking-platform-rewrite` T024 (#28) describe the
-same route fix. Exactly one should remain open; both are currently open so the maintainer
-chooses rather than the choice being made silently.
+**Duplicate resolved**: U027 (#88) absorbed `001-booking-platform-rewrite` T024 (#28), which
+is now **closed as not planned**. #28 also required renaming the buildings controller's
+handlers (all misleadingly named `...Client`) and carrying the `tech-debt` label; both were
+folded into #88 before closing, so no requirement was lost. #88 remains in milestone #16.
 
 ## Milestones
 
@@ -122,7 +123,7 @@ A task is complete only when its acceptance criteria pass and the CI gate is gre
   - Acceptance: a test asserts the password is hashed exactly once per save; an update path preserves the existing hash.
 - [ ] U027 Fix `@Delete('_id')` → `@Delete(':_id')` in `client.controller.ts` and `building.controller.ts`, with regression tests. (FR-011)
   - Acceptance: `DELETE /api/clients/{id}` and `DELETE /api/buildings/{id}` reach the handler.
-  - Note: `001-booking-platform-rewrite` tracks this as T024. Remove T024 there to avoid duplicate work.
+  - Note: supersedes `001-booking-platform-rewrite` T024 (#28), now closed as a duplicate.
 
 ## Verification
 

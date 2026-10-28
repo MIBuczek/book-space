@@ -185,7 +185,8 @@ apps/server/src/app/buildings/controller/building.controller.ts:47 @Delete('_id'
 
 These can never match a request. `001-booking-platform-rewrite` already tracks this
 as T024; the Express 5 upgrade makes it a correctness issue rather than a latent one.
-Fix here, and drop T024 from the other feature to avoid duplicate work.
+Fix here. T024 (#28) was closed as a duplicate and its extra requirement — renaming the
+buildings controller's copy-pasted `...Client` handlers — was folded into #88.
 
 **FR-010 — Mongoose hook.** `user.schema.ts:57` uses `pre('save')` with a `next`
 callback. Mongoose 9 prefers promise-returning hooks and warns on callback style.
