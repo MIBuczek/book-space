@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0 # Nx needs the merge base to compute affected projects
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: yarn
       - run: yarn install --frozen-lockfile --non-interactive
       - name: Lint all projects
@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: yarn
       - run: yarn install --frozen-lockfile --non-interactive
       - name: Run unit tests
@@ -66,7 +66,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: yarn
       - run: yarn install --frozen-lockfile --non-interactive
       - name: Build server and ui
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: yarn
       - run: yarn install --frozen-lockfile --non-interactive
       - name: Build ui for scanning

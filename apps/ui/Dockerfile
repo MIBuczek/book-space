@@ -4,7 +4,7 @@
 # Tip: Modify "docker-build" options in project.json to change docker build args.
 #
 # Run the container with `docker run -p 3000:3000 -t ui`.
-FROM node:18
+FROM node:24
 
 WORKDIR /app
 
