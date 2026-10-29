@@ -2,7 +2,7 @@
 
 ## Layout
 
-Nx workspace, Node 18 (`.nvmrc`/CI). Apps: `apps/server` (NestJS 9 + Mongoose),
+Nx workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 9 + Mongoose),
 `apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types live in
 `libs/models`.
 
@@ -15,10 +15,33 @@ yarn nx run-many --target=test --projects=server,ui --configuration=ci
 yarn nx run-many --target=build --projects=server,ui --configuration=production
 ```
 
+Add `--skip-nx-cache` when you need to be sure a result is real rather than replayed.
+
+## Environment setup
+
+The repo is a **Yarn 1** workspace (`yarn.lock` is lockfile v1). Some sandboxes ship Node
+without `yarn`, and `corepack enable` fails there because it cannot write symlinks into
+`/usr/local/bin`. Install yarn 1 into a user-local prefix instead:
+
+```bash
+npm i -g yarn@1.22.22 --prefix "$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+`npm i -g` without `--prefix` fails the same way for the same reason. Do not "fix" this by
+switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, and CI uses
+`yarn install --frozen-lockfile`.
+
 ## Constraints that are easy to get wrong
 
-- **Always set `NX_NO_CLOUD=true`.** CI does. Do not reintroduce an Nx Cloud token into
-  `nx.json`: a read-write token in this repository lets anyone poison the shared cache.
+- **Always set `NX_NO_CLOUD=true`.** CI does. The `nx-cloud` client was removed in Stage 0;
+  do not reintroduce it or an Nx Cloud token into `nx.json`: a read-write token in this
+  repository lets anyone poison the shared cache.
+- **`npmScope` is gone from `nx.json` and must not come back.** Nx 17 dropped it from the
+  schema. The `@models/*` and `@server/*` aliases resolve through `paths` in
+  `tsconfig.base.json`, so nothing depends on `npmScope`.
+- **`bcrypt` is a native addon.** It is the one dependency that can break on a Node upgrade
+  independently of version ranges; confirm it loads and hashes after any runtime change.
 - **Inside `apps/server`, use relative imports.** `@server/*` resolves to a file in the
   same project, which trips `@nx/enforce-module-boundaries`. Cross-project imports use
   the `@models/*` alias, which is fine.
