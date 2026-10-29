@@ -32,5 +32,22 @@ yarn nx run-many --target=build --projects=server,ui --configuration=production
 ## CI
 
 `.github/workflows/ci.yml` runs lint, unit tests, build and a client-bundle secret scan on
-every PR, then a `gate` job that fails unless all of them passed. Branch protection should
-require the single `CI` check.
+every PR, then a `gate` job that fails unless all of them passed.
+
+## Branch ruleset
+
+`main` is protected by the `OpenHandsBookSpace` ruleset (id 26131068): deletion and
+non-fast-forward blocked, PR required, and the single `CI` check required. Require `CI`
+alone — the `gate` job already aggregates lint, test, build and secrets with `if: always()`,
+so listing the four sub-checks individually is redundant and, if a job is ever renamed,
+leaves a check that can never be satisfied.
+
+Three things that are easy to get wrong:
+
+- **`git push --dry-run` does not validate rulesets.** It reports success while the real
+  push is rejected. Do not use it as a gate in scripts.
+- **The ruleset has `bypass_mode: always` for Repository admin**, so CI does not actually
+  block a direct push to `main` by an admin. It protects against accidents, not against you.
+- **Testing a bypass-enabled rule with a bypass-enabled token is self-defeating.** The push
+  succeeds, so the test proves nothing about the rule. Read the ruleset config via
+  `GET /repos/{owner}/{repo}/rulesets/{id}` instead of pushing to `main`.
