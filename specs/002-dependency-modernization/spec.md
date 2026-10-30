@@ -78,7 +78,7 @@ A fourth constraint affects sequencing rather than the target:
 | NestJS | 9.1 | **11.2.8** | 12.3.2 rejected by `@nx/nest` |
 | Mongoose | 7.1 | 9.11.4 | via `@nestjs/mongoose` 11 |
 | Jest | 29.4 | 30.5.2 | |
-| ESLint | 8.15 | 10.13.0 | requires flat config |
+| ESLint | 8.15 | 10.13.0 | 9.17 lands in Stage 1; flat config in Stage 5 |
 | Cypress | 12.11 | 16.2.0 | |
 | yarn | 1 (lockfile v1) | 1 | unchanged; out of scope |
 
@@ -140,8 +140,10 @@ is already end-of-life.
   `@angular-devkit/build-angular:browser` to `@angular/build:application`, and
   `browserTarget` MUST become `buildTarget` in the dev-server target.
 - **FR-007** The `@nx/linter:eslint` executor MUST become `@nx/eslint:lint`.
-- **FR-008** ESLint MUST migrate from `.eslintrc.json` to flat config
-  (`eslint.config.js`) for ESLint 10.
+- **FR-008** ESLint MUST be upgraded to 9 in Stage 1 (a hard prerequisite of
+  `@nx/eslint@23`, which refuses to run on ESLint 8) and MUST migrate from
+  `.eslintrc.json` to flat config (`eslint.config.js`) in Stage 5. Until flat config
+  lands, Nx runs ESLint in eslintrc mode because a root `.eslintrc.json` is present.
 - **FR-009** The UI test setup MUST migrate from `jest-preset-angular/setup-jest`
   (removed in v17) to the supported setup entry point.
 - **FR-010** The Mongoose `pre('save')` hook in `user.schema.ts` MUST be updated for

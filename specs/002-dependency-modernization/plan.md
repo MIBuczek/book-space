@@ -94,20 +94,58 @@ to be the only candidates for trouble.
 **Why first**: if Node 24 breaks a native module, it is far easier to diagnose here
 than after six other changes.
 
-### Stage 1 — Nx 16 → 23.3.1
+### Stage 1 — Nx 16 → 23.3.1 (with ESLint 8 → 9)
 
-- `yarn nx migrate latest` then pin the resulting `nx` and `@nx/*` to 23.3.1.
-- Run the generated `migrations.json`.
+`nx migrate 23.3.1` **cannot be used for this jump** and the lint-stack bump cannot be
+deferred to Stage 5. Both were verified against the registry and by running the
+upgrade on a scratch branch:
+
+1. **`nx migrate` fails.** It resolves `@nx/linter` as part of the workspace's current
+   package set and tries `yarn add -W @nx/linter@23.3.1`. That package was removed
+   after Nx 20 (last stable `19.8.15`), so the fetch 404s and the command aborts with
+   no `migrations.json`. Pin the versions in `package.json` by hand instead.
+2. **`@nx/eslint@23` hard-requires ESLint >= 9.0.0.** Running the renamed executor
+   against ESLint 8.15 or 8.57.1 aborts with `Unsupported version of 'eslint'
+   detected. Installed: 8.57.1 / Supported: >= 9.0.0`. The error is a version gate,
+   not a missing function: `@nx/eslint@23` calls `eslint.loadESLint`, which exists only
+   from ESLint 9. Nx 17.0.6 is the last version whose `@nx/eslint` runs on ESLint 8.
+   The ESLint 8 → 9 bump (FR-008's prerequisite) therefore belongs to Stage 1, and
+   Stage 5 is left with flat config, Jest 30 and Cypress 16.
+3. **Nx 23 plugins are not framework-locked.** `@nx/angular@23` and `@nx/nest@23`
+   install and run against Angular 16.0.1 and NestJS 9.4.0 — their Angular/Nest peers
+   are optional and only the generators consume them. Nothing in `project.json` uses an
+   `@nx/angular` or `@nx/nest` executor, so the version skew is inert. Confirmed by a
+   full green lint/test/build gate with both packages at 23.3.1.
+4. **`@nx/angular@23` must be added.** It is not currently a direct dependency; the
+   Angular support arrives through `@nrwl/angular@16`, which must be removed.
+
+Changes:
+
+- Remove `@nrwl/angular`, `@nrwl/nest` (from `dependencies`) and `@nx/linter`.
+- Add `@nx/angular` and pin `nx` and every `@nx/*` package to 23.3.1.
+- ESLint 8.15 → 9.17; `@typescript-eslint/*` 5.58 → 8.18;
+  `@angular-eslint/*` 16 → 18; `eslint-config-prettier` 8.1 → 9.1;
+  `eslint-plugin-cypress` 2.10 → 4.1 (its 2.x rules call `context.getAncestors`,
+  removed in ESLint 9).
 - Fix `@nx/linter:eslint` → `@nx/eslint:lint` in all four `project.json` files
   (FR-007).
-- Remove `@nx/linter` and `@nrwl/*` in favour of `@nx/*` packages.
-- Reconcile `nx.json` `targetDefaults` and `namedInputs` with the v23 schema.
+- Reconcile `nx.json` with the v23 schema. `cacheableOperations` under
+  `tasksRunnerOptions` is silently ignored by Nx 23 — caching stops working with no
+  warning. Replace it with per-target `cache: true` in `targetDefaults`; verified by
+  an identical rebuild hitting the cache.
+- Add `.nx/cache` and `.nx/workspace-data` to `.gitignore`. Nx 17 moved its cache out
+  of `node_modules/.cache` into `.nx/`, which is not currently ignored.
 
-Verification: lint, test, build green. This is the largest config change but carries
-no application-code risk.
+Legacy `.eslintrc.json` is kept. Nx detects a root `.eslintrc.json` and runs ESLint in
+eslintrc mode, so no `ESLINT_USE_FLAT_CONFIG` is needed; flat config stays in Stage 5
+(FR-008).
 
-**Note**: `nx migrate` will propose jumping past 23.3.1. Pin deliberately and do not
-accept 24 in this feature.
+Verification: lint, test, build green; all 21 tests pass; caching works. The UI build
+hash moves from `9b981ab76db6fe3a` to `063b0743c9c836e9` — this is **not** a
+behaviour change. The two bundles are byte-identical except for six bytes of webpack
+module-ID renumbering (`264` → `547`), caused by `@nx/webpack@23` no longer hoisting
+webpack `^5.82` so `@angular-devkit/build-angular@16`'s exact pin of `5.80.0` wins.
+The server and UI remain on Angular 16 and NestJS 9 throughout.
 
 ### Stage 2 — TypeScript 5.0.2 → 6.0.3
 
@@ -158,12 +196,16 @@ Verification: all 21 tests pass; the 24 endpoints return unchanged payloads.
 is the smaller surface. Doing Angular first means the UI is on a supported framework
 even if the server stage slips.
 
-### Stage 5 — ESLint 8 → 10, Jest 30, Cypress 16
+### Stage 5 — ESLint flat config, Jest 30, Cypress 16
+
+The ESLint 8 → 9 bump moved to Stage 1, because `@nx/eslint@23` refuses to run on
+ESLint 8. This stage carries the config-format change and the remaining test-tool
+bumps.
 
 - ESLint flat config: replace the five `.eslintrc.json` files with
   `eslint.config.js` (FR-008). Use the `@nx/eslint` migration
   `update-23-1-0-convert-to-flat-config` as a starting point.
-- `@typescript-eslint/*` 5 → 8, `@angular-eslint/*` → 22.
+- `@angular-eslint/*` 18 → 22; `@typescript-eslint/*` stays on 8 (already at 8.18).
 - Jest 30 across `jest.config.ts` and `jest.preset.js`.
 - Cypress 12 → 16 and `@nx/cypress` to 23.3.1.
 
