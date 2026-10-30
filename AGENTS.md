@@ -2,7 +2,7 @@
 
 ## Layout
 
-Nx workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 9 + Mongoose),
+Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 9 + Mongoose),
 `apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types live in
 `libs/models`.
 
@@ -40,6 +40,23 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`npmScope` is gone from `nx.json` and must not come back.** Nx 17 dropped it from the
   schema. The `@models/*` and `@server/*` aliases resolve through `paths` in
   `tsconfig.base.json`, so nothing depends on `npmScope`.
+- **Never run `nx migrate` in this repository.** It resolves `@nx/linter` from the current
+  package set and tries to install `@nx/linter@23.3.1`, which was removed after Nx 20; the
+  fetch 404s and the command aborts with no `migrations.json`. Bump `nx` and every `@nx/*`
+  in `package.json` by hand instead.
+- **`@nx/eslint` and ESLint are version-locked.** `@nx/eslint@23` refuses to run on ESLint 8
+  (`Supported: >= 9.0.0`) because it calls `eslint.loadESLint`. Nx 17.0.6 is the last version
+  whose `@nx/eslint` runs on ESLint 8. Any further `nx` bump must move `eslint`,
+  `@typescript-eslint` and `@angular-eslint` with it.
+- **Caching is configured per target, not via `tasksRunnerOptions`.** Nx 23 ignores
+  `tasksRunnerOptions.cacheableOperations` silently — targets just stop being cached, with no
+  warning. `cache: true` lives in `targetDefaults` in `nx.json`. If a repeat build is not a
+  cache hit, this is the first thing to check.
+- **`.nx/cache` and `.nx/workspace-data` are gitignored.** Nx 17 moved its cache out of
+  `node_modules/.cache`; `.nx/` grows to tens of megabytes and must never be committed.
+- **ESLint still runs in eslintrc mode.** The five `.eslintrc.json` files are intentional;
+  Nx detects the root `.eslintrc.json` and sets legacy mode itself, so no
+  `ESLINT_USE_FLAT_CONFIG` is needed. Flat config lands in Stage 5.
 - **`bcrypt` is a native addon.** It is the one dependency that can break on a Node upgrade
   independently of version ranges; confirm it loads and hashes after any runtime change.
 - **Inside `apps/server`, use relative imports.** `@server/*` resolves to a file in the
