@@ -54,10 +54,9 @@ export class User {
 const userSchema = SchemaFactory.createForClass(User);
 
 /* Pre save middle action to hash user password */
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   const salt = await bcrypt.genSalt();
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 export const UserSchema = userSchema;
