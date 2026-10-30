@@ -224,7 +224,9 @@ declares **no** `typescript` peer, so it is independent of the corridor in findi
 and it touches only `apps/server`.
 
 - Bump the `@nestjs/*` set to 11.2.8, `@nestjs/mongoose` to 11.0.4, `mongoose` to
-  9.11.4, `@nestjs/config` to 11, `@nestjs/jwt` to 11.
+  9.11.4, `@nestjs/config` to 4.0.4, `@nestjs/jwt` to 11.0.2. Note `@nestjs/config`
+  has no 11.x line — its majors jump 4 → 12 — so 4.0.4 is the release that peers
+  `@nestjs/common ^10 || ^11`.
 - `@nestjs/platform-express` 11 pulls **Express 5**. Review middleware and route
   behaviour. No wildcard or regex routes exist, so the exposure is limited.
 - `class-validator` 0.14 → 0.15.
