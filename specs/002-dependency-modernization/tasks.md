@@ -44,6 +44,17 @@ These are deliberately separate from the `001-booking-platform-rewrite` mileston
 not share a milestone. This feature should complete **before** the `001` Phase 6 UI work
 begins, because the Angular migration is cheap while `apps/ui` is still the starter shell.
 
+**Stage numbers are not execution order.** Milestone #11 (Stage 1) is done. The
+recommended order from here is:
+
+```text
+Stage 4 (NestJS)  →  Stage 3 (Angular + TypeScript)  →  Stage 5
+```
+
+Stage 4 goes first because NestJS declares no `typescript` peer, so nothing in Stage 3
+blocks it, and it touches only `apps/server`. Stage 2 has no pull request of its own: its
+work is inside Stage 3 (FR-015). The ESLint-9 half of Stage 5 already landed in Stage 1.
+
 A task is complete only when its acceptance criteria pass and the CI gate is green.
 
 ---
@@ -75,14 +86,24 @@ A task is complete only when its acceptance criteria pass and the CI gate is gre
   - Acceptance: build caching works (a repeat build is a cache hit); `.nx/cache` and `.nx/workspace-data` are gitignored.
   - Note: Nx 23 silently ignores `tasksRunnerOptions.cacheableOperations`, which stops caching with no warning. Move to per-target `cache: true` in `targetDefaults`.
 
-## Stage 2 — TypeScript 5.0.2 → 6.0.3 (S2)
+## Stage 2 — TypeScript 5.0.2 → 6.0.3 (S2) — no pull request of its own
 
-- [ ] U010 Bump `typescript` to `~6.0.3` and set `target` to `es2022` in `tsconfig.base.json`. (FR-012)
+TypeScript cannot be raised while Angular is 16 (FR-015). These two tasks are executed
+inside Stage 3, at the steps where the Angular peer range forces the move. They are kept
+here only so the milestone and issue map stay aligned.
+
+- [ ] U010 Raise TypeScript and set `target` to `es2022` in `tsconfig.base.json`. (FR-012, FR-015)
   - Acceptance: `yarn nx build server` and `build ui` succeed.
+  - Note: the step is driven by Angular, not chosen: 5.2 at Angular 17, 5.5 at 18, 5.8 at 20, 6.0.3 at 22. Raising it against Angular 16 fails with "The Angular Compiler requires TypeScript >=4.9.3 and <5.1.0".
+  - Note: TypeScript 6 also errors on `baseUrl` and `moduleResolution: node10` (TS5101, TS5107) and needs `ts-jest` ≥ 29.4.15 (29.1.0 peers `typescript <6`).
 - [ ] U011 Fix type errors introduced by TypeScript 6 strictness. (FR-012)
   - Acceptance: all 21 existing tests pass unmodified.
+  - Note: `catch (e)` is `unknown` under TypeScript 6. 11 of 15 suites fail on this before any other fix; `apps/server/src/app/users/service/user.service.ts` reads `e.status` and `e.message` unguarded.
 
-## Stage 3 — Angular 16 → 22.2.3 (S3)
+## Stage 3 — Angular 16 → 22.2.3 (S3), with TypeScript riding along
+
+TypeScript moves here, not before (FR-015). Recommended as two pull requests: 16→18 with
+TypeScript 5.0.4→5.5, then 18→22 with TypeScript 5.5→6.0.3.
 
 - [ ] U012 Step Angular through 17, 18, 19, 20 using `ng update`, verifying after each. (FR-012)
   - Acceptance: UI builds and serves after each major.

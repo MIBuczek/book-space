@@ -58,7 +58,7 @@ are properties of the upstream packages, not of this repository:
    the Nx Nest plugin does not support it. The NestJS target is therefore 11.2.8
    unless `@nx/nest` is dropped, which is a decision (see FR-014).
 
-A fourth constraint affects sequencing rather than the target:
+A further constraint affects sequencing rather than the target:
 
 4. **Nx 24 removed the `jest`, `eslint` and `webpack` executors** that this
    repository's `project.json` files depend on. `@nx/jest@24`, `@nx/eslint@24` and
@@ -67,6 +67,25 @@ A fourth constraint affects sequencing rather than the target:
    most invasive change in the whole upgrade and it is avoidable by targeting Nx
    23.3.1, which still ships every executor this repo uses.
 
+5. **TypeScript is pinned by Angular, not chosen freely.** `@angular/compiler-cli`
+   declares a `typescript` peer per major, and the ranges do not tile:
+
+   | Angular | `typescript` peer |
+   | ------- | ---------------- |
+   | 16      | `>=4.9.3 <5.1`   |
+   | 17      | `>=5.2 <5.5`     |
+   | 18      | `>=5.4 <5.6`     |
+   | 19      | `>=5.5 <5.9`     |
+   | 20      | `>=5.8 <6.0`     |
+   | 21      | `>=5.9 <6.1`     |
+   | 22      | `>=6.0 <6.1`     |
+
+   Every adjacent pair overlaps except 16 → 17. Angular 16 caps TypeScript below the
+   floor Angular 17 requires, so TypeScript cannot reach 6.0.3 while Angular is 16.
+   The TypeScript work therefore rides along with the Angular ladder (FR-015). The
+   installed `@angular/compiler-cli` 16.0.1 caps TypeScript at `<5.1`, so the current
+   5.0.4 is the highest TypeScript this repository can use until Angular moves.
+
 ## Target state
 
 | Component | Current | Target | Note |
@@ -74,7 +93,7 @@ A fourth constraint affects sequencing rather than the target:
 | Node | 18 (CI, Docker) | 24 LTS | Angular 22 floor |
 | Nx | 16.1.2 | **23.3.1** | 24 removes needed executors |
 | Angular | 16.0 | 22.2.3 | latest |
-| TypeScript | 5.0.2 | **6.0.3** | 7.0.2 rejected by Angular 22 |
+| TypeScript | 5.0.2 | **6.0.3** | 7.0.2 rejected by Angular 22; pinned by Angular — see FR-015 |
 | NestJS | 9.1 | **11.2.8** | 12.3.2 rejected by `@nx/nest` |
 | Mongoose | 7.1 | 9.11.4 | via `@nestjs/mongoose` 11 |
 | Jest | 29.4 | 30.5.2 | |
@@ -153,13 +172,20 @@ is already end-of-life.
   These are latent defects that become visible under Express 5 (shipped by
   `@nestjs/platform-express` 11).
 - **FR-012** The upgrade MUST be executed as the staged sequence in `plan.md`, one
-  pull request per stage, each green before the next begins.
+  pull request per stage, each green before the next begins. The stage *numbers* and the
+  execution *order* may differ; `plan.md` "Stage order" is authoritative for sequencing.
 - **FR-013** No behavioural change to the HTTP contract is permitted by this feature.
   Contract changes belong to `001-booking-platform-rewrite`.
 - **FR-014** The NestJS major MUST be decided explicitly: stay on 11.2.8 with
   `@nx/nest` supported, or move to 12.3.2 and drop `@nx/nest`. `@nx/nest` is
   currently referenced only by generators, never by a `project.json`, so dropping it
   is viable but removes scaffolding support.
+- **FR-015** TypeScript MUST NOT be raised independently of Angular. `@angular/compiler-cli`
+  declares a `typescript` peer per major and the ranges do not tile — Angular 16 caps
+  TypeScript below the floor Angular 17 requires, so no TypeScript version satisfies both.
+  TypeScript MUST move on the Angular step that forces it. Verified: TypeScript 6.0.3
+  against Angular 16.0.1 fails with "The Angular Compiler requires TypeScript >=4.9.3
+  and <5.1.0".
 
 ## Non-Functional Requirements
 

@@ -36,6 +36,35 @@ decisive findings, each of which changes the plan:
 
    Targeting Nx 23.3.1 avoids a workspace-wide migration to inference plugins.
    `@nx/angular@23.3.1` peers `@angular/build >=20 <23`, so Angular 22 fits.
+5. **TypeScript is pinned by Angular, not the other way round.** `@angular/compiler-cli`
+   declares a narrow `typescript` peer per major, and the gates do not tile:
+
+   | Angular | `typescript` peer |
+   | ------- | ---------------- |
+   | 16      | `>=4.9.3 <5.1`   |
+   | 17      | `>=5.2 <5.5`     |
+   | 18      | `>=5.4 <5.6`     |
+   | 19      | `>=5.5 <5.9`     |
+   | 20      | `>=5.8 <6.0`     |
+   | 21      | `>=5.9 <6.1`     |
+   | 22      | `>=6.0 <6.1`     |
+
+   Every adjacent pair overlaps **except 16 → 17**: Angular 16 caps TypeScript below
+   the floor Angular 17 requires. So TypeScript cannot be raised to 6.0.3 while Angular
+   is 16, and the intended "TypeScript first, then Angular" order is impossible. Verified
+   by installing TypeScript 6.0.3 against the current Angular 16.0.1 and building:
+
+   ```
+   Error: The Angular Compiler requires TypeScript >=4.9.3 and <5.1.0
+          but 6.0.3 was found instead.
+   ```
+
+   The same run failed 11 of 15 test suites on real code errors (`catch (e)` is
+   `unknown` from TypeScript 4.4's `useUnknownInCatchVariables`, which 6 makes loud).
+   TypeScript therefore steps with Angular, not before it.
+6. **`ts-jest` caps TypeScript at `<6`.** The installed 29.1.0 peers
+   `typescript >=4.3 <6`; 29.4.15 lifts this to `<7`. The server test runner must move
+   with TypeScript.
 
 ## Technical Context
 
@@ -147,22 +176,23 @@ module-ID renumbering (`264` → `547`), caused by `@nx/webpack@23` no longer ho
 webpack `^5.82` so `@angular-devkit/build-angular@16`'s exact pin of `5.80.0` wins.
 The server and UI remain on Angular 16 and NestJS 9 throughout.
 
-### Stage 2 — TypeScript 5.0.2 → 6.0.3
+### Stage 2 — TypeScript (not independently landable)
 
-- Bump `typescript` to `~6.0.3`.
-- Update `tsconfig.base.json`: `target` `es2015` → `es2022`, keep `lib`.
-- Fix any new type errors. Expect `strict` violations and `unknown` narrowing.
+**This stage cannot be executed on its own.** TypeScript cannot leave 5.0.x while
+Angular is 16 (finding 5), so its work is carried out inside Stage 3. It is kept as a
+numbered stage only so the milestone and the U010/U011 issues stay aligned; there is no
+"bump TypeScript, then do Angular" pull request.
 
-Verification: all 21 tests pass; build green.
+### Stage 3 — Angular 16 → 22.2.3, with TypeScript riding along
 
-**Why before Angular**: Angular 22 requires TS 6, so this must land first, and doing
-it alone keeps type errors separate from Angular's template errors.
+One major at a time: 16→17→18→19→20→21→22. `ng update @angular/core@N @angular/cli@N`
+drives each step; stop and verify after each. TypeScript moves on the steps where the
+peer range forces it — 16→17 (`>=5.2`), then to 5.5, 5.8, and finally 6.0.3 at 22.
 
-### Stage 3 — Angular 16 → 22.2.3
+Recommended as two pull requests so each diff stays reviewable:
 
-One major at a time: 16→17→18→19→20→21→22. `nx migrate` handles the update
-schematics per major; `ng update @angular/core@N @angular/cli@N` drives each step.
-Stop and verify after each.
+- **3a** — Angular 16 → 18, TypeScript 5.0.4 → 5.5.
+- **3b** — Angular 18 → 22, TypeScript 5.5 → 6.0.3.
 
 Code and config changes required:
 
@@ -172,19 +202,31 @@ Code and config changes required:
   point (`setup-env`). `setup-jest` no longer exists (FR-009).
 - `apps/ui/src/app/app.component.ts`: `HttpClientModule` → `provideHttpClient()`.
 - `apps/ui/src/app/app.config.ts`: add `provideHttpClient()` to providers.
-- `jest-preset-angular` 13 → 17, `jest` 29 → 30.
+- `jest-preset-angular` 13 → 17, `jest` 29 → 30, `ts-jest` 29.1.0 → 29.4.15.
 - `zone.js` 0.13 → 0.16.
+- `tsconfig.base.json`: `target` `es2015` → `es2022`; `moduleResolution` `node` →
+  `bundler` or `node16` and an explicit `ignoreDeprecations` for `baseUrl`. TypeScript 6
+  errors on `baseUrl` and `moduleResolution: node10` (TS5101, TS5107).
+- Every `catch (e)` that reads `e.message` / `e.status` needs narrowing. 11 of 15 test
+  suites fail on this alone; `apps/server/src/app/users/service/user.service.ts` is the
+  first offender.
 
-Verification: UI builds with `@angular/build:application`, `yarn nx serve ui` renders
-the shell and still reaches `GET /api`.
+Verification: all 21 tests pass; UI builds with `@angular/build:application`;
+`yarn nx serve ui` renders the shell and still reaches `GET /api`.
 
 **Why this is cheap now**: 9 UI files, 65 lines. After the feature UI exists, the same
 migration touches every component.
 
-### Stage 4 — NestJS 9 → 11.2.8
+### Stage 4 — NestJS 9 → 11.2.8, with Mongoose 9
+
+Sequenced before the Angular ladder in practice (see "Stage order" below). NestJS
+declares **no** `typescript` peer, so it is independent of the corridor in finding 5,
+and it touches only `apps/server`.
 
 - Bump the `@nestjs/*` set to 11.2.8, `@nestjs/mongoose` to 11.0.4, `mongoose` to
-  9.11.4, `@nestjs/config` to 11, `@nestjs/jwt` to 11.
+  9.11.4, `@nestjs/config` to 4.0.4, `@nestjs/jwt` to 11.0.2. Note `@nestjs/config`
+  has no 11.x line — its majors jump 4 → 12 — so 4.0.4 is the release that peers
+  `@nestjs/common ^10 || ^11`.
 - `@nestjs/platform-express` 11 pulls **Express 5**. Review middleware and route
   behaviour. No wildcard or regex routes exist, so the exposure is limited.
 - `class-validator` 0.14 → 0.15.
@@ -192,9 +234,10 @@ migration touches every component.
 
 Verification: all 21 tests pass; the 24 endpoints return unchanged payloads.
 
-**Why after Angular**: the server and UI are independently deployable, and the server
-is the smaller surface. Doing Angular first means the UI is on a supported framework
-even if the server stage slips.
+**Why it can go first**: the server and UI are independently deployable, and the server
+is the smaller surface. NestJS has no TypeScript peer, so nothing in Stage 3 blocks it.
+Doing it first means the Angular migration is not holding a NestJS variable at the same
+time.
 
 ### Stage 5 — ESLint flat config, Jest 30, Cypress 16
 
@@ -211,6 +254,19 @@ bumps.
 
 Verification: lint reports 0 errors; `@nx/enforce-module-boundaries` still passes
 (this is what caught the 33 errors fixed in PR #59).
+
+### Stage order
+
+The stages are numbered for the milestone and issue map, but the recommended execution
+order differs from the numbering:
+
+```text
+Stage 1 (done)  →  Stage 4 (NestJS)  →  Stage 3 (Angular + TypeScript)  →  Stage 5
+```
+
+Stage 2 has no pull request of its own; its work is inside Stage 3. The ESLint-9 half of
+Stage 5 already landed in Stage 1, because `@nx/eslint@23` requires it; what remains
+there is flat config and the test-tool bumps.
 
 ## Two code fixes this feature must carry
 
