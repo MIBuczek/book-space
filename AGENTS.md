@@ -2,9 +2,9 @@
 
 ## Layout
 
-Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 9 + Mongoose),
-`apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types live in
-`libs/models`.
+Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 11 + Mongoose 9
+on Express 5), `apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types
+live in `libs/models`.
 
 ## Commands
 
@@ -59,6 +59,16 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   `ESLINT_USE_FLAT_CONFIG` is needed. Flat config lands in Stage 5.
 - **`bcrypt` is a native addon.** It is the one dependency that can break on a Node upgrade
   independently of version ranges; confirm it loads and hashes after any runtime change.
+  `bcrypt@6` builds and hashes fine on Node 24.
+- **`@nestjs/config` has no 11.x line.** Its majors jump 4 → 12, so a NestJS 11 upgrade takes
+  `@nestjs/config@4.0.4`, which peers `@nestjs/common ^10 || ^11`. Do not read the shared
+  major number as a package version.
+- **Mongoose 9 removed callback-style middleware.** `pre('save', function (next) {...})` no
+  longer compiles — `next` is typed `SaveOptions` and calling it is TS2349. Write hooks as
+  plain async functions instead. `@nestjs/mongoose@11` pulls this in with Mongoose 9.
+- **`nx test` does not type-check files no spec imports.** The `user.schema.ts` TS2349 above
+  passed `nx test` and only failed `nx build`. When a dependency bump changes library types,
+  run the build too — a green test run is not a type check.
 - **Inside `apps/server`, use relative imports.** `@server/*` resolves to a file in the
   same project, which trips `@nx/enforce-module-boundaries`. Cross-project imports use
   the `@models/*` alias, which is fine.
