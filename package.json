@@ -11,6 +11,10 @@
     "lint": "eslint --fix"
   },
   "private": true,
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "packageManager": "yarn@1.22.22",
   "dependencies": {
     "@angular/animations": "~16.0.0",
     "@angular/common": "~16.0.0",
@@ -85,7 +89,6 @@
     "jest-environment-node": "^29.4.1",
     "jest-preset-angular": "~13.0.0",
     "nx": "16.1.2",
-    "nx-cloud": "latest",
     "prettier": "^2.6.2",
     "ts-jest": "^29.1.0",
     "ts-node": "10.9.1",
