@@ -44,3 +44,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Nx cache and workspace data (Nx 17+ uses .nx/ instead of node_modules/.cache)
+.nx/cache
+.nx/workspace-data

@@ -63,15 +63,17 @@ A task is complete only when its acceptance criteria pass and the CI gate is gre
 
 ## Stage 1 — Nx 16.1.2 → 23.3.1 (S1)
 
-- [ ] U006 Run `nx migrate` to 23.3.1 and apply `migrations.json`; pin `nx` and `@nx/*` to 23.3.1. (FR-012)
+- [ ] U006 Pin `nx` and every `@nx/*` package to 23.3.1 by hand, and bump the lint stack to ESLint 9. (FR-012)
   - Acceptance: `yarn nx show project server` lists every target; CI green.
-  - Note: `nx migrate latest` will propose 24. Pin to 23.3.1 deliberately — 24 removes executors this repo uses.
+  - Note: `nx migrate 23.3.1` **cannot** be used — it fetches `@nx/linter@23.3.1`, which was removed after Nx 20, and aborts without producing `migrations.json`. `nx migrate latest` would also propose 24, which removes executors this repo uses.
+  - Note: `@nx/eslint@23` refuses to run on ESLint 8 (`Supported: >= 9.0.0`), so the ESLint 9 bump cannot be deferred to Stage 5. Bump `eslint` to ^9.17, `@typescript-eslint/*` to ^8.18, `@angular-eslint/*` to ^18.4, `eslint-config-prettier` to ^9.1 and `eslint-plugin-cypress` to ^4.1 together with Nx.
 - [ ] U007 Rename `@nx/linter:eslint` → `@nx/eslint:lint` in all four `project.json` files. (FR-007)
   - Acceptance: `yarn nx run-many --target=lint --all` reports 0 errors.
-- [ ] U008 [P] Replace `@nrwl/*` and `@nx/linter` with their `@nx/*` equivalents. (FR-012)
-  - Acceptance: no `@nrwl/*` remains in `package.json` or `project.json`.
-- [ ] U009 [P] Reconcile `nx.json` `targetDefaults` and `namedInputs` with the v23 schema. (FR-012)
-  - Acceptance: `nx` emits no configuration warnings; build caching still works.
+- [ ] U008 [P] Replace `@nrwl/*` and `@nx/linter` with their `@nx/*` equivalents, and add `@nx/angular@23.3.1`. (FR-012)
+  - Acceptance: no `@nrwl/*` remains in `package.json` or `project.json`; `@nx/angular` is a direct dependency.
+- [ ] U009 [P] Reconcile `nx.json` with the v23 schema and ignore the new `.nx/` cache. (FR-012)
+  - Acceptance: build caching works (a repeat build is a cache hit); `.nx/cache` and `.nx/workspace-data` are gitignored.
+  - Note: Nx 23 silently ignores `tasksRunnerOptions.cacheableOperations`, which stops caching with no warning. Move to per-target `cache: true` in `targetDefaults`.
 
 ## Stage 2 — TypeScript 5.0.2 → 6.0.3 (S2)
 
