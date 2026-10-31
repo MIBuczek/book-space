@@ -109,6 +109,12 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   projects; the five `.eslintrc.json` files and `.eslintignore` are gone (Stage 5, U021).
   `.eslintignore` only listed `node_modules`, which flat config ignores by default. The
   per-project configs import the root one and spread `nx.configs['flat/*']`.
+- **`yarn lint` runs the Nx target, and the root config ignores build output.** The legacy
+  root `.eslintrc.json` carried `ignorePatterns: ["**/*"]`, which made the root config match
+  nothing so each project was linted through its own config. `convert-to-flat-config` does not
+  carry that over, so bare `eslint` walks `dist/` and `.angular/cache/` and exits with
+  thousands of errors. The ignores are now explicit in `eslint.config.mjs` and the `lint`
+  script is `nx run-many --target=lint --all`, which resolves per-project configs.
 - **`@angular-eslint` 22 dropped its legacy `plugin:` configs.** There is no
   `plugin:@angular-eslint/template/process-inline-templates` or `plugin:@nx/angular` to
   `extends` any more, and `@angular-eslint/*` no longer ships `dist/configs`. The
