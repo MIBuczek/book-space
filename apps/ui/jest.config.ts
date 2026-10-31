@@ -2,6 +2,8 @@
 export default {
   displayName: 'ui',
   preset: '../../jest.preset.js',
+  // Angular components need a DOM; the nx preset defaults to node.
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/apps/ui',
   transform: {
