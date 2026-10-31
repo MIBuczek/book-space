@@ -6,19 +6,25 @@ Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 11
 on Express 5), `apps/ui` (Angular 22, standalone), plus `apps/server-e2e` and `apps/ui-e2e`.
 Shared types live in `libs/models`.
 
-The server stack is modernized (NestJS 11, Mongoose 9, Express 5, Node 24). The UI is on
-Angular 22 and TypeScript 6; ESLint 10 is the remaining shared-version move:
+The dependency-modernization plan (`specs/002-dependency-modernization/`) is complete. Every
+stage has landed, so the table below is the current state, not a target:
 
-| Package    | Now     | Target  | Lands in |
-| ---------- | ------- | ------- | -------- |
-| Angular    | 22      | 22      | done (Stage 3) |
-| TypeScript | 6.0.3   | 6.0.3   | done (Stage 3) |
-| Jest       | 30      | 30      | done (Stage 3) |
-| ESLint     | 9       | 10      | Stage 5  |
+| Package    | Version | Landed in |
+| ---------- | ------- | --------- |
+| Node       | 24      | Stage 0   |
+| Nx         | 23.3.1  | Stage 1   |
+| TypeScript | 6.0.3   | Stage 3   |
+| Angular    | 22.2.4  | Stage 3   |
+| NestJS     | 11.2.8  | Stage 4   |
+| Mongoose   | 9.11.4  | Stage 4   |
+| Express    | 5       | Stage 4   |
+| Jest       | 30      | Stage 3   |
+| ESLint     | 10      | Stage 5   |
+| Cypress    | 16      | Stage 5   |
 
 TypeScript is a single workspace-wide version pinned by Angular, so the server does not get
-6.0.3 on its own — it moves when Angular moves. Until Stage 5 lands, check `package.json`
-rather than trusting a version written down anywhere, including this file.
+6.0.3 on its own — it moves when Angular moves. Check `package.json` rather than trusting a
+version written down anywhere, including this file.
 
 ## Version ceilings
 
@@ -99,9 +105,36 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   cache hit, this is the first thing to check.
 - **`.nx/cache` and `.nx/workspace-data` are gitignored.** Nx 17 moved its cache out of
   `node_modules/.cache`; `.nx/` grows to tens of megabytes and must never be committed.
-- **ESLint still runs in eslintrc mode.** The five `.eslintrc.json` files are intentional;
-  Nx detects the root `.eslintrc.json` and sets legacy mode itself, so no
-  `ESLINT_USE_FLAT_CONFIG` is needed. Flat config lands in Stage 5.
+- **ESLint runs on flat config.** `eslint.config.mjs` exists at the root and in all four
+  projects; the five `.eslintrc.json` files and `.eslintignore` are gone (Stage 5, U021).
+  `.eslintignore` only listed `node_modules`, which flat config ignores by default. The
+  per-project configs import the root one and spread `nx.configs['flat/*']`.
+- **`@angular-eslint` 22 dropped its legacy `plugin:` configs.** There is no
+  `plugin:@angular-eslint/template/process-inline-templates` or `plugin:@nx/angular` to
+  `extends` any more, and `@angular-eslint/*` no longer ships `dist/configs`. The
+  `convert-to-flat-config` generator still emits a `FlatCompat` block referencing them, which
+  fails at load with `Failed to load config "plugin:@angular-eslint/template/..."`. Use
+  `nx.configs['flat/angular']` and `nx.configs['flat/angular-template']` instead — Nx bundles
+  the inline-template processor and the same rule sets, so no `FlatCompat` is needed.
+- **Lint output is 0 errors, 5 warnings.** The 5 are pre-existing `no-unused-vars` /
+  `no-explicit-any` findings in `apps/server`; they are the Stage 5 acceptance baseline. A
+  change in that count means a rule was silently dropped or added.
+- **A passing lint cannot prove a rule is live.** `@nx/enforce-module-boundaries` is what
+  caught the 33 errors fixed in PR #59, and it is the rule most likely to vanish silently in a
+  config-format change. Verify it by adding an `@server/*` import inside `apps/server` where a
+  relative import is correct and confirming lint *fails*; a green run looks identical whether
+  the rule works or is absent (U023).
+- **`@typescript-eslint/types`, `@typescript-eslint/utils` and `jsdom` are direct devDependencies
+  on purpose.** `@angular-eslint@22` peers `@typescript-eslint/utils@^8` and
+  `jest-preset-angular@17` peers `jsdom@>=26`, but nothing else pulls either one in, so yarn 1
+  reports them as unmet peers even though the packages are hoisted and working. Declaring them
+  is what clears the install warnings (U028). Do not remove them as "unused" — `yarn why` shows
+  no other requester, which is exactly the point.
+- **Two `incorrect peer dependency` warnings remain and are not fixable here.** `@napi-rs/wasm-runtime`
+  (inside `@angular/build`'s optional `wasm32-wasi` binding) wants `@emnapi/core@^1.7.1`, while
+  `nx@23.3.1` pins `@emnapi/core` to exactly `1.4.5`. That is an upstream disagreement between
+  Nx and Angular; forcing it with a `resolutions` entry would override Nx's exact pin. They are
+  warnings about an optional wasm path, not a resolution error.
 - **`bcrypt` is a native addon.** It is the one dependency that can break on a Node upgrade
   independently of version ranges; confirm it loads and hashes after any runtime change.
   `bcrypt@6` builds and hashes fine on Node 24.
@@ -116,6 +149,9 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   the previous semantics. Raising it is a real migration (the server alone has ~100 sites:
   94 `TS18046` catch clauses, plus `bcrypt` types, `TS2564` class properties and `TS7053`
   index access), and belongs in its own task, not a dependency bump.
+- **`target` is `es2022`, in both `tsconfig.base.json` and `apps/server/tsconfig.app.json`.**
+  Both had to move: the server's `tsconfig.app.json` sets its own `target` and does not inherit
+  the base one, so changing only the base leaves the server emitting ES2015 (U010).
 - **`moduleResolution: "node"` (node10) cannot read Angular 22.** Angular 22 packages are
   `exports`-only — `@angular/common` ships no physical `http/` directory, only
   `exports["./http"]`. node10 ignores `exports` maps, so `import { HttpClient } from
@@ -129,12 +165,16 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   nothing provides it and the server build dies with `Cannot find module 'webpack'` — a
   failure that looks like an Nx problem and is not. `webpack@^5.112.2` is now a direct
   devDependency.
-- **`@angular-eslint` must stay at 21 until flat config lands.** v22 drops the legacy
-  `dist/configs` entry points, so the existing `.eslintrc.json` files fail to load
-  (`Failed to load config "plugin:@angular-eslint/recommended"`). v21 has no Angular peer
-  dependency and peers `eslint ^8.57 || ^9`, so it works with the current ESLint 9 and defers
-  the flat-config migration to Stage 5 where ESLint 10 already belongs. Verified by extracting
-  `dist/configs` from the published tarballs: present through 21.2.0, absent from 22.2.0 on.
+- **`@angular-eslint` 22 requires flat config, and that is now the state.** v22 drops the
+  legacy `dist/configs` entry points, so an `.eslintrc.json` workspace cannot use it
+  (`Failed to load config "plugin:@angular-eslint/recommended"`). The 21 → 22 move was held
+  until Stage 5 moved ESLint to flat config; both have now landed, so `@angular-eslint/*` and
+  `angular-eslint` are on 22.6.0 and there is no version ceiling left here. If this ever has to
+  be reverted, it reverts *with* the flat config, not on its own.
+- **`@angular-eslint` 22 adds `prefer-on-push-component-change-detection` as an error.** In
+  Angular 22 `OnPush` is the default, so the rule fires only on an explicit
+  `changeDetection: ChangeDetectionStrategy.Default`, not on a component that omits the
+  property. A component with no `changeDetection` is already compliant.
 - **`@angular-eslint@21` adds `prefer-inject`.** It flags constructor parameter injection in
   favour of `inject()`. `AppComponent` was migrated rather than disabling the rule.
 - **Mongoose 9 removed callback-style middleware.** `pre('save', function (next) {...})` no
