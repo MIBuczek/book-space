@@ -29,7 +29,7 @@ Measured on `main` at the time of writing:
 | Pattern | Occurrences | Verdict |
 |---|---|---|
 | `throw new HttpException(e.message, e.status)` | **22** | defect — returns **HTTP 200** with the driver message |
-| `catch (e)` bindings | 23 | will not compile under `strict` (#105) |
+| `catch (e)` bindings | 23 | 43 `TS18046` errors under `strict` (#105) |
 | `@Body(new ValidationPipe())` per parameter | 10 | defect — no `whitelist`, mass-assignment surface |
 | `@UseGuards(AuthGuard('jwt'))` | 21 | incomplete — no role decision anywhere |
 | Any `role` attribute (schema, JWT, `IUser`) | **0** | the four-role model is unimplemented |
@@ -128,10 +128,11 @@ existing code leaks it on every failure.
 
 Two consequences worth stating, because both are currently wrong:
 
-- **`catch (e)` must narrow before use.** `e` is `unknown`. Under `strict` (#105) every one of the
-  23 sites becomes `TS18046`. The fix is `if (e instanceof DomainError) ...` or an explicit type
-  guard, not `e: any`. Typing the error is what makes the mapping possible; the two issues share
-  this prerequisite.
+- **`catch (e)` must narrow before use.** `e` is `unknown`. Under `strict` the server reports 43
+  `TS18046` errors across 23 catch blocks — more errors than blocks, because most blocks read `e`
+  twice (`e.message` and `e.status`). The fix is `if (e instanceof DomainError) ...` or an explicit
+  type guard, not `e: any`. Typing the error is what makes the mapping possible; the two issues
+  share this prerequisite.
 - **`validation-error.fun.ts` must be deleted.** It branches on
   `err.message === 'Incorrect email'` — string matching against messages that belong to the legacy
   Firebase implementation, not this API. Worse, `err.message.includes(...)` throws a `TypeError`
