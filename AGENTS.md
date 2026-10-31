@@ -149,6 +149,9 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   the previous semantics. Raising it is a real migration (the server alone has ~100 sites:
   94 `TS18046` catch clauses, plus `bcrypt` types, `TS2564` class properties and `TS7053`
   index access), and belongs in its own task, not a dependency bump.
+- **`target` is `es2022`, in both `tsconfig.base.json` and `apps/server/tsconfig.app.json`.**
+  Both had to move: the server's `tsconfig.app.json` sets its own `target` and does not inherit
+  the base one, so changing only the base leaves the server emitting ES2015 (U010).
 - **`moduleResolution: "node"` (node10) cannot read Angular 22.** Angular 22 packages are
   `exports`-only — `@angular/common` ships no physical `http/` directory, only
   `exports["./http"]`. node10 ignores `exports` maps, so `import { HttpClient } from
