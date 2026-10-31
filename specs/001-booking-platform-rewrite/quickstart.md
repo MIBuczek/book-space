@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 18 and Yarn 1.x
+- Node.js 24 (`.nvmrc`) and Yarn 1.x
 - Docker and Docker Compose (optional, for the containerised workflow)
 - A MongoDB instance. Atlas or a local `mongod` both work; the database name is `book_space`.
 
@@ -18,9 +18,10 @@ MAIL_PROVIDER_API_KEY=<provider key>
 MAIL_FROM=rezerwacje@sisk-siechnice.pl
 ```
 
-`apps/server/.env` is currently committed with live credentials. Rotate the MongoDB user and
-the JWT secret, then remove the file from version control and add it to `.gitignore`
-(research.md R3).
+`apps/server/.env` is no longer committed — it was purged from history in #61 and is now
+gitignored, with `apps/server/.env.example` as the template. The server validates `DB_URI` and
+`JWT_SECRET` at boot and refuses to start with a message naming what is wrong. Rotate the
+legacy MongoDB user and JWT secret if that has not already been done (research.md R3).
 
 ## Install and run
 
@@ -53,13 +54,13 @@ Run the checks in this order; each maps to a section of the specification.
 ```bash
 # 1. Lint and unit tests
 yarn lint
-nx run-many --target=test --projects=server,ui
+yarn nx run-many --target=test --projects=server,ui
 
 # 2. API end-to-end tests
-nx e2e server-e2e
+yarn nx e2e server-e2e
 
 # 3. UI end-to-end tests
-nx e2e ui-e2e
+yarn nx e2e ui-e2e
 ```
 
 ### Manual verification per user story
