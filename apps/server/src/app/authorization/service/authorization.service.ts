@@ -6,6 +6,7 @@ import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {handleAuthErrors} from '../../utility/validation-error.fun';
 import {JwtPayload} from '@models/jwt-payload.model';
+import {errorMessage, errorStatus} from '../../utility/http-error';
 
 @Injectable()
 export class AuthorizationService {
@@ -55,7 +56,7 @@ export class AuthorizationService {
       }
       return user;
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 }
