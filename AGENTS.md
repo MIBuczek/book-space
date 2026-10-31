@@ -124,9 +124,17 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   config-format change. Verify it by adding an `@server/*` import inside `apps/server` where a
   relative import is correct and confirming lint *fails*; a green run looks identical whether
   the rule works or is absent (U023).
-- **`@typescript-eslint` resolves at 8.72.1 despite an unmet-peer warning.** `yarn install`
-  warns that `@angular-eslint@22` wants `@typescript-eslint/utils@^8.0.0`; the package is
-  hoisted and present, so the warning is cosmetic. Confirm with `yarn why` before chasing it.
+- **`@typescript-eslint/types`, `@typescript-eslint/utils` and `jsdom` are direct devDependencies
+  on purpose.** `@angular-eslint@22` peers `@typescript-eslint/utils@^8` and
+  `jest-preset-angular@17` peers `jsdom@>=26`, but nothing else pulls either one in, so yarn 1
+  reports them as unmet peers even though the packages are hoisted and working. Declaring them
+  is what clears the install warnings (U028). Do not remove them as "unused" — `yarn why` shows
+  no other requester, which is exactly the point.
+- **Two `incorrect peer dependency` warnings remain and are not fixable here.** `@napi-rs/wasm-runtime`
+  (inside `@angular/build`'s optional `wasm32-wasi` binding) wants `@emnapi/core@^1.7.1`, while
+  `nx@23.3.1` pins `@emnapi/core` to exactly `1.4.5`. That is an upstream disagreement between
+  Nx and Angular; forcing it with a `resolutions` entry would override Nx's exact pin. They are
+  warnings about an optional wasm path, not a resolution error.
 - **`bcrypt` is a native addon.** It is the one dependency that can break on a Node upgrade
   independently of version ranges; confirm it loads and hashes after any runtime change.
   `bcrypt@6` builds and hashes fine on Node 24.
