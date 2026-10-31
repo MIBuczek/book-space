@@ -10,6 +10,12 @@ const compat = new FlatCompat({
 });
 
 export default [
+  {
+    // The legacy root .eslintrc.json set `ignorePatterns: ["**/*"]` so the root config
+    // matched nothing and every project was linted through its own config. Flat config has
+    // no equivalent, so the same effect is spelled out as ignores.
+    ignores: ['dist/**', 'coverage/**', '.angular/**', '**/node_modules/**', 'tmp/**']
+  },
   ...nx.configs['flat/base'],
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
