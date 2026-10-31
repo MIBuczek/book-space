@@ -14,7 +14,7 @@ Standards for `apps/ui`. Applies to all of Phase 6 (T032–T040).
 | Routes | 0 (`appRoutes = []`) |
 
 It is already `bootstrapApplication`, already standalone, already using `inject()`, and already
-on Angular 22.2.0.
+on Angular 22.2.4 (the range `~22.2.0` resolves to 22.2.4).
 
 **There is no Angular code to migrate.** The Angular 16 → 22 upgrade was completed under
 `002-dependency-modernization` Stage 3 (PRs #101, #102, #103; issues #73–#77). Nothing in
@@ -359,7 +359,7 @@ Each is standalone (the default), relies on the default OnPush strategy, uses
 
 | plan.md says | Actual |
 |---|---|
-| Angular 16 | Angular 22.2.0 |
+| Angular 16 | Angular 22.2.4 |
 | TypeScript 5.0 | TypeScript 6.0.3 |
 | server target ES2015 / Node 18 | ES2022 / Node 24 |
 | NestJS 9 | NestJS 11.2.8 |
