@@ -6,6 +6,51 @@ Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 11
 on Express 5), `apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types
 live in `libs/models`.
 
+The server stack is modernized (NestJS 11, Mongoose 9, Express 5, Node 24). The UI is
+mid-upgrade, and two versions are still shared workspace-wide rather than settled:
+
+| Package    | Now     | Target  | Lands in |
+| ---------- | ------- | ------- | -------- |
+| Angular    | 16      | 22      | Stage 3  |
+| TypeScript | 5.0.2   | 6.0.3   | Stage 3  |
+| Jest       | 29      | 30      | Stage 5  |
+| ESLint     | 9       | 10      | Stage 5  |
+
+TypeScript is a single workspace-wide version pinned by Angular, so the server does not get
+6.0.3 on its own — it moves when Angular moves. Until those stages land, check `package.json`
+rather than trusting a version written down anywhere, including this file.
+
+## Version ceilings
+
+Three ceilings are deliberate. Each was verified against the npm registry, not read from
+release notes. Do not raise them without re-checking the constraint named here; a version
+that looks stale is usually pinned on purpose.
+
+- **Nx 23, not 24.** Nx 24 ships empty `executors` maps for `@nx/jest`, `@nx/eslint` and
+  `@nx/cypress`, and drops `webpack` from `@nx/webpack` (keeping only `ssr-dev-server`).
+  Verified by extracting `executors.json` from the published tarballs:
+
+  ```
+  nx 23.3.1   jest:[jest] eslint:[lint] cypress:[cypress] webpack:[webpack|dev-server|ssr-dev-server]
+  nx 24.0.3   jest:[]     eslint:[]     cypress:[]        webpack:[ssr-dev-server]
+  ```
+
+  Every `project.json` here uses `@nx/jest:jest`, `@nx/eslint:lint`, `@nx/cypress:cypress`
+  and `@nx/webpack:webpack`, so moving to 24 means migrating the whole workspace to inference
+  plugins first. That is a separate project, not a version bump.
+- **NestJS 11, not 12.** `@nx/nest` peers `@nestjs/core >=10.0.0 <12.0.0` — still true in
+  24.0.3. NestJS 12 is unreachable without dropping `@nx/nest`. Raising Nx does not lift this.
+- **TypeScript 6.0.x, not 7.** `@angular/compiler-cli@22` peers `typescript >=6.0 <6.1`, so
+  TypeScript 7 is unreachable while Angular is 22. Angular pins TypeScript, not the other way
+  round, and the peer ranges do not tile: every adjacent Angular pair overlaps except
+  16 → 17, where Angular 16 caps TypeScript below Angular 17's floor. TypeScript therefore
+  steps *with* Angular, never before it. `ts-jest` adds a second cap of its own — the
+  installed 29.1.0 peers `typescript >=4.3 <6`, so the server test runner must move with
+  TypeScript too.
+
+`@nestjs/config` is a fourth case of the same trap: its majors jump 4 → 12 with no 11.x line,
+so NestJS 11 takes `@nestjs/config@4.0.4`. See the constraint below.
+
 ## Commands
 
 ```bash
