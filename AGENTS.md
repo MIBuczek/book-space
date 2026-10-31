@@ -16,6 +16,8 @@ stage has landed, so the table below is the current state, not a target:
 | TypeScript | 6.0.3   | Stage 3   |
 | Angular    | 22.2.4  | Stage 3   |
 | NestJS     | 11.2.8  | Stage 4   |
+| Mongoose   | 9.11.4  | Stage 4   |
+| Express    | 5       | Stage 4   |
 | Jest       | 30      | Stage 3   |
 | ESLint     | 10      | Stage 5   |
 | Cypress    | 16      | Stage 5   |
