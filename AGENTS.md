@@ -151,10 +151,15 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   Angular 22 step, and it is not Angular's doing: the same source that compiles under
   TypeScript 5.5.4 fails under 6.0.3 with no tsconfig change. Verified by A/B against both
   compilers — under 5.5.4 `{}` compiles, under 6.0.3 `{}` reports TS18046/TS18047/TS7006.
-  The repository predates strict mode, so `tsconfig.base.json` sets `strict: false` to keep
-  the previous semantics. Raising it is a real migration (the server alone has ~100 sites:
-  94 `TS18046` catch clauses, plus `bcrypt` types, `TS2564` class properties and `TS7053`
-  index access), and belongs in its own task, not a dependency bump.
+  The repository predated strict mode, so `tsconfig.base.json` set `strict: false` to keep
+  the previous semantics. **That pin has been removed (#105); the compiler default now
+  applies.** The migration was 91 errors in the server and none in the UI: 85 `TS2564`
+  class properties (Mongoose schemas, DTOs, `env.validation.ts` — all populated by
+  decorators or the framework, so `!` is the deliberate annotation), 43 `TS18046` catch
+  clauses across 23 blocks, 2 `TS7016` for `bcrypt` (fixed by installing `@types/bcrypt`),
+  plus `TS7053`, `TS2366`, `TS2345` and `TS18047`. Measured by flag, `strict` is eight
+  flags and they do not sum: four report 0 errors on their own, `strictPropertyInitialization`
+  reports 1 alone but 85 once `strictNullChecks` is on. Do not plan this per-flag.
 - **`target` is `es2022`, in both `tsconfig.base.json` and `apps/server/tsconfig.app.json`.**
   Both had to move: the server's `tsconfig.app.json` sets its own `target` and does not inherit
   the base one, so changing only the base leaves the server emitting ES2015 (U010).

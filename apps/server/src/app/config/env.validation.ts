@@ -5,12 +5,12 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   @Matches(/^mongodb(\+srv)?:\/\//, {message: 'DB_URI must be a mongodb:// or mongodb+srv:// connection string'})
-  DB_URI: string;
+  DB_URI!: string;
 
   @IsString()
   @IsNotEmpty()
   @MinLength(32, {message: 'JWT_SECRET must be at least 32 characters'})
-  JWT_SECRET: string;
+  JWT_SECRET!: string;
 }
 
 /**

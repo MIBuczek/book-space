@@ -13,36 +13,36 @@ export class Booking {
     required: [true, 'Please pick client type'],
     uppercase: true
   })
-  type: TClientType;
+  type!: TClientType;
 
   @Prop({
     type: Object,
     required: [true, 'Please add booked place']
   })
-  place: IPlace;
+  place!: IPlace;
 
   @Prop({
     type: String,
     required: [true, 'Please pick booked size'],
     uppercase: true
   })
-  size: string;
+  size!: string;
 
   @Prop({
     type: String
   })
-  clientId: string;
+  clientId!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add booked person name']
   })
-  personName: string;
+  personName!: string;
 
   @Prop({
     type: String
   })
-  personCompany: string;
+  personCompany!: string;
 
   @Prop({
     type: String,
@@ -50,49 +50,49 @@ export class Booking {
     lowercase: true,
     validate: [validator.isEmail, 'Please enter a valid email']
   })
-  personEmail: string;
+  personEmail!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add booked person phone number']
   })
-  personPhone: string;
+  personPhone!: string;
 
   @Prop({
     type: Number,
     required: [true, 'Please select month']
   })
-  month: number;
+  month!: number;
 
   @Prop({
     type: Array,
     required: [true, 'Please add at least one booked time']
   })
-  bookedTimes: Array<TBookedTime>;
+  bookedTimes!: Array<TBookedTime>;
 
   @Prop({
     type: Boolean,
     required: [true]
   })
-  accepted: boolean;
+  accepted!: boolean;
 
   @Prop({
     type: String
   })
-  comments: string;
+  comments!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please select payment method']
   })
-  paymentMethod: TPayment;
+  paymentMethod!: TPayment;
 
   @Prop({
     type: Boolean,
     required: [true],
     default: () => false
   })
-  archive: boolean;
+  archive!: boolean;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

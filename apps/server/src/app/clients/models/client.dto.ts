@@ -4,27 +4,27 @@ import * as Validator from 'class-validator';
 
 export class ClientDto implements Client {
   @Validator.Length(3, 125)
-  city: string;
+  city!: string;
 
   @Validator.Length(3, 125)
-  contactPerson: string;
+  contactPerson!: string;
 
   @Validator.IsEmail()
   @Validator.Length(3, 125)
-  email: string;
+  email!: string;
 
   @Validator.Length(3, 125)
-  name: string;
+  name!: string;
 
   @Validator.Length(3, 15)
-  phone: string;
+  phone!: string;
 
   @Validator.Length(3, 125)
-  street: string;
+  street!: string;
 
   @Validator.IsEnum(['INDIVIDUAL', 'COMPANY'])
-  type: TClientType;
+  type!: TClientType;
 
   @Validator.Length(6, 6)
-  zipCode: string;
+  zipCode!: string;
 }

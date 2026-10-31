@@ -10,35 +10,35 @@ export class BookedTime {
     type: Date,
     required: [true, 'Please pick booked time day']
   })
-  day: Date;
+  day!: Date;
 
   @Prop({
     type: Date,
     required: [true, 'Please pick booked time start hours']
   })
-  startHours: Date;
+  startHours!: Date;
 
   @Prop({
     type: Date,
     required: [true, 'Please pick booked time end hours']
   })
-  endHours: Date;
+  endHours!: Date;
 
   @Prop({
     type: String
   })
-  comments: string;
+  comments!: string;
 
   @Prop({
     type: Number
   })
-  participants: number;
+  participants!: number;
 
   @Prop({
     type: String,
     required: [true, 'Please add booked time status']
   })
-  status: TSingleBookingStatus;
+  status!: TSingleBookingStatus;
 }
 
 export const BookedTimeSchema = SchemaFactory.createForClass(BookedTime);

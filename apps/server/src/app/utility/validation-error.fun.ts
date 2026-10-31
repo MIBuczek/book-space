@@ -20,13 +20,15 @@ const handleAuthErrors = (err: any): string => {
   }
 
   /* validation errors */
-  if (err.message.includes('user validation failed')) {
+  if (typeof err.message === 'string' && err.message.includes('user validation failed')) {
     return Object.values(err.errors as any[])
       .map(({properties}) => {
         return properties.message;
       })
       .join(',');
   }
+
+  return err.message;
 };
 
 export {handleAuthErrors};

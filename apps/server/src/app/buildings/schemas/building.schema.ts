@@ -9,7 +9,7 @@ export class Building {
     type: String,
     required: [true, 'Please add company name']
   })
-  name: string;
+  name!: string;
 
   @Prop({
     type: String,
@@ -17,38 +17,38 @@ export class Building {
     lowercase: true,
     validate: [validator.isEmail, 'Please enter a valid email']
   })
-  email: string;
+  email!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add contact phone number']
   })
-  phone: string;
+  phone!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client name']
   })
-  city: string;
+  city!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client street']
   })
-  street: string;
+  street!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client zip code'],
     validate: [(val: string) => validator.matches(val, /^[\d./-]+$/)]
   })
-  zipCode: string;
+  zipCode!: string;
 
   @Prop({
     type: Array,
     required: [true, 'Please add at least one employee']
   })
-  employees: Array<TUser>;
+  employees!: Array<TUser>;
 }
 
 export const BuildingSchema = SchemaFactory.createForClass(Building);
