@@ -3,21 +3,21 @@
 ## Layout
 
 Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 11 + Mongoose 9
-on Express 5), `apps/ui` (Angular 16), plus `apps/server-e2e` and `apps/ui-e2e`. Shared types
-live in `libs/models`.
+on Express 5), `apps/ui` (Angular 22, standalone), plus `apps/server-e2e` and `apps/ui-e2e`.
+Shared types live in `libs/models`.
 
-The server stack is modernized (NestJS 11, Mongoose 9, Express 5, Node 24). The UI is
-mid-upgrade, and two versions are still shared workspace-wide rather than settled:
+The server stack is modernized (NestJS 11, Mongoose 9, Express 5, Node 24). The UI is on
+Angular 22 and TypeScript 6; ESLint 10 is the remaining shared-version move:
 
 | Package    | Now     | Target  | Lands in |
 | ---------- | ------- | ------- | -------- |
-| Angular    | 16      | 22      | Stage 3  |
-| TypeScript | 5.0.2   | 6.0.3   | Stage 3  |
-| Jest       | 29      | 30      | Stage 5  |
+| Angular    | 22      | 22      | done (Stage 3) |
+| TypeScript | 6.0.3   | 6.0.3   | done (Stage 3) |
+| Jest       | 30      | 30      | done (Stage 3) |
 | ESLint     | 9       | 10      | Stage 5  |
 
 TypeScript is a single workspace-wide version pinned by Angular, so the server does not get
-6.0.3 on its own — it moves when Angular moves. Until those stages land, check `package.json`
+6.0.3 on its own — it moves when Angular moves. Until Stage 5 lands, check `package.json`
 rather than trusting a version written down anywhere, including this file.
 
 ## Version ceilings
@@ -44,9 +44,9 @@ that looks stale is usually pinned on purpose.
   TypeScript 7 is unreachable while Angular is 22. Angular pins TypeScript, not the other way
   round, and the peer ranges do not tile: every adjacent Angular pair overlaps except
   16 → 17, where Angular 16 caps TypeScript below Angular 17's floor. TypeScript therefore
-  steps *with* Angular, never before it. `ts-jest` adds a second cap of its own — the
-  installed 29.1.0 peers `typescript >=4.3 <6`, so the server test runner must move with
-  TypeScript too.
+  steps *with* Angular, never before it. `ts-jest` adds a cap of its own: the previous
+  29.1.0 peers `typescript >=4.3 <6`, so it had to move alongside TypeScript. The installed
+  29.4.15 peers `typescript >=4.3 <7`, which is what lets the server test runner sit on 6.0.3.
 
 `@nestjs/config` is a fourth case of the same trap: its majors jump 4 → 12 with no 11.x line,
 so NestJS 11 takes `@nestjs/config@4.0.4`. See the constraint below.
@@ -108,6 +108,35 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`@nestjs/config` has no 11.x line.** Its majors jump 4 → 12, so a NestJS 11 upgrade takes
   `@nestjs/config@4.0.4`, which peers `@nestjs/common ^10 || ^11`. Do not read the shared
   major number as a package version.
+- **TypeScript 6 defaults `strict` to `true`.** This is the single biggest trap in the
+  Angular 22 step, and it is not Angular's doing: the same source that compiles under
+  TypeScript 5.5.4 fails under 6.0.3 with no tsconfig change. Verified by A/B against both
+  compilers — under 5.5.4 `{}` compiles, under 6.0.3 `{}` reports TS18046/TS18047/TS7006.
+  The repository predates strict mode, so `tsconfig.base.json` sets `strict: false` to keep
+  the previous semantics. Raising it is a real migration (the server alone has ~100 sites:
+  94 `TS18046` catch clauses, plus `bcrypt` types, `TS2564` class properties and `TS7053`
+  index access), and belongs in its own task, not a dependency bump.
+- **`moduleResolution: "node"` (node10) cannot read Angular 22.** Angular 22 packages are
+  `exports`-only — `@angular/common` ships no physical `http/` directory, only
+  `exports["./http"]`. node10 ignores `exports` maps, so `import { HttpClient } from
+  '@angular/common/http'` fails with TS2307 even though the types exist. `tsconfig.base.json`
+  uses `moduleResolution: "bundler"`, which also lets `baseUrl` be dropped: `paths` entries
+  are already `./`-prefixed, so they resolve relative to the tsconfig. Both `baseUrl` and
+  node10 are hard errors under TypeScript 6 (TS5101/TS5107), not warnings.
+- **Removing `@angular-devkit/build-angular` removes `webpack`.** The server builds with
+  `@nx/webpack:webpack`, which needs `webpack` at the workspace root. `webpack` used to arrive
+  transitively via `@angular-devkit/build-angular`; once Angular 22 uses `@angular/build`,
+  nothing provides it and the server build dies with `Cannot find module 'webpack'` — a
+  failure that looks like an Nx problem and is not. `webpack@^5.112.2` is now a direct
+  devDependency.
+- **`@angular-eslint` must stay at 21 until flat config lands.** v22 drops the legacy
+  `dist/configs` entry points, so the existing `.eslintrc.json` files fail to load
+  (`Failed to load config "plugin:@angular-eslint/recommended"`). v21 has no Angular peer
+  dependency and peers `eslint ^8.57 || ^9`, so it works with the current ESLint 9 and defers
+  the flat-config migration to Stage 5 where ESLint 10 already belongs. Verified by extracting
+  `dist/configs` from the published tarballs: present through 21.2.0, absent from 22.2.0 on.
+- **`@angular-eslint@21` adds `prefer-inject`.** It flags constructor parameter injection in
+  favour of `inject()`. `AppComponent` was migrated rather than disabling the rule.
 - **Mongoose 9 removed callback-style middleware.** `pre('save', function (next) {...})` no
   longer compiles — `next` is typed `SaveOptions` and calling it is TS2349. Write hooks as
   plain async functions instead. `@nestjs/mongoose@11` pulls this in with Mongoose 9.
@@ -120,8 +149,9 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **Never commit `apps/server/.env`.** It is gitignored; `apps/server/.env.example` is the
   template. The real MongoDB URI and `JWT_SECRET` were committed historically and remain in
   git history.
-- **`ui:test` passes vacuously** (`passWithNoTests`, no specs exist yet). Do not read a
-  green UI test run as evidence that the UI works.
+- **`ui:test` has a single spec.** `apps/ui/src/app/app.component.spec.ts` is the only one, and
+  it exists to guard the test harness and the HttpClient wiring. A green UI run is still thin
+  evidence that the UI works — do not read it as coverage of the app.
 - E2E projects are not part of the CI gate: `ui-e2e` still asserts the Nx starter text.
 
 ## CI

@@ -1,11 +1,11 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, inject, OnInit} from '@angular/core';
 import {RouterModule} from '@angular/router';
-import {HttpClient, HttpClientModule} from '@angular/common/http';
+import {HttpClient} from '@angular/common/http';
 import {map, take} from 'rxjs';
 
 @Component({
   standalone: true,
-  imports: [RouterModule, HttpClientModule],
+  imports: [RouterModule],
   selector: 'book-space-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
   title = 'frontend';
   ocean = '';
 
-  constructor(private readonly http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   ngOnInit(): void {
     this.http
