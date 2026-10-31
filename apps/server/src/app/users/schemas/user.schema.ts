@@ -55,6 +55,11 @@ const userSchema = SchemaFactory.createForClass(User);
 
 /* Pre save middle action to hash user password */
 userSchema.pre('save', async function () {
+  // Hashing unconditionally would re-hash an already-hashed password on every later
+  // save, leaving a stored value that no longer matches what the user typed.
+  if (!this.isModified('password')) {
+    return;
+  }
   const salt = await bcrypt.genSalt();
   this.password = await bcrypt.hash(this.password, salt);
 });
