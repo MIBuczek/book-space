@@ -19,34 +19,34 @@ export class BuildingController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'))
-  getAllClients() {
+  getAllBuildings() {
     return this.buildingService.findAllBuildings();
   }
 
   @Get(':_id')
   @UseGuards(AuthGuard('jwt'))
-  getSingleClient(@Param('_id') _id: string) {
+  getSingleBuilding(@Param('_id') _id: string) {
     return this.buildingService.findBuilding(_id);
   }
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createClient(@Body(new ValidationPipe()) newBuilding: BuildingDto) {
+  createBuilding(@Body(new ValidationPipe()) newBuilding: BuildingDto) {
     return this.buildingService.createBuilding(newBuilding);
   }
 
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateClient(
+  updateBuilding(
     @Param('_id') _id: string,
     @Body(new ValidationPipe()) building: Partial<BuildingDto>
   ) {
     return this.buildingService.updateBuilding(_id, building);
   }
 
-  @Delete('_id')
+  @Delete(':_id')
   @UseGuards(AuthGuard('jwt'))
-  deleteClient(@Param('_id') _id: string) {
+  deleteBuilding(@Param('_id') _id: string) {
     return this.buildingService.deleteBuilding(_id);
   }
 }

@@ -41,7 +41,7 @@ export class ClientController {
     return this.clientService.updateClient(_id, client);
   }
 
-  @Delete('_id')
+  @Delete(':_id')
   @UseGuards(AuthGuard('jwt'))
   deleteClient(@Param('_id') _id: string) {
     return this.clientService.deleteClient(_id);
