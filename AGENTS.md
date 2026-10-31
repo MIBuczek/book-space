@@ -222,3 +222,24 @@ Three things that are easy to get wrong:
 - **Testing a bypass-enabled rule with a bypass-enabled token is self-defeating.** The push
   succeeds, so the test proves nothing about the rule. Read the ruleset config via
   `GET /repos/{owner}/{repo}/rulesets/{id}` instead of pushing to `main`.
+
+## Constitution
+
+`.specify/memory/constitution.md` (v1.0.0) is binding. It supersedes other practices, so
+read it before starting work that touches authorisation, domain logic or shared types.
+
+The principles that change day-to-day decisions most often:
+
+- **Server-side enforcement** — a rule enforced only in the UI does not exist.
+- **Test-first for domain logic** — a task implementing domain logic is not complete
+  until its tests pass; a behaviour change changes a test. A `toBeDefined()` assertion is
+  not a test.
+- **Measured coverage** — 80 % on the domain modules, 100 % on files added or modified,
+  and the global threshold is a ratchet that is never lowered.
+- **Single source of truth for types** — payload types live in `libs/models`, not in each
+  app.
+
+The spec-driven artefacts are `specs/001-booking-platform-rewrite/` (spec, plan, tasks,
+contracts, `ui-conventions.md`, and `backend-conventions.md` once #107 lands) and
+`specs/002-dependency-modernization/` (complete). Work not traceable to a task in a
+`tasks.md` is out of scope until it is written down.
