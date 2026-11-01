@@ -301,3 +301,8 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `new HttpException(rawMessage, 500)`, so the filter treats every 5xx as opaque and logs the
   real error instead. Without this a malformed id returns the Mongoose message naming the
   model.
+- **Integration tests that boot `AppModule` need a raised Jest timeout.** Starting `mongod`
+  exceeds the 5s default on a cold CI runner. When it times out the hook's assignment never
+  runs and the suite fails in teardown on `undefined`, which reads like a different bug — this
+  passed locally and failed only in CI. `jest.config.ts` sets `testTimeout: 120_000` globally
+  so a new spec cannot forget it.
