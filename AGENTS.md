@@ -6,6 +6,11 @@ Nx 23 workspace, Node 24 (`.nvmrc`/CI/`engines`). Apps: `apps/server` (NestJS 11
 on Express 5), `apps/ui` (Angular 22, standalone), plus `apps/server-e2e` and `apps/ui-e2e`.
 Shared types live in `libs/models`.
 
+Writing conventions for the rewrite: `specs/001-booking-platform-rewrite/ui-conventions.md`
+(Angular 22) and `specs/001-booking-platform-rewrite/backend-conventions.md` (NestJS 11). Read the
+relevant one before writing code in that app; it records decisions that would otherwise be
+re-derived per task.
+
 The dependency-modernization plan (`specs/002-dependency-modernization/`) is complete. Every
 stage has landed, so the table below is the current state, not a target:
 
