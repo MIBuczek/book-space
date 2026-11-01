@@ -35,6 +35,24 @@ export default [
       ]
     }
   },
+  {
+    // Validation is global (see specs/001-booking-platform-rewrite/backend-conventions.md).
+    // A per-parameter `new ValidationPipe()` in a controller silently drops the
+    // `whitelist`/`forbidNonWhitelisted` options, which reopens the mass-assignment
+    // surface the global pipe closes — and it is invisible in review because the
+    // controller still looks validated. The global pipe is the only permitted one.
+    files: ['apps/server/src/**/*.controller.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "NewExpression[callee.name='ValidationPipe']",
+          message:
+            'Do not construct ValidationPipe in a controller; it bypasses the global pipe. Configure it in configure-app.ts instead.'
+        }
+      ]
+    }
+  },
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   ...compat

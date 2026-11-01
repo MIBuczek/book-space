@@ -7,7 +7,6 @@ import {
   Post,
   Put,
   UseGuards,
-  ValidationPipe
 } from '@nestjs/common';
 import {ClientService} from '../service/client.service';
 import {AuthGuard} from '@nestjs/passport';
@@ -31,13 +30,13 @@ export class ClientController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createClient(@Body(new ValidationPipe()) newClient: ClientDto) {
+  createClient(@Body() newClient: ClientDto) {
     return this.clientService.createClient(newClient);
   }
 
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateClient(@Param('_id') _id: string, @Body(new ValidationPipe()) client: Partial<ClientDto>) {
+  updateClient(@Param('_id') _id: string, @Body() client: Partial<ClientDto>) {
     return this.clientService.updateClient(_id, client);
   }
 

@@ -7,7 +7,6 @@ import {
   Post,
   Put,
   UseGuards,
-  ValidationPipe
 } from '@nestjs/common';
 import {UserService} from '../service/user.service';
 import {TUser} from '../schemas/user.schema';
@@ -31,12 +30,12 @@ export class UsersController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createUser(@Body(new ValidationPipe()) newUser: UserDto) {
+  createUser(@Body() newUser: UserDto) {
     return this.userService.createUser(newUser);
   }
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateUser(@Param('_id') _id: string, @Body(new ValidationPipe()) user: Partial<UserDto>) {
+  updateUser(@Param('_id') _id: string, @Body() user: Partial<UserDto>) {
     return this.userService.updateUser(_id, user);
   }
 
