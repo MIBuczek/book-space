@@ -283,6 +283,26 @@ The principles that change day-to-day decisions most often:
   app.
 
 The spec-driven artefacts are `specs/001-booking-platform-rewrite/` (spec, plan, tasks,
-contracts, `ui-conventions.md`, and `backend-conventions.md` once #107 lands) and
+contracts, `ui-conventions.md`, `backend-conventions.md`) and
 `specs/002-dependency-modernization/` (complete). Work not traceable to a task in a
 `tasks.md` is out of scope until it is written down.
+
+## Backend conventions that are easy to break
+
+- **Validation and error mapping are configured once, in
+  `apps/server/src/app/config/configure-app.ts`**, and applied by both `main.ts` and the test
+  harness. Do not register a `ValidationPipe` or exception filter in `main.ts` directly: the
+  harness boots `AppModule` without running `main.ts`, so anything registered only there is
+  absent in every integration test and a regression that removed it would still pass. A lint
+  rule bans `new ValidationPipe()` in controllers.
+- **Validation failures are `422`, not Nest's default `400`.** `contracts/openapi.yaml`
+  declares 422 and the UI is written against the contract.
+- **A 5xx response never carries the cause.** Services catch a database error and re-throw
+  `new HttpException(rawMessage, 500)`, so the filter treats every 5xx as opaque and logs the
+  real error instead. Without this a malformed id returns the Mongoose message naming the
+  model.
+- **Integration tests that boot `AppModule` need a raised Jest timeout.** Starting `mongod`
+  exceeds the 5s default on a cold CI runner. When it times out the hook's assignment never
+  runs and the suite fails in teardown on `undefined`, which reads like a different bug — this
+  passed locally and failed only in CI. `jest.config.ts` sets `testTimeout: 120_000` globally
+  so a new spec cannot forget it.

@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Post, Req, Res, ValidationPipe} from '@nestjs/common';
+import {Body, Controller, Get, Post, Req, Res} from '@nestjs/common';
 import {AuthorizationService} from '../service/authorization.service';
 import {LoginUserDto} from '../models/login-user-dto';
 import {Response} from 'express';
@@ -12,7 +12,7 @@ export class AuthorizationController {
    * Sign in user controller method.
    */
   @Post('sign-in')
-  async signIn(@Body(new ValidationPipe()) loginUserDto: LoginUserDto) {
+  async signIn(@Body() loginUserDto: LoginUserDto) {
     const user = await this.autService.signIn(loginUserDto);
     const payload = {email: user.email, _id: user._id};
     const token = await this.jwtService.signAsync(payload);

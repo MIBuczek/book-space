@@ -51,10 +51,11 @@ export async function createMongoTestContext(): Promise<MongoTestContext> {
   process.env.DB_URI = uri;
   process.env.JWT_SECRET = process.env.JWT_SECRET ?? TEST_JWT_SECRET;
 
-  const [{Test}, {AppModule}, {getConnectionToken}] = await Promise.all([
+  const [{Test}, {AppModule}, {getConnectionToken}, {configureApp}] = await Promise.all([
     import('@nestjs/testing'),
     import('../app/app.module'),
     import('@nestjs/mongoose'),
+    import('../app/config/configure-app'),
   ]);
 
   const mongoose = (await import('mongoose')).default;
@@ -72,6 +73,10 @@ export async function createMongoTestContext(): Promise<MongoTestContext> {
 
   const app = moduleRef.createNestApplication();
   app.setGlobalPrefix('api');
+  // The same configuration `main.ts` applies. Without this the tests would
+  // exercise an app that lacks the global pipe and filter, and would pass even
+  // if `main.ts` stopped registering them.
+  configureApp(app);
   await app.listen(0, '127.0.0.1');
 
   const address = app.getHttpServer().address();
