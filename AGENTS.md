@@ -233,6 +233,23 @@ Three things that are easy to get wrong:
   succeeds, so the test proves nothing about the rule. Read the ruleset config via
   `GET /repos/{owner}/{repo}/rulesets/{id}` instead of pushing to `main`.
 
+## Logging
+
+`LoggingModule` is registered once in `AppModule` and applies to every route, so a new
+module is covered without opting in. Records are one JSON object per line.
+
+- Use `StructuredLogger`, not `console.log` or Nest's `Logger` directly.
+- The correlation id and the acting user are ambient (`request-context.ts`); do not thread
+  them through a method signature.
+- The store is created in the **correlation-id middleware**, not in an interceptor. An
+  interceptor returns an observable that is subscribed after it returns, so a context
+  opened around its body has already been left by the time the handler runs.
+- Redaction is applied by the logger, so a call site does not have to remember. It matches
+  on the key (`password`, `token`, `email`, …) **and** on the value, because an address can
+  arrive under a key such as `recipient` that names nothing.
+- A failing request is logged from the error path, and its status comes from the exception
+  — the filter that sets the response status has not run yet at that point.
+
 ## Constitution
 
 `.specify/memory/constitution.md` (v1.0.0) is binding. It supersedes other practices, so

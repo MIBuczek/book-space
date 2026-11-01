@@ -14,6 +14,7 @@ import {BuildingModule} from './buildings/building.module';
 import {PassportModule} from '@nestjs/passport';
 import {AuthorizationModule} from './authorization/authorization.module';
 import {validateEnv} from './config/env.validation';
+import {LoggingModule} from './logging/logging.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import {validateEnv} from './config/env.validation';
     // `validateEnv` throws when DB_URI is absent, and forRoot() runs before this
     // expression is evaluated, so the value is guaranteed by the time it is read.
     MongooseModule.forRoot(process.env.DB_URI!, {dbName: 'book_space'}),
+    LoggingModule,
     AuthorizationModule,
     BookingsModule,
     NotificationModule,

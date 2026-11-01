@@ -7,10 +7,14 @@ import {Model} from 'mongoose';
 import {handleAuthErrors} from '../../utility/validation-error.fun';
 import {JwtPayload} from '@models/jwt-payload.model';
 import {errorMessage, errorStatus} from '../../utility/http-error';
+import {StructuredLogger} from '../../logging/structured-logger';
 
 @Injectable()
 export class AuthorizationService {
-  constructor(@InjectModel('User') private userModel: Model<TUser>) {}
+  constructor(
+    @InjectModel('User') private userModel: Model<TUser>,
+    private readonly logger: StructuredLogger
+  ) {}
 
   /**
    *
@@ -23,18 +27,24 @@ export class AuthorizationService {
       const currentUser = await this.userModel.findOne({email});
 
       if (!currentUser) {
+        // The attempted address is not logged: it is personal data, and the
+        // caller already knows what they typed.
+        this.logger.warn('auth.sign_in.rejected', {reason: 'unknown_email'});
         throw new HttpException('Incorrect email', HttpStatus.UNAUTHORIZED);
       }
 
       const pass_auth = await bcrypt.compare(password, currentUser.password);
 
       if (!pass_auth) {
+        this.logger.warn('auth.sign_in.rejected', {reason: 'bad_password', userId: currentUser._id});
         throw new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
       }
 
       currentUser.lastLogin = new Date();
 
       await this.userModel.updateOne({_id: currentUser._id}, {lastLogin: currentUser.lastLogin});
+
+      this.logger.log('auth.sign_in.succeeded', {userId: currentUser._id});
 
       return currentUser;
     } catch (e) {
@@ -52,6 +62,7 @@ export class AuthorizationService {
       const {_id, email} = payload;
       const user = await this.userModel.findOne({_id});
       if (!user || user.email !== email) {
+        this.logger.warn('auth.token.rejected', {userId: _id});
         throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
       }
       return user;
