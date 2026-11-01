@@ -24,26 +24,49 @@ export default {
     // own. Exercised by the e2e harness (#10), which boots the real module.
     '\\.module\\.ts$',
     // Bootstrap. Testing it means mocking NestFactory and asserting on listen().
-    '^src/main\\.ts$',
+    //
+    // Anchored on `/src/` rather than `^src/`: Jest tests these patterns against
+    // each file's absolute path, so `^src/main\.ts$` matched nothing and this
+    // file was counted at 0% while the comment claimed otherwise. The patterns
+    // that already worked (`.module.ts$`, `.spec.ts$`) are unanchored, which is
+    // why only the anchored one was silently dead.
+    '/src/main\\.ts$',
+    // Integration-test scaffolding, not production code: it exists to boot the
+    // app under test. It is exercised by mongo-test-context.spec.ts, but counting
+    // it here inflates the global figure — the two files are ~98% covered, so
+    // adding them moved the reported total from 54.18% to 67.44% without a line
+    // of production code changing. The ratchet is meant to measure production
+    // code, so scaffolding is excluded for the same reason as the wiring above.
+    '/src/testing/',
   ],
 
-  // Set at the measured value so this is a ratchet: it cannot regress and is
-  // raised as phases land. T045 raises the domain services to the 80% that
-  // SC-008 requires.
+  // A ratchet: set to the measured value, never lowered, raised as phases land
+  // (constitution, Principle III). T045 raises the domain services to the 80%
+  // that SC-008 requires.
+  //
+  // The figures were 49/19/25/46 when the threshold was introduced (#106). They
+  // move to 67/45/34/64 because two things changed the measurement, not the code:
+  //
+  // 1. The `/src/main.ts$` pattern above was dead, so `main.ts` sat in the
+  //    denominator at 0%. Fixing the pattern is worth about 1.5 points.
+  // 2. The integration harness (T006) boots the real `AppModule`, which executes
+  //    every module, controller and schema body. That is execution, so it counts
+  //    as coverage, and it is the bulk of the increase. It is boot coverage
+  //    rather than assertions about those paths, so the number overstates how
+  //    much behaviour is verified; the domain targets in T045 are what make this
+  //    a meaningful figure, and until then it is a floor that cannot regress.
   //
   // `global` is deliberately the only threshold group. Jest assigns each file
   // to the first matching path or glob group and only files matching NO group
   // fall through to `global`, so adding a per-directory group silently removes
-  // those files from `global`. A `global: 49` with five service directories
-  // listed would have been enforced against the 57.09% remainder, not the
-  // 49.88% the report shows. Per-directory thresholds are added in T045, and
+  // those files from `global`. Per-directory thresholds are added in T045, and
   // this number is re-derived from the report at that point.
   coverageThreshold: {
     global: {
-      statements: 49,
-      branches: 19,
-      functions: 25,
-      lines: 46,
+      statements: 67,
+      branches: 45,
+      functions: 34,
+      lines: 64,
     },
   },
 };

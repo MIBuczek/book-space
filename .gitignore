@@ -48,3 +48,8 @@ Thumbs.db
 # Nx cache and workspace data (Nx 17+ uses .nx/ instead of node_modules/.cache)
 .nx/cache
 .nx/workspace-data
+
+# mongodb-memory-server's `mongod` binary. CI points MONGOMS_DOWNLOAD_DIR here so
+# actions/cache can find it (the default is under $HOME); locally the package
+# uses $HOME, so this only matters when that variable is set.
+/.cache/mongodb-binaries

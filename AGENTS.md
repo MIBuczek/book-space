@@ -208,6 +208,39 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`ui:test` has a single spec.** `apps/ui/src/app/app.component.spec.ts` is the only one, and
   it exists to guard the test harness and the HttpClient wiring. A green UI run is still thin
   evidence that the UI works — do not read it as coverage of the app.
+- **Integration tests use `createMongoTestContext()`** (`apps/server/src/testing/`). CI has no
+  MongoDB, so it starts an ephemeral `mongod` via `mongodb-memory-server`. Three traps, all
+  already handled there:
+  - **MongoDB driver 7.x + Jest = a 27-second hang, not an error.** The driver resolves its
+    `os` adapter with a dynamic `import('os')`, which Jest's `vm` sandbox rejects
+    ("A dynamic import callback was invoked without --experimental-vm-modules"). The driver
+    swallows the rejection, so client metadata ships without its `driver` sub-document and
+    `mongod` refuses the handshake. `MongooseModule` then retries 9x every 3s, which looks
+    like a hang. Fix: pass `runtimeAdapters: {os}` to `createConnection` (test-only; the
+    production app resolves `os` normally).
+  - **The connection must be overridden, not just the URI.** `runtimeAdapters` cannot be
+    expressed through `MongooseModule.forRoot(uri)`, so the harness overrides the
+    `getConnectionToken()` provider with a connection it builds itself.
+  - **`AppModule` reads `DB_URI` at import time.** Import it *after* `mongod` is up, never at
+    module top level, or the URI is captured as `undefined`.
+  `reset()` drops the database between tests, and `mongo-test-context.spec.ts` proves the
+  harness boots the real app and that isolation works.
+- **The `mongod` version is pinned** in `apps/server/src/testing/mongo-version.ts`. Left
+  unpinned, `mongodb-memory-server` resolves the latest supported version at install time, so
+  the same commit could be tested against different servers. CI caches the ~220 MB binary,
+  keyed on the version.
+- **`actions/cache` does not expand `~`.** The first version of that cache step used
+  `path: ~/.cache/mongodb-binaries`; it looked for a directory literally named `~`, so it
+  never restored and never saved, and the only signal was a warning. The workflow now sets
+  `MONGOMS_DOWNLOAD_DIR` to an absolute `${{ github.workspace }}/.cache/mongodb-binaries` and
+  caches that. The restore must also come *before* `yarn install`, because the package's
+  postinstall hook downloads the binary when it is missing.
+- **Jest's `coveragePathIgnorePatterns` are matched against absolute paths.** `^src/main\.ts$`
+  matched nothing and `main.ts` sat in the denominator at 0%; use `/src/main\.ts$`. Prefer
+  unanchored suffixes (`.module.ts$`) or anchor on `/src/`.
+- **Test scaffolding is excluded from coverage** (`/src/testing/`). It is ~98% covered by its
+  own spec, so counting it inflated the global figure from 54.18% to 67.44% without a line of
+  production code changing.
 - E2E projects are not part of the CI gate: `ui-e2e` still asserts the Nx starter text.
 
 ## CI
