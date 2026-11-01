@@ -53,6 +53,20 @@ jobs:
           node-version: 24
           cache: yarn
       - run: yarn install --frozen-lockfile --non-interactive
+
+      # The integration suite starts a real `mongod` (mongodb-memory-server).
+      # Without a cache the ~220 MB binary is downloaded on every run, which is
+      # both slow and a new way for CI to fail for reasons unrelated to a change.
+      # The key carries the pinned version so a bump re-downloads exactly once.
+      - name: Cache the mongod binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongod-8.2.6-${{ runner.os }}
+
+      # The binary lands in the default ~/.cache/mongodb-binaries, which is the
+      # path cached above. Setting MONGOMS_DOWNLOAD_DIR here would not help: a
+      # `~` in an `env:` value is passed through literally rather than expanded.
       - name: Run unit tests
         run: yarn nx run-many --target=test --projects=server,ui --configuration=ci
 
