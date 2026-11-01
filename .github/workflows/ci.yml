@@ -44,6 +44,12 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Where mongodb-memory-server puts the `mongod` binary. Set explicitly to
+      # an absolute path so the cache below and the test run agree on one
+      # location. The package's own default is $HOME/.cache/mongodb-binaries,
+      # which happens to match on a hosted runner, but it is not a contract.
+      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,21 +58,24 @@ jobs:
         with:
           node-version: 24
           cache: yarn
-      - run: yarn install --frozen-lockfile --non-interactive
 
-      # The integration suite starts a real `mongod` (mongodb-memory-server).
-      # Without a cache the ~220 MB binary is downloaded on every run, which is
-      # both slow and a new way for CI to fail for reasons unrelated to a change.
-      # The key carries the pinned version so a bump re-downloads exactly once.
+      # Restore before `yarn install`: the package's postinstall hook downloads
+      # the ~220 MB `mongod` binary when it is absent, and re-downloading it on
+      # every run is both slow and a new way for CI to fail for reasons unrelated
+      # to a change. The key carries the pinned version, so a bump re-downloads
+      # exactly once.
       - name: Cache the mongod binary
         uses: actions/cache@v4
         with:
-          path: ~/.cache/mongodb-binaries
+          # Must be absolute (or workspace-relative). actions/cache does not
+          # expand `~`: with `~/.cache/...` it looks for a directory literally
+          # named `~`, so it neither restores nor saves and the only signal is a
+          # warning in the log.
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
           key: mongod-8.2.6-${{ runner.os }}
 
-      # The binary lands in the default ~/.cache/mongodb-binaries, which is the
-      # path cached above. Setting MONGOMS_DOWNLOAD_DIR here would not help: a
-      # `~` in an `env:` value is passed through literally rather than expanded.
+      - run: yarn install --frozen-lockfile --non-interactive
+
       - name: Run unit tests
         run: yarn nx run-many --target=test --projects=server,ui --configuration=ci
 

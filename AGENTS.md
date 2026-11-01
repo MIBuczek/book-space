@@ -227,9 +227,14 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   harness boots the real app and that isolation works.
 - **The `mongod` version is pinned** in `apps/server/src/testing/mongo-version.ts`. Left
   unpinned, `mongodb-memory-server` resolves the latest supported version at install time, so
-  the same commit could be tested against different servers. CI caches the ~220 MB binary at
-  `~/.cache/mongodb-binaries` keyed on the version, which is the package's default download
-  directory (setting `MONGOMS_DOWNLOAD_DIR` in `env:` would not work — `~` is not expanded).
+  the same commit could be tested against different servers. CI caches the ~220 MB binary,
+  keyed on the version.
+- **`actions/cache` does not expand `~`.** The first version of that cache step used
+  `path: ~/.cache/mongodb-binaries`; it looked for a directory literally named `~`, so it
+  never restored and never saved, and the only signal was a warning. The workflow now sets
+  `MONGOMS_DOWNLOAD_DIR` to an absolute `${{ github.workspace }}/.cache/mongodb-binaries` and
+  caches that. The restore must also come *before* `yarn install`, because the package's
+  postinstall hook downloads the binary when it is missing.
 - **Jest's `coveragePathIgnorePatterns` are matched against absolute paths.** `^src/main\.ts$`
   matched nothing and `main.ts` sat in the denominator at 0%; use `/src/main\.ts$`. Prefer
   unanchored suffixes (`.module.ts$`) or anchor on `/src/`.
