@@ -1,8 +1,9 @@
-import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
+import {HttpException, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
 import {BookedTime} from '../schemas/booked-time.schemta';
+import {errorMessage, errorStatus} from '../../utility/http-error';
 
 @Injectable()
 export class BookingService {
@@ -12,7 +13,7 @@ export class BookingService {
     try {
       return await this.bookingModel.create(booking);
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -20,7 +21,7 @@ export class BookingService {
     try {
       return await this.bookingModel.updateOne({_id}, booking);
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -28,7 +29,7 @@ export class BookingService {
     try {
       return await this.bookingModel.updateOne({_id}, {bookedTimes});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -36,7 +37,7 @@ export class BookingService {
     try {
       return await this.bookingModel.deleteOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -44,7 +45,7 @@ export class BookingService {
     try {
       return await this.bookingModel.findOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -52,7 +53,7 @@ export class BookingService {
     try {
       return await this.bookingModel.find({});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 }

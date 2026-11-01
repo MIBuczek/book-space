@@ -9,12 +9,12 @@ export class AuthorizationController {
   constructor(private autService: AuthorizationService, private jwtService: JwtService) {}
 
   /**
-   * Sing in user controller method.
+   * Sign in user controller method.
    */
   @Post('sign-in')
   async signIn(@Body(new ValidationPipe()) loginUserDto: LoginUserDto) {
     const user = await this.autService.signIn(loginUserDto);
-    const payload = {email: user.email, _id: user['_id']};
+    const payload = {email: user.email, _id: user._id};
     const token = await this.jwtService.signAsync(payload);
     return {user, token};
   }

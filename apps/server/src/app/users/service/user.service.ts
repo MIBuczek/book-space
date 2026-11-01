@@ -4,6 +4,7 @@ import {User} from '../schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {UserDto} from '../models/user.dto';
+import {errorMessage, errorStatus} from '../../utility/http-error';
 
 @Injectable()
 export class UserService {
@@ -13,7 +14,7 @@ export class UserService {
     try {
       return await this.userModel.create(user);
     } catch (e) {
-      throw new HttpException(handleAuthErrors(e), e.status);
+      throw new HttpException(handleAuthErrors(e), errorStatus(e));
     }
   }
 
@@ -21,7 +22,7 @@ export class UserService {
     try {
       return this.userModel.findOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -29,7 +30,7 @@ export class UserService {
     try {
       return await this.userModel.updateOne({_id}, user);
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -37,7 +38,7 @@ export class UserService {
     try {
       return this.userModel.deleteOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -45,7 +46,7 @@ export class UserService {
     try {
       return this.userModel.find({});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 }

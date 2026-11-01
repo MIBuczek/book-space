@@ -12,25 +12,25 @@ export class Client {
     required: [true, 'Please pick client type'],
     uppercase: true
   })
-  type: TClientType;
+  type!: TClientType;
 
   @Prop({
     type: String,
     required: [true, 'Please add company name']
   })
-  name: string;
+  name!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add contact person name']
   })
-  contactPerson: string;
+  contactPerson!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add contact phone number']
   })
-  phone: string;
+  phone!: string;
 
   @Prop({
     type: String,
@@ -38,26 +38,26 @@ export class Client {
     lowercase: true,
     validate: [validator.isEmail, 'Please enter a valid email']
   })
-  email: string;
+  email!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client street']
   })
-  street: string;
+  street!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client name']
   })
-  city: string;
+  city!: string;
 
   @Prop({
     type: String,
     required: [true, 'Please add client zip code'],
     validate: [(val: string) => validator.matches(val, /^[\d./-]+$/)]
   })
-  zipCode: string;
+  zipCode!: string;
 
   @Prop({
     type: String

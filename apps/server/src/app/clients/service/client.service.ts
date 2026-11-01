@@ -2,6 +2,7 @@ import {HttpException, Injectable} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {Client} from '../schemas/client.schema';
+import {errorMessage, errorStatus} from '../../utility/http-error';
 
 @Injectable()
 export class ClientService {
@@ -11,7 +12,7 @@ export class ClientService {
     try {
       return await this.clientModel.create(client);
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -19,7 +20,7 @@ export class ClientService {
     try {
       return await this.clientModel.updateOne({_id}, client);
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -27,7 +28,7 @@ export class ClientService {
     try {
       return await this.clientModel.deleteOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -35,7 +36,7 @@ export class ClientService {
     try {
       return await this.clientModel.findOne({_id});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 
@@ -43,7 +44,7 @@ export class ClientService {
     try {
       return await this.clientModel.find({});
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 }

@@ -8,7 +8,7 @@ export class LoginUserDto implements Pick<User, 'email' | 'password'> {
   @Validator.Length(3, 125, {
     message: 'Number of characters need to be between 3 and 125.'
   })
-  email: string;
+  email!: string;
 
   @Validator.MinLength(6, {
     message: 'Minimal number of characters is 6.'
@@ -16,5 +16,5 @@ export class LoginUserDto implements Pick<User, 'email' | 'password'> {
   @Validator.MaxLength(30, {
     message: 'Maximal number of characters is 30.'
   })
-  password: string;
+  password!: string;
 }

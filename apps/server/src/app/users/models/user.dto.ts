@@ -8,7 +8,7 @@ export class UserDto implements Pick<User, 'firstName' | 'lastName' | 'password'
   @Validator.MaxLength(125, {
     message: 'Maximal number of characters is 125.'
   })
-  firstName: string;
+  firstName!: string;
 
   @Validator.MinLength(3, {
     message: 'Minimal number of characters is 3.'
@@ -16,7 +16,7 @@ export class UserDto implements Pick<User, 'firstName' | 'lastName' | 'password'
   @Validator.MaxLength(125, {
     message: 'Maximal number of characters is 125.'
   })
-  lastName: string;
+  lastName!: string;
 
   @Validator.MinLength(6, {
     message: 'Minimal number of characters is 6.'
@@ -24,7 +24,7 @@ export class UserDto implements Pick<User, 'firstName' | 'lastName' | 'password'
   @Validator.MaxLength(30, {
     message: 'Maximal number of characters is 30.'
   })
-  password: string;
+  password!: string;
 
   @Validator.MinLength(6, {
     message: 'Minimal number of characters is 6.'
@@ -32,7 +32,7 @@ export class UserDto implements Pick<User, 'firstName' | 'lastName' | 'password'
   @Validator.MaxLength(30, {
     message: 'Maximal number of characters is 30.'
   })
-  recheckPassword: string;
+  recheckPassword!: string;
 
   @Validator.IsEmail(undefined, {
     message: 'E-mail address need to contains correct pattern.'
@@ -40,5 +40,5 @@ export class UserDto implements Pick<User, 'firstName' | 'lastName' | 'password'
   @Validator.Length(3, 125, {
     message: 'Number of characters need to be between 3 and 125.'
   })
-  email: string;
+  email!: string;
 }

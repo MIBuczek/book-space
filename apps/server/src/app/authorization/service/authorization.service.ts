@@ -1,21 +1,22 @@
 import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
 import bcrypt from 'bcrypt';
 import {LoginUserDto} from '../models/login-user-dto';
-import {User} from '../../users/schemas/user.schema';
+import {TUser} from '../../users/schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {handleAuthErrors} from '../../utility/validation-error.fun';
 import {JwtPayload} from '@models/jwt-payload.model';
+import {errorMessage, errorStatus} from '../../utility/http-error';
 
 @Injectable()
 export class AuthorizationService {
-  constructor(@InjectModel('User') private userModel: Model<User>) {}
+  constructor(@InjectModel('User') private userModel: Model<TUser>) {}
 
   /**
    *
    * @param loginUserDto
    */
-  async signIn(loginUserDto: LoginUserDto): Promise<User> {
+  async signIn(loginUserDto: LoginUserDto): Promise<TUser> {
     try {
       const {email, password} = loginUserDto;
 
@@ -50,12 +51,12 @@ export class AuthorizationService {
     try {
       const {_id, email} = payload;
       const user = await this.userModel.findOne({_id});
-      if (user.email !== email) {
+      if (!user || user.email !== email) {
         throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
       }
       return user;
     } catch (e) {
-      throw new HttpException(e.message, e.status);
+      throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }
 }

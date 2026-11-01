@@ -73,6 +73,7 @@
     "@nx/webpack": "23.3.1",
     "@nx/workspace": "23.3.1",
     "@schematics/angular": "~22.2.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.3",
     "@types/jest": "^30.0.0",
     "@types/lodash": "^4.14.194",
