@@ -55,20 +55,24 @@ bookings per year; single municipality tenant.
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-No constitution file is present in the repository yet (`.specify/memory/constitution.md` is the
-unfilled template). The following gates are adopted for this feature and MUST be recorded in
-the constitution when it is ratified:
+The constitution is ratified at `.specify/memory/constitution.md` (v1.0.0, 2026-10-31). The five
+gates adopted provisionally for this feature are now Principles I–V there, with the rationale and
+the verification method for each:
 
-1. **Server-side enforcement** — no business rule that protects data may exist only in the UI.
-2. **Single source of truth for types** — shared request/response types live in `libs/models`
-   and are consumed by both applications.
-3. **No secrets in the client bundle** — configuration is injected at runtime or served by the API.
-4. **Test-first for domain logic** — conflict detection, cyclical expansion, report generation
-   and permission checks require unit tests before implementation.
-5. **Migration is reversible** — the legacy Firebase project stays intact until reconciliation
-   passes.
+| Gate (as adopted here) | Principle |
+|---|---|
+| Server-side enforcement | I. Server-Side Enforcement |
+| Test-first for domain logic | II. Test-First for Domain Logic (NON-NEGOTIABLE) |
+| Coverage targets | III. Measured Coverage |
+| Single source of truth for types | IV. Single Source of Truth for Types |
+| Reversible migration | V. Reversible Migration |
 
-All planned work below satisfies these gates.
+The "no secrets in the client bundle" gate is in the constitution's Security and Data Protection
+Constraints section, alongside `SC-007` and the bundle scan in CI.
+
+Re-checked after Phase 1 design: all planned work satisfies these principles. Two consequences for
+the task list, both already covered — `T045`–`T048` are the verification required by Principle II,
+and the coverage threshold required by Principle III is tracked in #106.
 
 ## Project Structure
 
