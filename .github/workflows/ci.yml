@@ -56,6 +56,32 @@ jobs:
       - name: Run unit tests
         run: yarn nx run-many --target=test --projects=server,ui --configuration=ci
 
+      # The threshold makes the build fail; this makes the number visible. The
+      # original defect was that the reported figure (63.9%) was not the figure
+      # being measured (42.5%), so print what the thresholds were checked
+      # against rather than leaving it in a scrollback.
+      - name: Report coverage
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const projects = [["server", "coverage/apps/server/coverage-summary.json"],
+                              ["ui", "coverage/apps/ui/coverage-summary.json"]];
+            const keys = ["statements", "branches", "functions", "lines"];
+            const rows = [];
+            for (const [name, path] of projects) {
+              if (!fs.existsSync(path)) { rows.push([name, "no summary", "", "", ""]); continue; }
+              const total = JSON.parse(fs.readFileSync(path, "utf8")).total;
+              rows.push([name, ...keys.map((k) => total[k].pct + "%")]);
+            }
+            const header = ["project", ...keys];
+            const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => String(r[i]).length)));
+            const line = (cells) => cells.map((c, i) => String(c).padEnd(widths[i])).join("  ");
+            console.log(line(header));
+            console.log(widths.map((w) => "-".repeat(w)).join("  "));
+            for (const r of rows) console.log(line(r));
+          '
+
   build:
     name: Build
     runs-on: ubuntu-latest
