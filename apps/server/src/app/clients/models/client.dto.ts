@@ -1,5 +1,5 @@
 import {Client} from '../schemas/client.schema';
-import {TClientType} from '@models/booking.model';
+import {CLIENT_TYPES, TClientType} from '@models/booking.model';
 import * as Validator from 'class-validator';
 
 export class ClientDto implements Client {
@@ -22,7 +22,7 @@ export class ClientDto implements Client {
   @Validator.Length(3, 125)
   street!: string;
 
-  @Validator.IsEnum(['INDIVIDUAL', 'COMPANY'])
+  @Validator.IsEnum(CLIENT_TYPES)
   type!: TClientType;
 
   @Validator.Length(6, 6)

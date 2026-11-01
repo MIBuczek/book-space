@@ -1,5 +1,5 @@
 import {BookedTime} from '../schemas/booked-time.schemta';
-import {TSingleBookingStatus} from '@models/booked-time.model';
+import {BOOKING_STATUSES, TSingleBookingStatus} from '@models/booked-time.model';
 import * as Validator from 'class-validator';
 
 export class BookedTimeDto implements BookedTime {
@@ -18,7 +18,7 @@ export class BookedTimeDto implements BookedTime {
   })
   endHours!: Date;
 
-  @Validator.IsEnum(['INITIAL', 'DONE', 'CANCELED'], {
+  @Validator.IsEnum(BOOKING_STATUSES, {
     message: 'Status state can be only initial, done, canceled.'
   })
   status!: TSingleBookingStatus;

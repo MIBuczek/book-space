@@ -1,10 +1,10 @@
-import {TClientType, IPlace, TPayment} from '@models/booking.model';
+import {CLIENT_TYPES, PAYMENTS, TClientType, IPlace, TPayment} from '@models/booking.model';
 import {TBookedTime} from '../schemas/booked-time.schemta';
 import {Booking} from '../schemas/booking.schema';
 import * as Validator from 'class-validator';
 
 export class BookingDto implements Booking {
-  @Validator.IsEnum(['INDIVIDUAL', 'COMPANY'], {
+  @Validator.IsEnum(CLIENT_TYPES, {
     message: 'Client type can be only individual or company.'
   })
   type!: TClientType;
@@ -73,8 +73,8 @@ export class BookingDto implements Booking {
   })
   comments!: string;
 
-  @Validator.IsEnum(['CASH', 'TRANSFER', 'CARD'], {
-    message: 'Payment method can be only cash, transfer or card.'
+  @Validator.IsEnum(PAYMENTS, {
+    message: 'Payment method can be only cash, transfer or free.'
   })
   paymentMethod!: TPayment;
 
