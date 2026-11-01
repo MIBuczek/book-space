@@ -51,7 +51,7 @@ export default {
   // that SC-008 requires.
   //
   // The figures were 49/19/25/46 when the threshold was introduced (#106). They
-  // move to 67/45/34/64 because two things changed the measurement, not the code:
+  // moved to 67/45/34/64 because two things changed the measurement, not the code:
   //
   // 1. The `/src/main.ts$` pattern above was dead, so `main.ts` sat in the
   //    denominator at 0%. Fixing the pattern is worth about 1.5 points.
@@ -62,6 +62,11 @@ export default {
   //    much behaviour is verified; the domain targets in T045 are what make this
   //    a meaningful figure, and until then it is a floor that cannot regress.
   //
+  // They moved again to 73/66/53/71 with structured logging (T004), which adds
+  // real assertions on the middleware, the interceptor, the logger and redaction
+  // rather than boot coverage. As above, the numbers are the measured floor on
+  // this branch, re-derived from the report, not a target.
+  //
   // `global` is deliberately the only threshold group. Jest assigns each file
   // to the first matching path or glob group and only files matching NO group
   // fall through to `global`, so adding a per-directory group silently removes
@@ -69,10 +74,10 @@ export default {
   // this number is re-derived from the report at that point.
   coverageThreshold: {
     global: {
-      statements: 72,
-      branches: 61,
-      functions: 46,
-      lines: 69,
+      statements: 73,
+      branches: 66,
+      functions: 53,
+      lines: 71,
     },
   },
 };

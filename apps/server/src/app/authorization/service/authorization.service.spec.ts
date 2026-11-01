@@ -1,4 +1,5 @@
 import {Test, TestingModule} from '@nestjs/testing';
+import {StructuredLogger} from '../../logging/structured-logger';
 import {getModelToken} from '@nestjs/mongoose';
 import {JwtService} from '@nestjs/jwt';
 import {AuthorizationService} from './authorization.service';
@@ -25,6 +26,7 @@ describe('AuthorizationService', () => {
       providers: [
         AuthorizationService,
         {provide: getModelToken('User'), useValue: modelMock},
+        {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
       ]
     }).compile();
