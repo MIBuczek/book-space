@@ -7,7 +7,6 @@ import {
   Post,
   Put,
   UseGuards,
-  ValidationPipe
 } from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
 import {BuildingService} from '../service/building.service';
@@ -31,7 +30,7 @@ export class BuildingController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createBuilding(@Body(new ValidationPipe()) newBuilding: BuildingDto) {
+  createBuilding(@Body() newBuilding: BuildingDto) {
     return this.buildingService.createBuilding(newBuilding);
   }
 
@@ -39,7 +38,7 @@ export class BuildingController {
   @UseGuards(AuthGuard('jwt'))
   updateBuilding(
     @Param('_id') _id: string,
-    @Body(new ValidationPipe()) building: Partial<BuildingDto>
+    @Body() building: Partial<BuildingDto>
   ) {
     return this.buildingService.updateBuilding(_id, building);
   }
