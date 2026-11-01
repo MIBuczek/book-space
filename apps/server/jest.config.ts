@@ -40,10 +40,10 @@ export default {
   // this number is re-derived from the report at that point.
   coverageThreshold: {
     global: {
-      statements: 49,
-      branches: 19,
-      functions: 25,
-      lines: 46,
+      statements: 54,
+      branches: 43,
+      functions: 29,
+      lines: 52,
     },
   },
 };
