@@ -1,4 +1,5 @@
 import {Test, TestingModule} from '@nestjs/testing';
+import {StructuredLogger} from '../../logging/structured-logger';
 import {JwtService} from '@nestjs/jwt';
 import {getModelToken} from '@nestjs/mongoose';
 import {AuthGuard} from '@nestjs/passport';
@@ -20,6 +21,7 @@ describe('BookingController', () => {
       providers: [
         {provide: BookingService, useValue: depMock},
         {provide: getModelToken('User'), useValue: modelMock},
+        {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
       ]
     })

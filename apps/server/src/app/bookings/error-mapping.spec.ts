@@ -1,5 +1,6 @@
 import {INestApplication} from '@nestjs/common';
 import {Test} from '@nestjs/testing';
+import {StructuredLogger} from '../logging/structured-logger';
 import {getModelToken} from '@nestjs/mongoose';
 import {JwtService} from '@nestjs/jwt';
 import {AuthGuard} from '@nestjs/passport';
@@ -38,6 +39,7 @@ describe('BookingService error mapping (regression)', () => {
       providers: [
         BookingService,
         {provide: getModelToken('Booking'), useValue: modelMock},
+        {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}},
       ],
     })
