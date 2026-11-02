@@ -5,22 +5,40 @@ import {getModelToken} from '@nestjs/mongoose';
 import {AuthGuard} from '@nestjs/passport';
 import {BookingController} from './booking.controller';
 import {BookingService} from '../service/booking.service';
+import {IActingUser} from '../../authorization/ownership';
+
+const ADMIN: IActingUser = {_id: 'u1', email: 'admin@example.com', role: 'ADMIN'};
+const EMPLOYEE: IActingUser = {_id: 'u2', email: 'employee@example.com', role: 'EMPLOYEE'};
+
+const storedBooking = (overrides: Record<string, unknown> = {}) => ({
+  _id: 'b1',
+  place: {place: 'Hala', city: 'Siechnice'},
+  size: 'X/X',
+  nick: 'Rezerwacja',
+  personName: 'Jan Kowalski',
+  personEmail: 'jan@example.com',
+  personPhone: '500100200',
+  month: 3,
+  bookedTimes: [{status: 'INITIAL'}],
+  accepted: true,
+  archive: false,
+  comments: 'Proszę o kontakt',
+  paymentMethod: 'CASH',
+  ...overrides,
+});
 
 describe('BookingController', () => {
   let controller: BookingController;
-
-  // The controller is constructed with its service injected, and the routes are
-  // guarded by AuthGuard('jwt'). Neither was provided by the generated spec, so
-  // Nest could not resolve the dependency graph.
-  const depMock = {};
-  const modelMock = {create: jest.fn(), find: jest.fn(), findOne: jest.fn()};
+  let findAllBooking: jest.Mock;
 
   beforeEach(async () => {
+    findAllBooking = jest.fn().mockResolvedValue([storedBooking()]);
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
       providers: [
-        {provide: BookingService, useValue: depMock},
-        {provide: getModelToken('User'), useValue: modelMock},
+        {provide: BookingService, useValue: {findAllBooking}},
+        {provide: getModelToken('User'), useValue: {}},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
       ]
@@ -32,7 +50,60 @@ describe('BookingController', () => {
     controller = module.get<BookingController>(BookingController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  describe('getAllBookings', () => {
+    it('is defined', () => {
+      expect(controller).toBeDefined();
+    });
+
+    it('redacts the response for a public caller', async () => {
+      const result = await controller.getAllBookings({isPublic: true} as never, undefined);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).not.toHaveProperty('personName');
+      expect(result[0]).not.toHaveProperty('personEmail');
+      expect(result[0]).not.toHaveProperty('personPhone');
+      expect(result[0]).not.toHaveProperty('comments');
+    });
+
+    it('asks the service for the restricted set for a public caller', async () => {
+      await controller.getAllBookings({isPublic: true} as never, undefined);
+
+      expect(findAllBooking).toHaveBeenCalledWith(false);
+    });
+
+    it('returns the full record to an administrator', async () => {
+      const result = await controller.getAllBookings({isPublic: false} as never, ADMIN);
+
+      expect(result[0]).toHaveProperty('personName', 'Jan Kowalski');
+      expect(result[0]).toHaveProperty('personEmail', 'jan@example.com');
+    });
+
+    it('returns the full record to an employee', async () => {
+      // The matrix gives every staff role the unfiltered read, not only administrators.
+      const result = await controller.getAllBookings({isPublic: false} as never, EMPLOYEE);
+
+      expect(findAllBooking).toHaveBeenCalledWith(true);
+      expect(result[0]).toHaveProperty('personName', 'Jan Kowalski');
+    });
+
+    it('fails closed when the guard did not mark the request', async () => {
+      // `isPublic` absent means the guard never ran. Serving the full record there
+      // would leak personal data on any routing mistake, so absent reads as public.
+      const result = await controller.getAllBookings({} as never, undefined);
+
+      expect(result[0]).not.toHaveProperty('personName');
+      expect(findAllBooking).toHaveBeenCalledWith(false);
+    });
+
+    it('fails closed when a user is present but carries no recognised role', async () => {
+      // A user object that is not staff must not widen the scope; only a role does.
+      const result = await controller.getAllBookings({isPublic: false} as never, {
+        _id: 'u3',
+        email: 'nobody@example.com',
+      });
+
+      expect(findAllBooking).toHaveBeenCalledWith(false);
+      expect(result[0]).not.toHaveProperty('personName');
+    });
   });
 });

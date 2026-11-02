@@ -86,6 +86,10 @@ export default {
   // asserts the unknown-e-mail and wrong-password responses are byte-identical, which
   // is what a message-only unit test cannot see.
   //
+  // The public booking read path (T016) moved them to 85/87/70/85. Two files carry
+  // the increase: the optional-auth guard, and the booking serialiser, which is
+  // asserted field-by-field against a booking that has every personal field set.
+  //
   // These are measured on the files Jest actually aggregates into `global`, which
   // is *not* every file. A more specific glob key takes its files out of the
   // `global` pool: `authorization` is at 100%, so excluding it lowers the figure.
@@ -129,9 +133,9 @@ export default {
     },
     global: {
       statements: 85,
-      branches: 86,
-      functions: 69,
-      lines: 84,
+      branches: 87,
+      functions: 70,
+      lines: 85,
     },
   },
 };

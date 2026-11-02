@@ -80,9 +80,19 @@ export class BookingService {
     }
   }
 
-  async findAllBooking() {
+  /**
+   * Lists bookings at the level of detail the caller is entitled to.
+   *
+   * `includeAll` is a parameter rather than something the service infers from the
+   * caller, so the scope decision is made once, in the controller, where the
+   * authenticated user is available. The public scope is the *filtered* query, not a
+   * post-filter of the full result: the query is what enforces FR-005 at the
+   * database, so an unaccepted booking is never read in the first place rather than
+   * read and discarded.
+   */
+  async findAllBooking(includeAll: boolean) {
     try {
-      return await this.bookingModel.find({});
+      return await this.bookingModel.find(includeAll ? {} : {accepted: true, archive: false});
     } catch (e) {
       throw new HttpException(errorMessage(e), errorStatus(e));
     }
