@@ -1,8 +1,11 @@
+import {TUserRole} from './user.model';
+
 interface JwtPayload {
   email: string;
   _id: string;
-  iat: number;
-  exp: number;
+  role: TUserRole;
+  iat?: number;
+  exp?: number;
 }
 
 export {JwtPayload};
