@@ -290,6 +290,36 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a
   "not authenticated → 401" assertion pass while the real stack answers `403` — the
   integration spec comments this explicitly.
+- **Sign-in answers one message for every rejection, and the message is not the only
+  channel.** Unknown e-mail, wrong password and deactivated account all return `401 Invalid
+  e-mail or password`. The distinct messages came from `handleAuthErrors`, a *second*
+  mapping layer: the service could have thrown a generic message and the mapper would have
+  rewritten it to "That email is not registered" anyway. Fixing only the service is not
+  enough — the mapper is out of that path now and its two branches are deleted, because a
+  dead branch that names the failing field is an invitation to reuse it. The unknown-address
+  path also compares against a dummy bcrypt hash, so it does not return measurably faster
+  than the wrong-password path; the timing is the same oracle the message was. The
+  per-rejection `reason` still reaches the log (`auth.sign_in.rejected`).
+- **`handleUserWriteError` (was `handleAuthErrors`) is the user-write mapper, not an auth
+  one.** It is used only by `UserService`. Its "validation errors" branch was **dead**: it
+  tested `message.includes('user validation failed')`, but Mongoose capitalises the model
+  name, so the real message is `"User validation failed: ..."` and a validation failure
+  returned the raw driver message (field path included) to the client. It now matches
+  `err.name === 'ValidationError'`. This was found by writing the spec for the file, not by
+  reading it — the branch looks correct at a glance.
+- **`/auth/me` reads the account the strategy already loaded, not the token.** `role`,
+  `city` and `buildings` come from the database, so an administrator's change to an account
+  shows up on the next request instead of when the token expires. It is guarded with
+  `AuthGuard('jwt')` and reads the user through `@CurrentUser()`.
+- **Sign-out is not revocation.** `GET /auth/sign-out` clears the cookie and returns
+  `{message: 'Signed out'}`; it destroys no server state, so a captured token stays valid
+  until it expires. The integration spec asserts the token still authenticates afterwards,
+  so the documented answer and the behaviour cannot drift.
+- **`serializeUser` is what keeps the hash out of `/auth/me`, and it accepts `IActingUser`.**
+  The `@CurrentUser()` parameter is typed `IActingUser` (id, e-mail, role), which is all an
+  authorisation decision needs; the serialiser is called with it and drops `password` by
+  allow-list. A spec that wants to prove the hash is dropped has to build an `IUser` — a
+  hydrated document — because `IActingUser` does not declare a `password` field at all.
 - **A per-directory threshold group removes its files from `global`.** Jest's `global` key
   aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
   `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the

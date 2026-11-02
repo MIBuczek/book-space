@@ -1,5 +1,5 @@
 import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
-import {handleAuthErrors} from '../../utility/validation-error.fun';
+import {handleUserWriteError} from '../../utility/user-write-error.fun';
 import {User} from '../schemas/user.schema';
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
@@ -20,7 +20,7 @@ export class UserService {
       const created = await this.userModel.create(user);
       return serializeUser(created);
     } catch (e) {
-      throw new HttpException(handleAuthErrors(e), errorStatus(e));
+      throw new HttpException(handleUserWriteError(e), errorStatus(e));
     }
   }
 
@@ -48,7 +48,7 @@ export class UserService {
     const {password, recheckPassword, ...rest} = user;
 
     if (password !== undefined && password !== recheckPassword) {
-      throw new HttpException(handleAuthErrors(new Error('Incorrect recheck_password')), HttpStatus.UNPROCESSABLE_ENTITY);
+      throw new HttpException(handleUserWriteError(new Error('Incorrect recheck_password')), HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     try {
@@ -65,7 +65,7 @@ export class UserService {
 
       return await this.userModel.updateOne({_id}, update);
     } catch (e) {
-      throw new HttpException(handleAuthErrors(e), errorStatus(e));
+      throw new HttpException(handleUserWriteError(e), errorStatus(e));
     }
   }
 

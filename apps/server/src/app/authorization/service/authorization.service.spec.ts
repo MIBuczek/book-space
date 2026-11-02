@@ -138,6 +138,47 @@ describe('AuthorizationService', () => {
 
       expect(userModel.updateOne).not.toHaveBeenCalled();
     });
+
+    it('answers an unknown e-mail and a wrong password identically', async () => {
+      userModel.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(storedUser());
+
+      const unknown = await service
+        .signIn({email: 'nobody@example.com', password} as never)
+        .catch((e: HttpException) => e);
+      const wrongPassword = await service
+        .signIn({email: 'ada@example.com', password: 'wrong password'} as never)
+        .catch((e: HttpException) => e);
+
+      // The whole response, not just the status: a message naming the failing field is
+      // what lets a caller enumerate registered addresses.
+      expect((unknown as HttpException).getStatus()).toBe((wrongPassword as HttpException).getStatus());
+      expect((unknown as HttpException).message).toBe((wrongPassword as HttpException).message);
+      expect((unknown as HttpException).message).toBe('Invalid e-mail or password');
+    });
+
+    it('still runs a password comparison for an unknown e-mail', async () => {
+      // Without the dummy comparison the unknown-address path returns early and answers
+      // measurably faster, which leaks the same fact the message no longer gives.
+      const compare = jest.spyOn(bcrypt, 'compare');
+      userModel.findOne.mockResolvedValue(null);
+
+      await service.signIn({email: 'nobody@example.com', password} as never).catch(() => undefined);
+
+      expect(compare).toHaveBeenCalled();
+      compare.mockRestore();
+    });
+
+    it('answers 401 with the generic message when the driver fails', async () => {
+      userModel.findOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.signIn({email: 'ada@example.com', password} as never)).rejects.toMatchObject({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Invalid e-mail or password',
+      });
+      // The reason is logged, so an operator can still tell a failure apart from a
+      // rejection even though the caller cannot.
+      expect(logger.error).toHaveBeenCalledWith('auth.sign_in.failed', {reason: 'connection lost'});
+    });
   });
 
   describe('validateUser', () => {
@@ -161,6 +202,12 @@ describe('AuthorizationService', () => {
       userModel.findOne.mockResolvedValue({...storedUser(), email: 'someone-else@example.com'});
 
       await expect(service.validateUser(payload)).rejects.toBeInstanceOf(HttpException);
+    });
+
+    it('does not leak a driver error as a 500 with its raw message', async () => {
+      userModel.findOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.validateUser(payload)).rejects.toMatchObject({message: 'connection lost'});
     });
   });
 });

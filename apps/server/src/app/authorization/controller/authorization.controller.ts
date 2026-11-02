@@ -1,10 +1,13 @@
-import {Body, Controller, Get, Post, Res} from '@nestjs/common';
+import {Body, Controller, Get, Post, Res, UseGuards} from '@nestjs/common';
+import {AuthGuard} from '@nestjs/passport';
 import {AuthorizationService} from '../service/authorization.service';
 import {LoginUserDto} from '../models/login-user-dto';
 import {Response} from 'express';
 import {JwtService} from '@nestjs/jwt';
 import {serializeUser} from '../../users/models/user.serializer';
 import {JwtPayload} from '@models/jwt-payload.model';
+import {CurrentUser} from '../decorators/current-user.decorator';
+import {IActingUser} from '../ownership';
 
 @Controller('auth')
 export class AuthorizationController {
@@ -32,8 +35,31 @@ export class AuthorizationController {
     return {user: serializeUser(user), token};
   }
 
+  /**
+   * Returns the authenticated user with the role and assignments resolved from the
+   * database.
+   *
+   * `JwtStrategy.validate` has already loaded the account, so the user on the request
+   * is the stored document and not a re-issued token's claims. That matters for
+   * `role`, `city` and `buildings`: a response built from the token would report the
+   * values as they were when the token was minted, so an administrator's change to an
+   * account would not appear until the token expired.
+   */
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  getMe(@CurrentUser() user: IActingUser) {
+    return serializeUser(user);
+  }
+
+  /**
+   * Sign-out is stateless: it clears the cookie and returns, and the token stays
+   * valid until it expires. There is no server-side session to destroy
+   * (contracts/authorization-matrix.md), so a caller cannot rely on this to revoke a
+   * token — that is what the token expiry is for.
+   */
   @Get('sign-out')
   async signOut(@Res({passthrough: true}) res: Response) {
     res.cookie('jwt', '', {httpOnly: true, expires: new Date()});
+    return {message: 'Signed out'};
   }
 }

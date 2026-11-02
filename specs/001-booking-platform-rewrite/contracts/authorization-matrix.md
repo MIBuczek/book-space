@@ -67,5 +67,24 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 | Expiry | 1 day (existing `signOptions`) |
 | Refresh | Not in scope for v1; the user signs in again |
 | Sign-out | Client discards the token; `GET /api/auth/sign-out` is retained but stateless |
-| Failed auth | `401` with a generic message; no user enumeration |
+| Failed auth | `401` with one generic message for every rejection; no user enumeration |
+| `/auth/me` | The authenticated user, resolved from the database on each request (T013) |
+
+**Sign-out is not revocation.** The endpoint clears the `jwt` cookie and returns
+`{message: 'Signed out'}`; it destroys no server-side state, so a token captured before
+sign-out stays valid until it expires. `auth.integration.spec.ts` asserts this, so the
+documented answer cannot drift from the behaviour.
+
+**Sign-in answers identically to every rejection.** An unknown address, a wrong password and
+a deactivated account all return `401 Invalid e-mail or password` with the same body. The
+distinct messages (`'That email is not registered'` / `'That password is incorrect'`) were
+removed: a caller who can tell them apart can enumerate which addresses have accounts. The
+unknown-address path also runs a bcrypt comparison against a dummy hash, because returning
+early would answer measurably faster and the timing is the same oracle. The reason is still
+logged (`auth.sign_in.rejected` with `reason`), so an operator can tell the cases apart.
+
+**`/auth/me` resolves from the database, not the token.** `JwtStrategy.validate` loads the
+account, so `role`, `city` and `buildings` reflect the stored values. A response built from
+the token's claims would report the values as they were when the token was minted, so an
+administrator's change to an account would not appear until the token expired.
 | Auto-logout | Not required (removed in legacy issue #70) |

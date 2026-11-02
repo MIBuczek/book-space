@@ -62,13 +62,22 @@ paths:
     get:
       tags: [auth]
       summary: Sign out (stateless; retained for compatibility)
+      description: >
+        Clears the `jwt` cookie. It is not revocation: no server-side state is destroyed,
+        so a token captured before sign-out remains valid until it expires.
       responses:
-        '200': {description: Acknowledged}
+        '200':
+          description: Acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: Signed out}
 
   /auth/me:
     get:
       tags: [auth]
-      x-status: to-build
       summary: Return the current user with resolved role and assignments
       security: [{bearerAuth: []}]
       responses:
