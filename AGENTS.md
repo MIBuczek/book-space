@@ -265,10 +265,26 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   refuses every role-restricted route for every caller — including an administrator. The
   failure is a silent `403`, not an error. `jwt.strategy.spec.ts` asserts the resolved value is
   not a `Promise` so this cannot regress.
-- **The `User` schema has no `role` field yet.** `libs/models/user.model.ts` declares it, but
-  `users/schemas/user.schema.ts` does not, so `user.role` does not type-check on a hydrated
-  document. Populating it is T007 (#11); the authorisation primitives (T014/T017) are
-  independent of it because `RolesGuard` reads whatever the caller's user object carries.
+- **The `User` schema carries `role`.** `libs/models/user.model.ts` declares it and
+  `users/schemas/user.schema.ts` enforces it as required with no default (T007, #11). A
+  default would have been a silent privilege decision: `ADMIN` makes every unroled user an
+  administrator, `EMPLOYEE` grants the least-privileged role to a caller who meant something
+  else.
+- **The JWT payload carries `role`, and it must come from the database.** `RolesGuard` reads
+  the role off `request.user`, which `JwtStrategy` builds from the payload, so a token minted
+  without a role lets an administrator in but refuses every role-restricted route to everyone.
+  `JwtPayload.role` is required, which is what makes that a compile error rather than a silent
+  `403`. The sign-in handler takes it from the stored user and never from the request body — a
+  body-supplied role would let any caller mint an administrator token.
+- **`JwtPayload._id` is a `string`; a hydrated `user._id` is an `ObjectId`.** It worked
+  untyped because JSON serialisation converts the `ObjectId` to its hex string, so the token
+  was already a string and only the type was wrong. Annotating the payload surfaces it as
+  TS2322; `String(user._id)` is the fix.
+- **`@Roles` on the class is what makes a new route restricted by default.** `RolesGuard` uses
+  `getAllAndOverride`, so a route-level `@Roles` overrides the class one and a route without
+  any inherits it. `UsersController` relies on this (T015): every route is administrator-only,
+  and the integration spec fails with `200` where it expects `403` if the decorators are
+  removed.
 - **`RolesGuard` returns `403`; `AuthGuard('jwt')` returns `401`.** A guard that returns
   `false` makes Nest answer `403`, so an authentication stand-in must *throw*
   `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a
