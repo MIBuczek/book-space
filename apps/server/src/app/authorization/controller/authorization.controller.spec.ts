@@ -6,6 +6,8 @@ import {Response} from 'express';
 import {AuthorizationController} from './authorization.controller';
 import {AuthorizationService} from '../service/authorization.service';
 import {serializeUser} from '../../users/models/user.serializer';
+import {IUser} from '@models/user.model';
+import {IActingUser} from '../ownership';
 
 /**
  * The controller's own behaviour is what is under test: it signs a token for the
@@ -96,5 +98,36 @@ describe('AuthorizationController', () => {
     expect(value).toBe('');
     expect(options.httpOnly).toBe(true);
     expect(options.expires.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('acknowledges sign-out so a client can tell it succeeded', async () => {
+    const res = {cookie: jest.fn()} as unknown as Response;
+
+    await expect(controller.signOut(res)).resolves.toEqual({message: 'Signed out'});
+  });
+
+  describe('getMe', () => {
+    it('serialises the acting user', () => {
+      const acting = {...user, password: '$2b$10$abcdefghijklmnopqrstuv'};
+
+      const result = controller.getMe(acting);
+
+      expect(result).toEqual(serializeUser(acting));
+    });
+
+    it('never returns the password hash', () => {
+      // `IUser` declares the hash, which is what a hydrated document carries; the
+      // serialiser is what keeps it out of the response.
+      const result = controller.getMe({...user, password: '$2b$10$abcdefghijklmnopqrstuv'} as IUser);
+
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('returns null rather than throwing when no user is on the request', () => {
+      // The guard should have refused first, so this is unreachable in production —
+      // but returning null is the serialiser's contract, and a throw here would turn
+      // a guard misconfiguration into a 500 instead of an obvious empty body.
+      expect(controller.getMe(undefined as unknown as IActingUser)).toBeNull();
+    });
   });
 });

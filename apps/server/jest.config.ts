@@ -80,6 +80,12 @@ export default {
   // password hash reaching it, and the update path is asserted to hand the driver
   // a bcrypt hash rather than the plaintext it used to store (CHK017).
   //
+  // The auth module (T013) moved them to 85/86/69/84. The increase is real coverage
+  // rather than boot coverage: the enumeration fix is asserted at both layers — the
+  // service answers one message for all three rejection reasons, and the HTTP spec
+  // asserts the unknown-e-mail and wrong-password responses are byte-identical, which
+  // is what a message-only unit test cannot see.
+  //
   // These are measured on the files Jest actually aggregates into `global`, which
   // is *not* every file. A more specific glob key takes its files out of the
   // `global` pool: `authorization` is at 100%, so excluding it lowers the figure.
@@ -122,10 +128,10 @@ export default {
       lines: 80,
     },
     global: {
-      statements: 84,
-      branches: 83,
-      functions: 67,
-      lines: 83,
+      statements: 85,
+      branches: 86,
+      functions: 69,
+      lines: 84,
     },
   },
 };
