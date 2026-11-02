@@ -238,6 +238,30 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **Jest's `coveragePathIgnorePatterns` are matched against absolute paths.** `^src/main\.ts$`
   matched nothing and `main.ts` sat in the denominator at 0%; use `/src/main\.ts$`. Prefer
   unanchored suffixes (`.module.ts$`) or anchor on `/src/`.
+- **A glob `coverageThreshold` group is enforced per file, not per directory.** Adding
+  `'**/src/app/authorization/**/*.ts': {statements: 80, ...}` means *every file* under that
+  path must reach 80%, not that the directory's aggregate must. Verified by deleting one spec
+  and watching the run fail with `Coverage for statements (0%) does not meet
+  ".../ownership.ts" threshold`. That is the stronger reading and the one SC-008 wants.
+- **Adding a threshold group silently removes those files from `global`.** Jest assigns each
+  file to the first matching group and only unmatched files fall through to `global`, so the
+  first per-directory group made the global figure *fall* (81.62 → 78.18 statements) even
+  though the excluded files were at 100%. Re-derive `global` from the report whenever a group
+  is added; the drop is the arithmetic, not a regression.
+- **`JwtStrategy.validate` must `await` the user.** Passing the promise to `done` sets
+  `request.user` to a `Promise`, so `RolesGuard` reads `role` off it, finds `undefined`, and
+  refuses every role-restricted route for every caller — including an administrator. The
+  failure is a silent `403`, not an error. `jwt.strategy.spec.ts` asserts the resolved value is
+  not a `Promise` so this cannot regress.
+- **The `User` schema has no `role` field yet.** `libs/models/user.model.ts` declares it, but
+  `users/schemas/user.schema.ts` does not, so `user.role` does not type-check on a hydrated
+  document. Populating it is T007 (#11); the authorisation primitives (T014/T017) are
+  independent of it because `RolesGuard` reads whatever the caller's user object carries.
+- **`RolesGuard` returns `403`; `AuthGuard('jwt')` returns `401`.** A guard that returns
+  `false` makes Nest answer `403`, so an authentication stand-in must *throw*
+  `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a
+  "not authenticated → 401" assertion pass while the real stack answers `403` — the
+  integration spec comments this explicitly.
 - **Test scaffolding is excluded from coverage** (`/src/testing/`). It is ~98% covered by its
   own spec, so counting it inflated the global figure from 54.18% to 67.44% without a line of
   production code changing.

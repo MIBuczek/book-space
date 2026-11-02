@@ -15,7 +15,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
   async validate(payload: JwtPayload | null, done: VerifiedCallback) {
     if (payload === null) return done(new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED));
-    const user = this.authService.validateUser(payload);
+    // `await` matters: passing the promise to `done` would set `request.user` to a
+    // Promise, so `RolesGuard` would read `user.role` off it and find nothing —
+    // refusing every role-restricted route for every caller.
+    const user = await this.authService.validateUser(payload);
     return done(null, user, payload.iat);
   }
 }

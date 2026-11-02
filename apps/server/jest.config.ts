@@ -67,17 +67,45 @@ export default {
   // rather than boot coverage. As above, the numbers are the measured floor on
   // this branch, re-derived from the report, not a target.
   //
-  // `global` is deliberately the only threshold group. Jest assigns each file
-  // to the first matching path or glob group and only files matching NO group
-  // fall through to `global`, so adding a per-directory group silently removes
-  // those files from `global`. Per-directory thresholds are added in T045, and
-  // this number is re-derived from the report at that point.
+  // The authorisation primitives (T014/T017) moved them to 78/73/55/76. The
+  // number *fell* from 81/79/60/80 measured with everything in one pool because
+  // the `authorization` group below now takes its files out of `global` — those
+  // files are at 100%, so removing them lowers the global figure. That is the
+  // behaviour the paragraph above warns about, and it is why the global number had
+  // to be re-derived rather than left alone.
+  //
+  // `global` is no longer the only threshold group: `authorization` is the first
+  // per-directory group, and it mechanises SC-008 for the one domain module that
+  // exists today.
+  //
+  // SC-008 names four domain modules — bookings, conflicts, reports and
+  // authorisation. Only `authorization` exists: conflicts and reports have no
+  // source at all (T018/T019/T026 are unbuilt), and `bookings` is at ~68%
+  // statements, below the 80% the criterion requires. So this group covers the one
+  // module that can meet the target today, and a `bookings`/`conflicts`/`reports`
+  // group is added as each of those tasks lands. Setting a group for a module that
+  // cannot reach 80% would fail the build for a reason unrelated to the change
+  // that introduced it.
   coverageThreshold: {
+    // The SC-008 floor. Jest applies a glob threshold to each matching file
+    // individually, not to the directory as a whole, so this reads "every file
+    // under `authorization/` is at least 80% covered" — verified by removing a
+    // spec and watching the run fail on the specific file it left uncovered.
+    // Every file currently measures 100%, so 80 is the criterion's requirement
+    // rather than the measured value; the headroom is deliberate, and it also
+    // means a new file arriving with no tests fails immediately at 0%, which is
+    // the desired behaviour for a domain module.
+    '**/src/app/authorization/**/*.ts': {
+      statements: 80,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+    },
     global: {
-      statements: 73,
-      branches: 66,
-      functions: 53,
-      lines: 71,
+      statements: 78,
+      branches: 73,
+      functions: 55,
+      lines: 76,
     },
   },
 };
