@@ -27,15 +27,22 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 | Create/update/delete facilities | ❌ | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab |
 | Generate summary reports | ❌ | ❌ | ✅ | ✅ | `summaryUserRestriction` |
 | Generate summary reports (denied account) | ❌ | ❌ | ❌ | ❌ | `mkulakowski@umsiechnice.pl` |
-| Read/update users | ❌ | ❌ | ❌ | ✅ | `UsersController` (all `AuthGuard('jwt')` today) |
+| Read/update users | ❌ | ❌ | ❌ | ✅ | `UsersController` (`AuthGuard('jwt')` + `RolesGuard`, `@Roles('ADMIN')`) |
 | Send a contact message | ✅ | ✅ | ✅ | ✅ | `FormMessage` |
 | Send a message to a facility employee | ❌ | ✅ | ✅ | ✅ | `Building.tsx` |
 
 ## Notes and defects to correct
 
-1. **Users endpoints are currently over-permissive.** `UsersController` guards every route
+1. ~~**Users endpoints are currently over-permissive.** `UsersController` guards every route
    with `AuthGuard('jwt')` only, so any authenticated user — including an employee — can list,
-   create, update and delete users. This MUST become administrator-only.
+   create, update and delete users. This MUST become administrator-only.~~ **Resolved (T015).**
+   `UsersController` now carries `@UseGuards(AuthGuard('jwt'), RolesGuard)` and
+   `@Roles('ADMIN')` at the class, so a route added later is restricted by default. The
+   sign-in payload carries the stored user's role — taken from the database, never from the
+   request body, or a caller could mint a token for a role they do not hold.
+   `users.integration.spec.ts` proves the `401`/`403`/`200` split over real HTTP against a
+   real signed token; removing the decorators turns its employee cases from `403` back to
+   `200`.
 2. **The public read path is currently too broad.** `getBookingDataForUser` filters on
    `accepted` and `archive`, but the Firestore rules allow any authenticated principal to read
    the entire `bookings` collection. The API must be the enforcement point.

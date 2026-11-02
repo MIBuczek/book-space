@@ -74,6 +74,21 @@ export default {
   // behaviour the paragraph above warns about, and it is why the global number had
   // to be re-derived rather than left alone.
   //
+  // The users schema, DTO, serialiser and service (T007) moved them to
+  // 84/83/67/83. Every file under `users/` measures 100%, so the increase is real
+  // coverage rather than boot coverage: the serialiser is asserted against a
+  // password hash reaching it, and the update path is asserted to hand the driver
+  // a bcrypt hash rather than the plaintext it used to store (CHK017).
+  //
+  // These are measured on the files Jest actually aggregates into `global`, which
+  // is *not* every file. A more specific glob key takes its files out of the
+  // `global` pool: `authorization` is at 100%, so excluding it lowers the figure.
+  // Computed over all files the numbers are 87/87/71/86, which is what the report
+  // prints as `total` — reading that as the global value sets the threshold four
+  // points too high and the run fails on a report that says the threshold passed.
+  // Derive the floor by summing the per-file rows that do not match the
+  // `authorization` glob, not by reading `total`.
+  //
   // `global` is no longer the only threshold group: `authorization` is the first
   // per-directory group, and it mechanises SC-008 for the one domain module that
   // exists today.
@@ -86,6 +101,11 @@ export default {
   // group is added as each of those tasks lands. Setting a group for a module that
   // cannot reach 80% would fail the build for a reason unrelated to the change
   // that introduced it.
+  //
+  // `users` is deliberately not a group even though it now measures 100%: SC-008
+  // does not name it, and a group whose files are all at 100% would be a second
+  // copy of the per-file rule rather than a mechanisation of the criterion. The
+  // global ratchet is what carries the increase.
   coverageThreshold: {
     // The SC-008 floor. Jest applies a glob threshold to each matching file
     // individually, not to the directory as a whole, so this reads "every file
@@ -102,10 +122,10 @@ export default {
       lines: 80,
     },
     global: {
-      statements: 78,
-      branches: 73,
-      functions: 55,
-      lines: 76,
+      statements: 84,
+      branches: 83,
+      functions: 67,
+      lines: 83,
     },
   },
 };

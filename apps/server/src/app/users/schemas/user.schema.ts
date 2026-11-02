@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import validator from 'validator';
 import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
 import {HydratedDocument} from 'mongoose';
+import {USER_ROLES, TUserRole} from '@models/user.model';
 
 export type TUser = HydratedDocument<User>;
 
@@ -36,6 +37,28 @@ export class User {
     validate: [validator.isEmail, 'Please enter a valid email']
   })
   email!: string;
+
+  // Required, with no default: defaulting to ADMIN would make every user created
+  // without an explicit role an administrator, and defaulting to EMPLOYEE would
+  // silently grant the least-privileged role to a caller who meant something else.
+  // A required field makes the omission a validation error.
+  @Prop({
+    type: String,
+    enum: {values: [...USER_ROLES], message: 'Role must be one of ADMIN, OFFICE, EMPLOYEE'},
+    required: [true, 'Please assign a role']
+  })
+  role!: TUserRole;
+
+  // Conditionally required: an administrator is not tied to a facility, so the
+  // requirement is enforced in the DTO where the role is known, not here.
+  @Prop({type: String})
+  city?: string;
+
+  @Prop({type: [String], default: undefined})
+  buildings?: string[];
+
+  @Prop({type: Boolean, default: true})
+  active!: boolean;
 
   @Prop({
     type: Date,

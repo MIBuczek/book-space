@@ -5,6 +5,7 @@ import {AuthGuard} from '@nestjs/passport';
 import {Response} from 'express';
 import {AuthorizationController} from './authorization.controller';
 import {AuthorizationService} from '../service/authorization.service';
+import {serializeUser} from '../../users/models/user.serializer';
 
 /**
  * The controller's own behaviour is what is under test: it signs a token for the
@@ -49,15 +50,37 @@ describe('AuthorizationController', () => {
 
     const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
 
-    expect(result).toEqual({user, token: 'signed.jwt.token'});
+    expect(result).toEqual({user: serializeUser(user), token: 'signed.jwt.token'});
   });
 
-  it('signs a payload carrying the id and e-mail', async () => {
+  it('never returns the password hash', async () => {
+    service.signIn.mockResolvedValue({...user, password: '$2b$10$abcdefghijklmnopqrstuv'});
+
+    const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
+
+    expect(result.user).not.toHaveProperty('password');
+  });
+
+  it('signs a payload carrying the id, e-mail and role', async () => {
     service.signIn.mockResolvedValue(user);
 
     await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
 
-    expect(jwt.signAsync).toHaveBeenCalledWith({email: user.email, _id: user._id});
+    // The role is in the payload because `RolesGuard` reads it off `request.user`,
+    // which `JwtStrategy` populates from this payload. A token without it would let
+    // an administrator in but refuse every role-restricted route to everyone.
+    expect(jwt.signAsync).toHaveBeenCalledWith({email: user.email, _id: user._id, role: 'ADMIN'});
+  });
+
+  it('takes the signed role from the stored user, not the request body', async () => {
+    // The stored user is an EMPLOYEE while the body claims ADMIN. If the controller
+    // signed the body's role, anyone could mint an administrator token by asking for
+    // one, because `RolesGuard` trusts whatever the token says.
+    service.signIn.mockResolvedValue({...user, role: 'EMPLOYEE'});
+
+    await controller.signIn({email: user.email, password: 'correct horse battery', role: 'ADMIN'} as never);
+
+    expect(jwt.signAsync).toHaveBeenCalledWith(expect.objectContaining({role: 'EMPLOYEE'}));
   });
 
   it('clears the jwt cookie on sign-out', async () => {

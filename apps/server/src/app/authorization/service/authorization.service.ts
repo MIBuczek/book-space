@@ -40,6 +40,15 @@ export class AuthorizationService {
         throw new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
       }
 
+      // Checked after the password, so the response does not distinguish "wrong
+      // password" from "deactivated account" to a caller who does not already know
+      // the password. `=== false` treats a legacy document with no `active` field as
+      // active, matching the schema default.
+      if (currentUser.active === false) {
+        this.logger.warn('auth.sign_in.rejected', {reason: 'inactive_user', userId: currentUser._id});
+        throw new HttpException('Account is deactivated', HttpStatus.UNAUTHORIZED);
+      }
+
       currentUser.lastLogin = new Date();
 
       await this.userModel.updateOne({_id: currentUser._id}, {lastLogin: currentUser.lastLogin});

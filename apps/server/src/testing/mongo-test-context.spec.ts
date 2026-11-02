@@ -47,6 +47,7 @@ describe('MongoTestContext', () => {
       lastName: 'Lovelace',
       email: 'ada@example.com',
       password: 'hashed-placeholder',
+      role: 'ADMIN',
     });
 
     const found = await model.findOne({email: 'ada@example.com'});
