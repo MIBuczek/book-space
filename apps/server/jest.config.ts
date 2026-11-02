@@ -5,6 +5,12 @@ export default {
   // class-validator/class-transformer rely on decorator metadata, which requires
   // reflect-metadata to be loaded before any module is imported.
   setupFiles: ['reflect-metadata'],
+  // Integration tests boot `AppModule` and start a real `mongod`, which takes
+  // longer than Jest's 5s default on a cold CI runner. The default does not
+  // report a slow hook as slow: the hook times out, its assignment never runs,
+  // and the suite fails later on `undefined` in teardown, which reads like a
+  // different bug. Set once here so a new integration spec cannot forget it.
+  testTimeout: 120_000,
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
@@ -63,10 +69,10 @@ export default {
   // this number is re-derived from the report at that point.
   coverageThreshold: {
     global: {
-      statements: 67,
-      branches: 45,
-      functions: 34,
-      lines: 64,
+      statements: 72,
+      branches: 61,
+      functions: 46,
+      lines: 69,
     },
   },
 };

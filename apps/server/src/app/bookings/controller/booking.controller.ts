@@ -4,7 +4,6 @@ import {Get} from '@nestjs/common';
 import {Param} from '@nestjs/common';
 import {Post} from '@nestjs/common';
 import {Body} from '@nestjs/common';
-import {ValidationPipe} from '@nestjs/common';
 import {Put} from '@nestjs/common';
 import {Delete} from '@nestjs/common';
 import {BookingDto} from '../models/booking.dto';
@@ -29,7 +28,7 @@ export class BookingController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createBooking(@Body(new ValidationPipe()) newBooking: BookingDto) {
+  createBooking(@Body() newBooking: BookingDto) {
     return this.bookingService.createBooking(newBooking);
   }
 
@@ -37,7 +36,7 @@ export class BookingController {
   @UseGuards(AuthGuard('jwt'))
   updateBooking(
     @Param('_id') _id: string,
-    @Body(new ValidationPipe()) booking: Partial<BookingDto>
+    @Body() booking: Partial<BookingDto>
   ) {
     return this.bookingService.updateBooking(_id, booking);
   }
@@ -46,7 +45,7 @@ export class BookingController {
   @UseGuards(AuthGuard('jwt'))
   updateBookedTimes(
     @Param('_id') _id: string,
-    @Body(new ValidationPipe()) bookedTimes: Partial<BookedTimeDto>
+    @Body() bookedTimes: Partial<BookedTimeDto>
   ) {
     return this.bookingService.updateBookedTimes(_id, bookedTimes);
   }
