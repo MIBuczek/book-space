@@ -320,6 +320,41 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   authorisation decision needs; the serialiser is called with it and drops `password` by
   allow-list. A spec that wants to prove the hash is dropped has to build an `IUser` — a
   hydrated document — because `IActingUser` does not declare a `password` field at all.
+- **`OptionalJwtAuthGuard` authenticates without requiring a credential, and refuses a bad
+  one.** `GET /api/bookings` is the public calendar *and* the staff calendar — one resource at
+  two levels of detail — so the guard runs the JWT strategy when a token is present and lets
+  the request through when there is none. It is overridden on `handleRequest`, not
+  `canActivate`: a malformed or expired token must not be downgraded to anonymous, or a
+  caller whose session just ended gets a silently redacted calendar instead of a `401`.
+  Whether a credential was *presented* is the only thing that separates "absent" from
+  "invalid", so it is checked explicitly rather than inferred from the absence of a user.
+- **`overrideGuard(AuthGuard('jwt'))` does not cover a subclass.** `OptionalJwtAuthGuard`
+  extends `AuthGuard('jwt')`, so a spec that overrides only the base class leaves the real
+  guard in place and the request is answered `401` before reaching the controller. Both must
+  be overridden. This is the same shape as the `RolesGuard` note above: the guard most likely
+  to be missed is the one attached to the route you just changed.
+- **The public booking scope is one boolean, not two decisions.** `BookingController` computes
+  `staff` once and uses it for both the query filter and the response shape. Computing the
+  filter from the user and the shape from the request is what served a restricted query's
+  results *unredacted* when the two inputs disagreed — a hole the unit spec's fail-closed
+  cases caught, not review. Both inputs are fail-closed: `request.isPublic` must be exactly
+  `false` and the user must carry a recognised role, so an unmarked request and a user with no
+  role both read as public.
+- **`serializePublicBooking` deletes four named fields and goes through `toJSON`.** The list
+  is a `const` tuple asserted one name at a time, because a redaction list that is wrong is a
+  data leak and a count assertion would not catch a missing name. It spreads `toJSON()` rather
+  than the document: Mongoose data lives on internals, so spreading a document directly yields
+  the schema's internals, not the fields. Assert against the raw response *text* in an
+  integration test — a field present but `undefined` still travels, and `toHaveProperty`
+  does not see it.
+- **`validateUser` re-checks `active`, not just the signature.** Sign-in already refused an
+  inactive account, but a token lives for a day, so an account disabled after its token was
+  issued kept working until the token expired. Found by the integration case that deactivates
+  a user and re-uses the token it already holds. `=== false` rather than a falsy test, so a
+  legacy document with no `active` field stays active.
+- **`nick` is not in the booking schema yet.** T010 adds it. A test that seeds `nick` and
+  reads it back will find nothing — Mongoose drops fields the schema does not declare — so the
+  calendar-label assertions wait for T010 and the redaction list is the control meanwhile.
 - **A per-directory threshold group removes its files from `global`.** Jest's `global` key
   aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
   `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the

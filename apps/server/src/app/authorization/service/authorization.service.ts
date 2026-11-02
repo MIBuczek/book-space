@@ -109,6 +109,15 @@ export class AuthorizationService {
         this.logger.warn('auth.token.rejected', {userId: _id});
         throw new HttpException(INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED);
       }
+      // Deactivation has to be checked here too, not only at sign-in. A token is
+      // valid for a day, so an account disabled after its token was issued would
+      // keep working for the rest of that day if this path trusted the signature
+      // alone. `=== false` rather than a falsy test: a legacy document with no
+      // `active` field is active, matching the schema default.
+      if (user.active === false) {
+        this.logger.warn('auth.token.rejected', {reason: 'inactive_user', userId: _id});
+        throw new HttpException(INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED);
+      }
       return user;
     } catch (e) {
       if (e instanceof HttpException) {

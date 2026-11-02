@@ -37,4 +37,39 @@ describe('BookingService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  describe('findAllBooking', () => {
+    beforeEach(() => {
+      modelMock.find.mockReset();
+      modelMock.find.mockResolvedValue([]);
+    });
+
+    it('restricts the public query to accepted, non-archived bookings', async () => {
+      await service.findAllBooking(false);
+
+      expect(modelMock.find).toHaveBeenCalledWith({accepted: true, archive: false});
+    });
+
+    it('does not restrict the staff query', async () => {
+      await service.findAllBooking(true);
+
+      expect(modelMock.find).toHaveBeenCalledWith({});
+    });
+
+    it('applies the restriction in the query, not after it', async () => {
+      // The filter has to reach the database. Filtering the returned array would
+      // read an unaccepted booking — the personal data on it — before discarding it.
+      await service.findAllBooking(false);
+
+      const [filter] = modelMock.find.mock.calls[0];
+      expect(filter).not.toEqual({});
+      expect(Object.keys(filter).sort()).toEqual(['accepted', 'archive']);
+    });
+
+    it('maps a driver failure to an HTTP error', async () => {
+      modelMock.find.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.findAllBooking(false)).rejects.toMatchObject({message: 'connection lost'});
+    });
+  });
 });

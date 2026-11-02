@@ -209,5 +209,28 @@ describe('AuthorizationService', () => {
 
       await expect(service.validateUser(payload)).rejects.toMatchObject({message: 'connection lost'});
     });
+
+    it('rejects a token whose account was deactivated after it was issued', async () => {
+      // Sign-in already refused an inactive account, so the hole was only here: a
+      // token lives for a day, so deactivation has to be re-checked on every request
+      // or a disabled user keeps their access until it expires.
+      userModel.findOne.mockResolvedValue({...storedUser(), active: false});
+
+      await expect(service.validateUser(payload)).rejects.toMatchObject({status: HttpStatus.UNAUTHORIZED});
+      expect(logger.warn).toHaveBeenCalledWith('auth.token.rejected', {
+        reason: 'inactive_user',
+        userId: payload._id,
+      });
+    });
+
+    it('accepts a legacy account with no active field', async () => {
+      // A missing `active` must read as active, or every migrated document would be
+      // locked out.
+      const legacy: Record<string, unknown> = {...storedUser()};
+      delete legacy.active;
+      userModel.findOne.mockResolvedValue(legacy);
+
+      await expect(service.validateUser(payload)).resolves.toEqual(legacy);
+    });
   });
 });
