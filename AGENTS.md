@@ -127,9 +127,21 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   fails at load with `Failed to load config "plugin:@angular-eslint/template/..."`. Use
   `nx.configs['flat/angular']` and `nx.configs['flat/angular-template']` instead — Nx bundles
   the inline-template processor and the same rule sets, so no `FlatCompat` is needed.
-- **Lint output is 0 errors, 5 warnings.** The 5 are pre-existing `no-unused-vars` /
+- **Lint output is 0 errors, 3 warnings.** The warnings are pre-existing `no-unused-vars` /
   `no-explicit-any` findings in `apps/server`; they are the Stage 5 acceptance baseline. A
-  change in that count means a rule was silently dropped or added.
+  change in that count means a rule was silently dropped or added. The count was 5 until T007,
+  which removed two genuinely unused imports (`Req` in `authorization.controller.ts`, `TUser`
+  in `users.controller.ts`) — that is the baseline moving because the code changed, not a rule
+  going missing. Check the rule list, not the number, if a change is unexplained.
+- **A pre-save hook does not run for `updateOne`.** `bcrypt` hashing lives in the users schema's
+  `pre('save')` hook, so `Model.updateOne` writes the value it is given verbatim. The update path
+  therefore hashes the password itself before calling the driver; a refactor that moves hashing
+  back into the schema alone silently stores plaintext (CHK017). `user.service.spec.ts` asserts
+  the hash reaches the driver, which is the only place that defect is visible.
+- **`Partial<SomeDto>` in a controller erases validation.** `Partial<T>` is a type, gone at
+  runtime, so the global `ValidationPipe` sees `Object` and validates nothing — no `whitelist`,
+  no `forbidNonWhitelisted`, no field rules. Any route whose body is a partial needs a concrete
+  class (`UpdateUserDto`), not a mapped type. The same applies to `Pick`/`Omit`.
 - **A passing lint cannot prove a rule is live.** `@nx/enforce-module-boundaries` is what
   caught the 33 errors fixed in PR #59, and it is the rule most likely to vanish silently in a
   config-format change. Verify it by adding an `@server/*` import inside `apps/server` where a
@@ -262,6 +274,13 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a
   "not authenticated → 401" assertion pass while the real stack answers `403` — the
   integration spec comments this explicitly.
+- **A per-directory threshold group removes its files from `global`.** Jest's `global` key
+  aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
+  `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the
+  `global` figure is measured without `authorization/` — at 100% it lowers the global number.
+  Reading `total` (87/87/71/86) and setting `global` to that makes the run fail with "does not
+  meet global threshold" while the printed report looks like it passes. Derive the floor by
+  summing the per-file rows that do not match the specific glob.
 - **Test scaffolding is excluded from coverage** (`/src/testing/`). It is ~98% covered by its
   own spec, so counting it inflated the global figure from 54.18% to 67.44% without a line of
   production code changing.

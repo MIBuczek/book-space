@@ -1,8 +1,9 @@
-import {Body, Controller, Get, Post, Req, Res} from '@nestjs/common';
+import {Body, Controller, Get, Post, Res} from '@nestjs/common';
 import {AuthorizationService} from '../service/authorization.service';
 import {LoginUserDto} from '../models/login-user-dto';
 import {Response} from 'express';
 import {JwtService} from '@nestjs/jwt';
+import {serializeUser} from '../../users/models/user.serializer';
 
 @Controller('auth')
 export class AuthorizationController {
@@ -16,7 +17,10 @@ export class AuthorizationController {
     const user = await this.autService.signIn(loginUserDto);
     const payload = {email: user.email, _id: user._id};
     const token = await this.jwtService.signAsync(payload);
-    return {user, token};
+    // `user` is the stored document, which carries the bcrypt hash. Serialising
+    // here is what stops the hash reaching the client — the service needs it to
+    // compare against, so it cannot be stripped any earlier.
+    return {user: serializeUser(user), token};
   }
 
   @Get('sign-out')

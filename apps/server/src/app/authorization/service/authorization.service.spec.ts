@@ -29,6 +29,7 @@ describe('AuthorizationService', () => {
     email: 'ada@example.com',
     password: passwordHash,
     role: 'ADMIN' as const,
+    active: true,
     lastLogin: new Date('2020-01-01'),
   });
 
@@ -109,10 +110,33 @@ describe('AuthorizationService', () => {
 
       const result = (await service.signIn({email: user.email, password} as never)) as {password?: string};
 
-      // The service returns the stored document, so the hash is on it. Removing it
-      // is the serialiser's job (T007); this asserts the current contract only so a
-      // future change that starts stripping it here is a deliberate one.
+      // The service returns the stored document, so the hash is still on it — the
+      // serialiser is applied at the controller boundary, where the response is
+      // built. This pins that division of responsibility: if the hash starts being
+      // stripped here, the sign-in controller no longer needs its serialiser call
+      // and this test fails to say so.
       expect(result.password).toBe(passwordHash);
+    });
+
+    it('refuses an inactive user even with the correct password', async () => {
+      const user = {...storedUser(), active: false};
+      userModel.findOne.mockResolvedValue(user);
+
+      await expect(service.signIn({email: user.email, password} as never)).rejects.toMatchObject({
+        status: HttpStatus.UNAUTHORIZED,
+      });
+      expect(logger.warn).toHaveBeenCalledWith('auth.sign_in.rejected', {
+        reason: 'inactive_user',
+        userId: user._id,
+      });
+    });
+
+    it('does not update lastLogin for an inactive user', async () => {
+      userModel.findOne.mockResolvedValue({...storedUser(), active: false});
+
+      await service.signIn({email: 'ada@example.com', password} as never).catch(() => undefined);
+
+      expect(userModel.updateOne).not.toHaveBeenCalled();
     });
   });
 

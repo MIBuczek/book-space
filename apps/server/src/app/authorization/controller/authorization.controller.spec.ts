@@ -5,6 +5,7 @@ import {AuthGuard} from '@nestjs/passport';
 import {Response} from 'express';
 import {AuthorizationController} from './authorization.controller';
 import {AuthorizationService} from '../service/authorization.service';
+import {serializeUser} from '../../users/models/user.serializer';
 
 /**
  * The controller's own behaviour is what is under test: it signs a token for the
@@ -49,7 +50,15 @@ describe('AuthorizationController', () => {
 
     const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
 
-    expect(result).toEqual({user, token: 'signed.jwt.token'});
+    expect(result).toEqual({user: serializeUser(user), token: 'signed.jwt.token'});
+  });
+
+  it('never returns the password hash', async () => {
+    service.signIn.mockResolvedValue({...user, password: '$2b$10$abcdefghijklmnopqrstuv'});
+
+    const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
+
+    expect(result.user).not.toHaveProperty('password');
   });
 
   it('signs a payload carrying the id and e-mail', async () => {

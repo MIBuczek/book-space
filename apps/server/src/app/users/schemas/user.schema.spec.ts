@@ -24,6 +24,7 @@ const userDoc = (password: string) => ({
   lastName: 'Lovelace',
   email: 'ada@example.com',
   password,
+  role: 'ADMIN',
   createdAt: new Date('2020-01-01'),
   lastLogin: new Date('2020-01-01')
 });
@@ -87,5 +88,55 @@ describe('userSchema password hashing', () => {
     expect(reloaded.password).not.toBe(storedHash);
     await expect(bcrypt.compare('a different secret', reloaded.password)).resolves.toBe(true);
     await expect(bcrypt.compare('correct horse battery', reloaded.password)).resolves.toBe(false);
+  });
+});
+
+describe('userSchema field defaults and constraints', () => {
+  it('defaults active to true', () => {
+    const doc = new UserModel(userDoc('correct horse battery'));
+
+    expect(doc.active).toBe(true);
+  });
+
+  it('accepts the ADMIN, OFFICE and EMPLOYEE roles', async () => {
+    for (const role of ['ADMIN', 'OFFICE', 'EMPLOYEE'] as const) {
+      const doc = new UserModel({...userDoc('correct horse battery'), role});
+      await saveIgnoringConnectionError(doc);
+      expect(doc.role).toBe(role);
+    }
+  });
+
+  it('rejects a role outside the enum', async () => {
+    const doc = new UserModel({...userDoc('correct horse battery'), role: 'SUPERUSER'});
+
+    // The save rejects either because the enum fails or because there is no
+    // database; the distinction is the validation error, so it is asserted rather
+    // than swallowed.
+    await expect(doc.validate()).rejects.toThrow(/role/);
+  });
+
+  it('rejects a user with no role', async () => {
+    // Built without the helper: the helper supplies a role, which is exactly the
+    // field this test removes.
+    const doc = new UserModel({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      email: 'ada@example.com',
+      password: 'correct horse battery',
+    });
+
+    await expect(doc.validate()).rejects.toThrow(/role/);
+  });
+
+  it('stores assigned buildings as a list', async () => {
+    const doc = new UserModel({
+      ...userDoc('correct horse battery'),
+      role: 'OFFICE',
+      city: 'siechnice',
+      buildings: ['siechnice-a', 'siechnice-b'],
+    });
+    await saveIgnoringConnectionError(doc);
+
+    expect(doc.buildings).toEqual(['siechnice-a', 'siechnice-b']);
   });
 });

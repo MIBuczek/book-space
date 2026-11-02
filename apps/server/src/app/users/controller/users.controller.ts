@@ -9,9 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {UserService} from '../service/user.service';
-import {TUser} from '../schemas/user.schema';
 import {AuthGuard} from '@nestjs/passport';
-import {UserDto} from '../models/user.dto';
+import {UserDto, UpdateUserDto} from '../models/user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -35,7 +34,7 @@ export class UsersController {
   }
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateUser(@Param('_id') _id: string, @Body() user: Partial<UserDto>) {
+  updateUser(@Param('_id') _id: string, @Body() user: UpdateUserDto) {
     return this.userService.updateUser(_id, user);
   }
 
