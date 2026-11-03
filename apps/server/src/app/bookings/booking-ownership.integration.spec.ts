@@ -82,7 +82,7 @@ describe('booking ownership over HTTP', () => {
     return {token: ((await response.json()) as {token: string}).token, id: String(user._id)};
   };
 
-  const update = (id: string, token: string, body: Record<string, unknown> = {accepted: true}) =>
+  const update = (id: string, token: string, body: Record<string, unknown> = {comments: 'updated'}) =>
     fetch(`${ctx.baseUrl}/bookings/${id}`, {
       method: 'PUT',
       headers: {'content-type': 'application/json', authorization: `Bearer ${token}`},

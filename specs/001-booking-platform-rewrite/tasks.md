@@ -41,7 +41,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 - [x] T018 [US3] Implement server-side conflict detection as a pure, unit-tested function reproducing the legacy semantics (same day, month match, overlapping hour ranges, accepted bookings excluded). (FR-015, research.md R5, SC-002)
 - [x] T019 [US1] Implement cyclical booking expansion on the server, with the week-count calculation corrected and covered by tests including a year boundary. (FR-013, spec.md edge cases)
-- [ ] T020 [US3] Add `POST /api/bookings/{_id}/approve` and `POST /api/bookings/{_id}/archive`; approval returns the conflicts and requires `force` to proceed when conflicts exist. (FR-017, contracts/openapi.yaml)
+- [x] T020 [US3] Add `POST /api/bookings/{_id}/approve` and `POST /api/bookings/{_id}/archive`; approval returns the conflicts and requires `force` to proceed when conflicts exist. (FR-017, contracts/openapi.yaml)
 - [ ] T021 [US3] Block editing or deleting a time slot whose status is not `INITIAL`, on the server, with a clear error. (FR-018, FR-017)
 - [ ] T022 [US1] Add period filtering and pagination to `GET /api/bookings` (from/to, city, building, accepted, archive, clientId, page, limit) and replace the unbounded read. (FR-020, FR-022, FR-043, research.md R9)
 - [ ] T023 [US1] Implement the booking creation path for public callers including RODO acknowledgement, and the `PUT /api/bookings/{_id}/booked-times` replacement that preserves resolved slots. (FR-011, FR-012, research.md R5)

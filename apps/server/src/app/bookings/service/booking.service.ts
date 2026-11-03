@@ -1,12 +1,13 @@
-import {HttpException, Injectable} from '@nestjs/common';
+import {HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
-import {Booking} from '../schemas/booking.schema';
+import {Booking, TBooking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
 import {BookedTime} from '../schemas/booked-time.schemta';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
-import {findConflictingBookingIds} from '../conflicts/conflicts';
+import {findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
+import {StructuredHttpException} from '../../config/structured-http-exception';
 
 const CHANGE_LABELS: Array<[keyof Booking, string]> = [
   ['accepted', 'approval'],
@@ -43,8 +44,26 @@ export class BookingService {
       // pipe sees `Object` and whitelists nothing on this route — a caller could
       // otherwise send `createdBy` and hand the booking to themselves. Stripping it
       // here is the enforcement that does not depend on the DTO being a class.
+      //
+      // `accepted` and `archive` are stripped for the same reason and a stronger one:
+      // they are the administrator decisions T020 moved behind
+      // `POST /bookings/{_id}/approve` and `/archive`, where the conflict check and the
+      // audit stamp live. Leaving them settable here would let a booking's owner approve
+      // their own request and skip the conflict check entirely — the rule would exist on
+      // one route and be absent on the other that writes the same field.
       const updates = {...booking};
       delete updates.createdBy;
+      delete updates.accepted;
+      delete updates.archive;
+
+      // After stripping the fields above an update can be empty — a caller who sent
+      // only `accepted`, or the ownership spec's default body. MongoDB rejects an empty
+      // update document ("requires at least one atomic operator"), which would surface
+      // as a `500` on a request that asked for nothing. A no-op is a success.
+      if (Object.keys(updates).length === 0) {
+        this.logger.log('booking.updated', {bookingId: _id, actorId: currentActorId(), action: 'none'});
+        return {acknowledged: true, matchedCount: 1, modifiedCount: 0};
+      }
 
       const result = await this.bookingModel.updateOne({_id}, updates);
       // The changed field names are logged, not their values: they identify an
@@ -125,6 +144,124 @@ export class BookingService {
         }))
       );
     } catch (e) {
+      throw new HttpException(errorMessage(e), errorStatus(e));
+    }
+  }
+
+  /**
+   * The ids of the bookings that conflict with one already-loaded booking
+   * (FR-015, FR-017).
+   *
+   * Scoped to the booking's own facility and month, because those are the only
+   * bookings the conflict rules compare against. `String(_id)` on the record and on
+   * every candidate keeps the comparison in the `string` domain the pure function
+   * declares; passing an `ObjectId` would make the identity test depend on reference
+   * equality.
+   *
+   * The booking is passed in rather than looked up again, so an approval does not
+   * read the same document twice.
+   */
+  private async conflictsFor(booking: TBooking): Promise<string[]> {
+    const candidates = await this.bookingModel.find({
+      'place.city': booking.place.city,
+      'place.place': booking.place.place,
+      month: booking.month,
+    });
+
+    const asConflict = (record: {_id: unknown; month: number; accepted: boolean; bookedTimes: BookedTime[]}) => ({
+      _id: String(record._id),
+      month: record.month,
+      accepted: record.accepted,
+      bookedTimes: record.bookedTimes,
+    });
+
+    return findConflictsWith(
+      asConflict(booking),
+      candidates.map((candidate) => asConflict(candidate))
+    );
+  }
+
+  /**
+   * Approves or unapproves a booking, refusing an approval that would keep a conflict
+   * unless `force` is set (FR-017, contracts/openapi.yaml `/bookings/{_id}/approve`).
+   *
+   * The conflict check runs only when *accepting*: unapproving cannot introduce a
+   * double booking, and refusing to unapprove a conflicted booking would trap it.
+   * The conflicts are returned even when `force` allowed the approval, because the
+   * contract's `200` reports them so the UI can keep showing the warning.
+   *
+   * The check and the write are two operations, so two simultaneous approvals can
+   * still both pass it and both be written — the window is one request wide, and the
+   * outcome is the same conflict the `force` path allows deliberately. A unique index
+   * on the slot would close it, but the domain permits overlapping unapproved
+   * requests, so a constraint would reject legitimate data.
+   *
+   * The write and the `modifiedBy`/`modifiedAt` stamp are one atomic
+   * `findOneAndUpdate` rather than a read-modify-write, so the audit fields cannot be
+   * lost to a concurrent change between the read and the write (FR-016).
+   */
+  async setApproval(_id: string, accepted: boolean, force: boolean) {
+    try {
+      const booking = await this.bookingModel.findOne({_id});
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      const conflicts = accepted ? await this.conflictsFor(booking) : [];
+
+      if (accepted && !force && conflicts.length > 0) {
+        this.logger.warn('booking.approval.conflict', {bookingId: _id, actorId: currentActorId(), conflictCount: conflicts.length});
+        throw new StructuredHttpException(
+          {
+            statusCode: HttpStatus.CONFLICT,
+            message: 'Booking conflicts with other bookings',
+            error: 'Conflict',
+            conflicts,
+          },
+          HttpStatus.CONFLICT
+        );
+      }
+
+      const updated = await this.bookingModel.findOneAndUpdate(
+        {_id},
+        {accepted, modifiedBy: currentActorId(), modifiedAt: new Date()},
+        {new: true}
+      );
+      this.logger.log('booking.approved', {bookingId: _id, actorId: currentActorId(), accepted, forced: force});
+      return {booking: updated, conflicts};
+    } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
+      this.logger.error('booking.approval.failed', {bookingId: _id, actorId: currentActorId(), error: errorMessage(e)});
+      throw new HttpException(errorMessage(e), errorStatus(e));
+    }
+  }
+
+  /**
+   * Archives or restores a booking (FR-017).
+   *
+   * Archiving is a visibility change, not a conflict decision, so it has no guard.
+   * The actor and timestamp are recorded with the write (FR-016).
+   */
+  async setArchive(_id: string, archive: boolean) {
+    try {
+      const updated = await this.bookingModel.findOneAndUpdate(
+        {_id},
+        {archive, modifiedBy: currentActorId(), modifiedAt: new Date()},
+        {new: true}
+      );
+      if (!updated) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      this.logger.log('booking.archived', {bookingId: _id, actorId: currentActorId(), archive});
+      return updated;
+    } catch (e) {
+      if (e instanceof NotFoundException) {
+        throw e;
+      }
+      this.logger.error('booking.archive.failed', {bookingId: _id, actorId: currentActorId(), error: errorMessage(e)});
       throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }

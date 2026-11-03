@@ -1,4 +1,4 @@
-import {findConflictingBookingIds, IConflictBooking, IConflictSlot, slotsConflict} from './conflicts';
+import {findConflictingBookingIds, findConflictsWith, IConflictBooking, IConflictSlot, slotsConflict} from './conflicts';
 
 /**
  * SC-002 requires the rewrite to produce identical results to the legacy
@@ -170,6 +170,54 @@ describe('findConflictingBookingIds', () => {
     ];
 
     expect(findConflictingBookingIds(bookings)).toEqual([]);
+  });
+});
+
+describe('findConflictsWith', () => {
+  const DAY = '2026-03-04T00:00:00.000Z';
+  const slotA = slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z');
+  const overlapping = slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z');
+  const apart = slot(DAY, '2026-03-04T10:00:00Z', '2026-03-04T11:00:00Z');
+
+  it('returns the ids of the bookings that overlap the target', () => {
+    const target = booking('target', 3, false, [slotA]);
+    const others = [target, booking('over', 3, false, [overlapping]), booking('far', 3, false, [apart])];
+
+    expect(findConflictsWith(target, others)).toEqual(['over']);
+  });
+
+  it('counts an accepted booking as a conflict', () => {
+    // The approval decision is exactly where an already-approved booking matters: it is
+    // the one that cannot be double-booked. `findConflictingBookingIds` excludes it as a
+    // candidate, which is right for the counter and wrong here.
+    const target = booking('target', 3, false, [slotA]);
+    const others = [target, booking('approved', 3, true, [overlapping])];
+
+    expect(findConflictsWith(target, others)).toEqual(['approved']);
+  });
+
+  it('compares the target even when it is already marked accepted', () => {
+    // Approving a booking that is already accepted still has to report the conflict,
+    // because the flag holds its previous value while the decision is made.
+    const target = booking('target', 3, true, [slotA]);
+    const others = [target, booking('over', 3, false, [overlapping])];
+
+    expect(findConflictsWith(target, others)).toEqual(['over']);
+  });
+
+  it('never reports the target itself', () => {
+    const target = booking('target', 3, false, [slotA]);
+
+    expect(findConflictsWith(target, [target])).toEqual([]);
+  });
+
+  it('does not compare bookings in different months or facilities are already excluded', () => {
+    // The caller scopes the candidate query to the facility-month; the month rule is the
+    // pure function's own, and a different month is not a conflict.
+    const target = booking('target', 3, false, [slotA]);
+    const others = [target, booking('april', 4, false, [overlapping])];
+
+    expect(findConflictsWith(target, others)).toEqual([]);
   });
 });
 

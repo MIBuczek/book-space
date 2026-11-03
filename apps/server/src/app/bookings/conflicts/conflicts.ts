@@ -117,5 +117,31 @@ const findConflictingBookingIds = (bookings: IConflictBooking[]): string[] => {
   return [...conflicted];
 };
 
-export {findConflictingBookingIds, slotsConflict, bookingsConflict};
+/**
+ * The ids of the bookings that conflict with `target` (FR-015, FR-017).
+ *
+ * This is the approval-time question, which is narrower than the facility-month
+ * counter `findConflictingBookingIds` answers: an administrator is about to accept
+ * *this* booking, so only the bookings that overlap *it* matter.
+ *
+ * `target` is compared against `others` regardless of its own `accepted` flag,
+ * because the decision is being made about it right now — the flag still holds its
+ * previous value. Every *other* booking is considered, accepted or not: an approved
+ * booking is exactly the one that cannot be double-booked. `findConflictingBookingIds`
+ * excludes accepted bookings on both sides, which is correct for the counter and
+ * wrong here, so this is a separate function rather than a flag on that one.
+ */
+const findConflictsWith = (target: IConflictBooking, others: IConflictBooking[]): string[] => {
+  const conflicted = new Set<string>();
+
+  for (const other of others) {
+    if (other._id !== target._id && bookingsConflict(target, other)) {
+      conflicted.add(other._id);
+    }
+  }
+
+  return [...conflicted];
+};
+
+export {findConflictingBookingIds, findConflictsWith, slotsConflict, bookingsConflict};
 export type {IConflictBooking, IConflictSlot};
