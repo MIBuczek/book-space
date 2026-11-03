@@ -376,6 +376,43 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   in declaration order, so the reverse order makes `conflicts` a booking id and answers `500` on
   the `ObjectId` cast instead of the conflicts. `@Roles('ADMIN')` is on the route, not the class:
   the rest of `BookingController` is public or any-authenticated.
+- **Approval-time conflict detection is `findConflictsWith(target, others)`, not
+  `findConflictingBookingIds` (T020).** They answer different questions. The counter reports every
+  unaccepted booking that overlaps another in the facility-month, and skips an accepted booking as
+  a *candidate*. Approval is about *one* booking: only the bookings that overlap it matter, and an
+  already-accepted booking is exactly the one that cannot be double-booked, so it counts as a
+  conflict. `findConflictsWith` compares `target` regardless of its own `accepted` flag (the flag
+  still holds its previous value while the decision is made) and never excludes an accepted
+  `other`. Do not "unify" the two by adding a flag to `findConflictingBookingIds`; the two
+  exclusion rules are opposite, and the unit and HTTP specs pin each.
+- **The `409` on a conflicted approval carries the conflicting ids, and the global filter had to
+  learn to pass a body through (T020).** `ErrorExceptionFilter` narrows every error to
+  `{statusCode, message, error}`, which cannot hold `conflicts`. `StructuredHttpException`
+  (`config/structured-http-exception.ts`) carries its body whole and the filter returns it
+  verbatim — but only below `500`, so it can never be used to smuggle a driver message out. A
+  `409` is a *client* error and is not opaque; a 5xx still is.
+- **`POST` defaults to `201` in Nest, and the contract says `200`.** The approve and archive
+  routes return the updated booking, not a created resource, so each needs `@HttpCode(HttpStatus.OK)`.
+  The integration spec asserts `200`; without the decorator it answers `201` and the assertion
+  fails for a reason unrelated to the behaviour.
+- **The approve/archive body DTOs are concrete classes, not `Partial<...>`.** `ApprovalDto`
+  (`accepted`, optional `force`) and `ArchiveDto` (`archive`) are declared so the global pipe's
+  `whitelist`/`forbidNonWhitelisted` see a type; a mapped type is erased to `Object` at runtime
+  and would let an unknown property through. The controller supplies `force ?? false` — the pipe
+  does not require `force`, and a service that treated a missing value as consent would approve a
+  conflicted booking silently.
+- **`modifiedBy`/`modifiedAt` are written by the decision routes with the update, not by a schema
+  hook (FR-016, T020).** The stamp and the flag are one `findOneAndUpdate`, so a concurrent change
+  between a read and a write cannot lose the audit fields. The booking schema now declares both
+  (they were absent), so a test that seeds them reads them back rather than finding Mongoose
+  dropped the fields.
+- **`updateBooking` strips `accepted` and `archive` as well as `createdBy` (T020).** The generic
+  `PUT /bookings/{_id}` takes a `Partial<BookingDto>` body, which declares both flags, so an
+  owner could set `accepted` there and skip the conflict check the approve route enforces — the
+  same field would be guarded on one route and open on the other. The strip can leave the update
+  empty (a caller who sent only `accepted`), and MongoDB rejects an empty update document, so the
+  service returns a no-op success rather than a `500`. The approval integration spec pins that a
+  generic update cannot change `accepted`.
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.

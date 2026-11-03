@@ -104,6 +104,24 @@ export class Booking {
     type: String
   })
   createdBy?: string;
+
+  /**
+   * Who last modified the booking, and when (FR-016).
+   *
+   * Written by the decision routes (approve/archive) and by any future write path,
+   * not by a schema hook: the legacy app stamped these from the component, and
+   * moving the write here is what makes the record survive an update that does not
+   * go through the form.
+   */
+  @Prop({
+    type: String
+  })
+  modifiedBy?: string;
+
+  @Prop({
+    type: Date
+  })
+  modifiedAt?: Date;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

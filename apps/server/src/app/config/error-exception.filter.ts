@@ -1,6 +1,7 @@
 import {ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger} from '@nestjs/common';
 import {HttpAdapterHost} from '@nestjs/core';
 import {STATUS_CODES} from 'http';
+import {StructuredHttpException} from './structured-http-exception';
 
 /** The shape in `contracts/openapi.yaml`. `message` is a string for a single error. */
 export interface ErrorResponse {
@@ -44,9 +45,28 @@ export class ErrorExceptionFilter implements ExceptionFilter {
     const body =
       status >= HttpStatus.INTERNAL_SERVER_ERROR
         ? this.serverError(status, exception)
-        : this.fromHttpException(exception as HttpException, status);
+        : this.clientError(exception as HttpException, status);
 
     this.httpAdapter.reply(host.switchToHttp().getResponse(), body, status);
+  }
+
+  /**
+   * The body for a non-5xx `HttpException`.
+   *
+   * A `StructuredHttpException` supplies its body whole, because the contract's `409`
+   * on approval carries the conflicting bookings and the `{statusCode, message,
+   * error}` envelope cannot hold them. Everything else is derived from the exception
+   * as before. The structured body is only honoured below 500, so it can never be
+   * used to smuggle a driver message out.
+   */
+  private clientError(
+    exception: HttpException,
+    status: number,
+  ): ErrorResponse | ValidationErrorResponse | Record<string, unknown> {
+    if (exception instanceof StructuredHttpException) {
+      return exception.getBody();
+    }
+    return this.fromHttpException(exception, status);
   }
 
   /**

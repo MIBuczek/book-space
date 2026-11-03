@@ -4,6 +4,8 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Post,
@@ -15,6 +17,8 @@ import {
 import {Request} from 'express';
 import {BookingService} from '../service/booking.service';
 import {BookingDto} from '../models/booking.dto';
+import {ApprovalDto} from '../models/approval.dto';
+import {ArchiveDto} from '../models/archive.dto';
 import {ConflictsQueryDto} from '../models/conflicts-query.dto';
 import {AuthGuard} from '@nestjs/passport';
 import {BookedTimeDto} from '../models/booked-time.dto';
@@ -96,6 +100,40 @@ export class BookingController {
   @UseGuards(AuthGuard('jwt'))
   createBooking(@Body() newBooking: BookingDto, @CurrentUser() user: IActingUser) {
     return this.bookingService.createBooking({...newBooking, createdBy: actingUserId(user)});
+  }
+
+  /**
+   * Approves or unapproves a booking (FR-017, matrix: administrator-only).
+   *
+   * When accepting a booking that conflicts with another and `force` is not set, the
+   * service throws a structured `409` carrying the conflicting ids so the UI can show
+   * the legacy warning. The route returns the contract's `{booking, conflicts}` shape
+   * on success, so a forced approval still tells the administrator what it kept.
+   *
+   * `@Roles('ADMIN')` is per route, not on the class: the rest of this controller is
+   * public or any-authenticated, and `RolesGuard` uses `getAllAndOverride`, so a
+   * class-level role would need a route-level exception on every other route.
+   */
+  @Post(':_id/approve')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  approveBooking(@Param('_id') _id: string, @Body() approval: ApprovalDto) {
+    return this.bookingService.setApproval(_id, approval.accepted, approval.force ?? false);
+  }
+
+  /**
+   * Archives or restores a booking (FR-017, matrix: administrator-only).
+   *
+   * A visibility change, so it has no conflict guard. Kept beside `approve` because the
+   * two are the administrator decision pair the matrix groups together.
+   */
+  @Post(':_id/archive')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  archiveBooking(@Param('_id') _id: string, @Body() body: ArchiveDto) {
+    return this.bookingService.setArchive(_id, body.archive);
   }
 
   /**

@@ -409,8 +409,13 @@ paths:
       - $ref: '#/components/parameters/Id'
     post:
       tags: [bookings]
-      x-status: to-build
       summary: Approve or unapprove a booking (administrator)
+      description: >
+        Approving a booking that conflicts with another is refused with `409` unless
+        `force` is set, so the UI can show the legacy warning before the administrator
+        confirms. The `200` reports the conflicts as well, so a forced approval still
+        says what it kept. `conflicts` carries booking identifiers, matching
+        `GET /bookings/conflicts` and the `conflicts` field on `Booking`.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -424,7 +429,7 @@ paths:
                 force: {type: boolean, description: Confirm despite detected conflicts}
       responses:
         '200':
-          description: Updated booking, with conflicts reported when not forced
+          description: Updated booking, with the conflicts that remain
           content:
             application/json:
               schema:
@@ -433,20 +438,51 @@ paths:
                   booking: {$ref: '#/components/schemas/Booking'}
                   conflicts:
                     type: array
-                    items: {$ref: '#/components/schemas/Booking'}
+                    items: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           description: Conflicts detected and `force` was not set
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConflictError'}
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /bookings/{_id}/archive:
     parameters:
       - $ref: '#/components/parameters/Id'
     post:
       tags: [bookings]
-      x-status: to-build
       summary: Archive or restore a booking (administrator)
       security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archive]
+              properties:
+                archive: {type: boolean}
       responses:
-        '200': {description: Updated}
+        '200':
+          description: Updated booking
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /bookings/conflicts:
     get:
@@ -638,6 +674,21 @@ components:
           items: {type: string}
           example: ['E-mail address need to contains correct pattern.']
         error: {type: string, example: Unprocessable Entity}
+
+    ConflictError:
+      description: >
+        A refused approval. Carries the `Error` fields plus the identifiers of the
+        bookings that conflict, so the UI can name them. The array holds identifiers
+        rather than whole bookings, matching `GET /bookings/conflicts`.
+      type: object
+      properties:
+        statusCode: {type: integer, example: 409}
+        message: {type: string, example: Booking conflicts with other bookings}
+        error: {type: string, example: Conflict}
+        conflicts:
+          type: array
+          items: {type: string}
+          description: Identifier of each booking this one conflicts with
 
     LoginUserDto:
       type: object

@@ -37,6 +37,8 @@ describe('BookingController', () => {
   let updateBooking: jest.Mock;
   let deleteBooking: jest.Mock;
   let findConflictingBookingIds: jest.Mock;
+  let setApproval: jest.Mock;
+  let setArchive: jest.Mock;
 
   beforeEach(async () => {
     findAllBooking = jest.fn().mockResolvedValue([storedBooking()]);
@@ -45,11 +47,13 @@ describe('BookingController', () => {
     updateBooking = jest.fn().mockResolvedValue({matchedCount: 1});
     deleteBooking = jest.fn().mockResolvedValue({deletedCount: 1});
     findConflictingBookingIds = jest.fn().mockResolvedValue(['b2', 'b3']);
+    setApproval = jest.fn().mockResolvedValue({booking: storedBooking({accepted: true}), conflicts: []});
+    setArchive = jest.fn().mockResolvedValue(storedBooking({archive: true}));
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
       providers: [
-        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking, findConflictingBookingIds}},
+        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking, findConflictingBookingIds, setApproval, setArchive}},
         {provide: getModelToken('User'), useValue: {}},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
@@ -128,6 +132,34 @@ describe('BookingController', () => {
 
     it('returns the ids the service produced', async () => {
       await expect(controller.getConflicts({city: 'siechnice', building: 'hala', month: 3})).resolves.toEqual(['b2', 'b3']);
+    });
+  });
+
+  describe('approveBooking', () => {
+    it('passes the decision and the force flag to the service', async () => {
+      await controller.approveBooking('b1', {accepted: true, force: true});
+
+      expect(setApproval).toHaveBeenCalledWith('b1', true, true);
+    });
+
+    it('defaults force to false when the body omits it', async () => {
+      // The pipe does not require `force`, so the controller has to supply the default
+      // rather than passing `undefined` to a service that treats truthiness as consent.
+      await controller.approveBooking('b1', {accepted: false});
+
+      expect(setApproval).toHaveBeenCalledWith('b1', false, false);
+    });
+
+    it('returns the service result unchanged', async () => {
+      await expect(controller.approveBooking('b1', {accepted: true})).resolves.toMatchObject({conflicts: []});
+    });
+  });
+
+  describe('archiveBooking', () => {
+    it('passes the archive flag to the service', async () => {
+      await controller.archiveBooking('b1', {archive: true});
+
+      expect(setArchive).toHaveBeenCalledWith('b1', true);
     });
   });
 

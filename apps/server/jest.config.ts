@@ -106,11 +106,15 @@ export default {
   // SC-008 names four domain modules — bookings, conflicts, reports and
   // authorisation. Two exist: `authorization` and, since T018, `conflicts`. The
   // conflict rules are pure and fully exercised, so the group below mechanises the
-  // 80% floor for that module. `bookings` is still ~68% statements, below the 80% the
-  // criterion requires, and `reports` has no source at all (T026 is unbuilt), so a
-  // group is added for each as its task lands. Setting a group for a module that
-  // cannot reach 80% would fail the build for a reason unrelated to the change that
-  // introduced it.
+  // 80% floor for that module. `reports` has no source at all (T026 is unbuilt).
+  //
+  // `bookings` now measures ~89% statements in aggregate (T020 took the service from
+  // 68% to 84%), but a per-file group cannot be set yet: Jest applies a glob threshold
+  // to each matching file, and two schema files would fail it for reasons unrelated to
+  // behaviour — `schemas/booked-time.schemta.ts` is 0% (its body is never executed) and
+  // `schemas/booking.schema.ts` reports 0% functions. The aggregate is the number
+  // SC-008 is about; the group lands with the task that gives those files a spec, and
+  // setting it earlier would fail the build on the change that introduced it.
   //
   // `users` is deliberately not a group even though it now measures 100%: SC-008
   // does not name it, and a group whose files are all at 100% would be a second

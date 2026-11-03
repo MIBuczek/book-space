@@ -120,6 +120,18 @@ met by `conflicts.spec.ts`, which carries an independent transcription of the le
 and asserts agreement over 200 generated sets (~900 booking pairs), not by calling the new code
 from both sides. Approval-with-`force` (T020) is where the result is enforced before a write.
 
+**Landed (T020).** `POST /bookings/{_id}/approve` enforces the rule at approval time. The
+question it asks is narrower than the facility-month counter: only the bookings that overlap
+*this* one matter, and an already-accepted booking is a conflict rather than an excluded
+candidate — so `findConflictsWith(target, others)` is a second function, not a flag on
+`findConflictingBookingIds`. An approval that would keep a conflict is refused with `409`
+carrying the conflicting ids, unless `force` is set; a forced approval still reports them on
+the `200`. Unapproving runs no check, because it cannot introduce a double booking. The
+`409` body needs a field the global filter's `{statusCode, message, error}` envelope cannot
+hold, so `StructuredHttpException` carries its body whole and the filter honours it below
+500 only. `POST /bookings/{_id}/archive` is the companion visibility change, and both routes
+record `modifiedBy`/`modifiedAt` with the write (FR-016).
+
 ---
 
 ## R6 — Facilities and cities as data
