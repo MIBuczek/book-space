@@ -142,6 +142,22 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   runtime, so the global `ValidationPipe` sees `Object` and validates nothing — no `whitelist`,
   no `forbidNonWhitelisted`, no field rules. Any route whose body is a partial needs a concrete
   class (`UpdateUserDto`), not a mapped type. The same applies to `Pick`/`Omit`.
+- **The global `ValidationPipe` does not validate a top-level array body.** Nest's pipe
+  declines an `Array` metatype (`toValidate` excludes it), so `@Body() x: SomeDto[]` reaches the
+  handler unchecked — no `whitelist`, no field rules, and an extra property is silently kept.
+  A route whose body is an array must attach `ParseArrayPipe({items: SomeDto, ...})`, and it
+  needs the validation options passed explicitly because it builds its own `ValidationPipe`.
+  Those options live in `apps/server/src/app/config/validation-options.ts` so the global pipe
+  and the array pipe cannot drift. `PUT /bookings/{_id}/booked-times` is the case in point
+  (T021); the `ParseArrayPipe` default status is 400, so `errorHttpStatusCode: 422` has to be
+  carried across or the contract's 422 becomes 400 on that route alone.
+- **A field with its own route must be stripped from the generic update.** `updateBooking`
+  deletes `accepted`, `archive` and `bookedTimes` from the body before writing, because each has
+  a dedicated route carrying a rule the generic update does not run (conflict check, resolved-slot
+  immutability). `BookingDto` declares all three, so without the strip the rule is enforced on
+  one route and absent on the other that writes the same field — and `forbidNonWhitelisted` does
+  not help, because the field *is* whitelisted. When a write rule is attached to a dedicated
+  route, add the field to that strip list.
 - **A passing lint cannot prove a rule is live.** `@nx/enforce-module-boundaries` is what
   caught the 33 errors fixed in PR #59, and it is the rule most likely to vanish silently in a
   config-format change. Verify it by adding an `@server/*` import inside `apps/server` where a

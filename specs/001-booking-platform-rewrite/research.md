@@ -132,6 +132,28 @@ hold, so `StructuredHttpException` carries its body whole and the filter honours
 500 only. `POST /bookings/{_id}/archive` is the companion visibility change, and both routes
 record `modifiedBy`/`modifiedAt` with the write (FR-016).
 
+**Landed (T021).** `PUT /bookings/{_id}/booked-times` is the slot-replacement route, and the
+resolved-slot rule (FR-018) now lives there. The route path was `booked_times` while the
+contract said `booked-times`; it now matches the contract, and the route gained the ownership
+check the other write routes carry. The rule itself is
+`apps/server/src/app/bookings/slots/resolved-slots.ts` — a pure function over the stored list
+and the incoming list, so it has its own spec rather than being reachable only through a
+request. A slot is identified by `day`, matching the legacy `concatBookingTime`, which merged
+slot lists on `day`; a stored slot whose status is not `INITIAL` must appear in the body
+unchanged, or the request is refused with `409` (removal and edit get distinct messages, the
+removal one verbatim from `BookingTimeForm.deleteBookingTime`). Reverting a resolved slot to
+`INITIAL` is an edit and is refused with no override: FR-018 names no exception, and an
+"unresolve" flag would be a capability neither the spec nor the legacy app describes. The
+body is a top-level array, which the global `ValidationPipe` does not check (it declines an
+`Array` metatype), so the route attaches `ParseArrayPipe` with the same options — `whitelist`,
+`forbidNonWhitelisted`, 422 — which is also why `BookedTimeDto.participants`/`comments`
+became optional: they always were in the contract and the data model, and nothing validated
+the array before. `BookingService.updateBooking` strips `bookedTimes` for the same reason it
+strips `accepted`/`archive`: the field has its own route with its own rule, and leaving it
+settable on the generic update would be the rule absent on one of the two paths that write
+it. T023 builds the *creation* path on top of this route; the replacement semantics are
+already here.
+
 ---
 
 ## R6 — Facilities and cities as data

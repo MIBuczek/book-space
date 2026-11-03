@@ -1,6 +1,7 @@
 import {INestApplication, ValidationPipe} from '@nestjs/common';
 import {HttpAdapterHost} from '@nestjs/core';
 import {ErrorExceptionFilter} from './error-exception.filter';
+import {VALIDATION_PIPE_OPTIONS} from './validation-options';
 
 /**
  * Applies the request-handling behaviour that must be identical in every
@@ -15,21 +16,7 @@ import {ErrorExceptionFilter} from './error-exception.filter';
  */
 export function configureApp(app: INestApplication): void {
   app.useGlobalPipes(
-    new ValidationPipe({
-      // Strip properties the DTO does not declare, and reject the request rather
-      // than silently ignoring them. Without this a caller can set any schema
-      // field the DTO omits (mass assignment), which is how `lastLogin` reached
-      // `model.create()` from a request that never mentioned it.
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {enableImplicitConversion: true},
-      // The contract (contracts/openapi.yaml) declares 422 for validation
-      // failures; Nest's ValidationPipe defaults to 400. The contract is the
-      // specification the UI is written against, so the pipe is configured to
-      // match it rather than the contract being changed to match the default.
-      errorHttpStatusCode: 422,
-    }),
+    new ValidationPipe(VALIDATION_PIPE_OPTIONS),
   );
 
   // The filter needs the HTTP adapter to write a response for errors raised
