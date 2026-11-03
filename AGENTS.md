@@ -379,6 +379,19 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.
+- **All instant↔civil-calendar conversion goes through `utility/facility-time.ts` (T019, R4).**
+  It uses `Intl.DateTimeFormat('Europe/Warsaw', {hourCycle: 'h23'})`; the `h23` is load-bearing —
+  the default cycle reports local midnight as hour `24`, which shifts every day boundary. Do not
+  replace it with a fixed `+1`/`+2` offset or a "same UTC calendar day" test: `startOfFacilityDay`
+  returns `23:00Z` the day before spring-forward and `22:00Z` the day before fall-back, and the
+  spec pins both. `addFacilityDays` preserves the *wall-clock* hour, so a day is 23 or 25 hours
+  long across a transition — that is the point, not a bug.
+- **Cyclical expansion is `bookings/cyclical/cyclical.ts` and its count is `floor(days/7) + 1`
+  (T019).** The rule is "slots on `startDay` and every 7 days after, keeping each slot day not
+  after `endDay`", both endpoints inclusive. The legacy `do/while` over `round(days/7)` emitted one
+  extra occurrence for every sub-week range; `cyclical.spec.ts` contrasts the two counts so the
+  off-by-one cannot come back. `expandBookingTimes` throws `RangeError` when `endDay` precedes
+  `startDay`, and `endHour` may be `24` (local midnight at the end of the day).
 - **A per-directory threshold group removes its files from `global`.** Jest's `global` key
   aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
   `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the

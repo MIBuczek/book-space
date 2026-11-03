@@ -79,6 +79,16 @@ the facility-local date.
 **Consequence**: all date handling goes through one shared utility with unit tests covering
 both DST transitions.
 
+**Landed (T019).** `apps/server/src/app/utility/facility-time.ts` is that utility. It uses
+`Intl.DateTimeFormat` with `timeZone: 'Europe/Warsaw'` and `hourCycle: 'h23'` rather than a
+date dependency (Node 24 ships full ICU) or the legacy hand-rolled offset. `hourCycle: 'h23'`
+matters: the default cycle reports local midnight as hour `24`, which shifts every day
+boundary. `facility-time.spec.ts` pins both transitions — local midnight is `23:00Z` the day
+before spring-forward and `22:00Z` the day before fall-back — and `addFacilityDays` is
+asserted to preserve the wall-clock hour across both, so a "constant UTC offset" rewrite
+fails. The cyclical expansion (`bookings/cyclical/cyclical.ts`) is built on it, so a weekly
+series keeps a constant local start hour through the change.
+
 ---
 
 ## R5 — Conflict detection
