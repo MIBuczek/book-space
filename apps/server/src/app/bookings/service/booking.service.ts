@@ -6,6 +6,7 @@ import {BookedTime} from '../schemas/booked-time.schemta';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
+import {findConflictingBookingIds} from '../conflicts/conflicts';
 
 const CHANGE_LABELS: Array<[keyof Booking, string]> = [
   ['accepted', 'approval'],
@@ -83,6 +84,46 @@ export class BookingService {
   async findBooking(_id: string) {
     try {
       return await this.bookingModel.findOne({_id});
+    } catch (e) {
+      throw new HttpException(errorMessage(e), errorStatus(e));
+    }
+  }
+
+  /**
+   * The ids of the unaccepted bookings that conflict within one facility-month
+   * (FR-015, contracts/openapi.yaml `/bookings/conflicts`).
+   *
+   * The facility and month are pushed into the query rather than filtered after the
+   * read, for the same reason the public calendar filter is: an unrelated booking is
+   * never loaded. Only `accepted: false` is required by the rules, but the query is
+   * scoped to the facility-month regardless, because that is the unit the legacy
+   * screen computed over and the only scope in which the answer is meaningful.
+   *
+   * The comparison itself lives in the pure `findConflictingBookingIds`, which is
+   * where the rules and their SC-002 oracle are. This method only shapes the query
+   * and adapts the documents to what that function reads.
+   */
+  async findConflictingBookingIds(city: string, building: string, month: number): Promise<string[]> {
+    try {
+      const bookings = await this.bookingModel.find({
+        'place.city': city,
+        'place.place': building,
+        month,
+      });
+
+      // `_id` on a hydrated document is an `ObjectId`, not the `string` the pure
+      // function declares, so it is converted here rather than hidden behind a cast.
+      // The module compares ids for identity and returns them; handing it an
+      // `ObjectId` would make the returned "ids" serialize as hex strings by accident
+      // and the identity test depend on reference equality (T017's trap).
+      return findConflictingBookingIds(
+        bookings.map((booking) => ({
+          _id: String(booking._id),
+          month: booking.month,
+          accepted: booking.accepted,
+          bookedTimes: booking.bookedTimes,
+        }))
+      );
     } catch (e) {
       throw new HttpException(errorMessage(e), errorStatus(e));
     }

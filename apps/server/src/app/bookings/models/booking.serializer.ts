@@ -34,6 +34,7 @@ type TBookingField =
   | 'discount'
   | 'extraOptions'
   | 'selectedOptions'
+  | 'conflicts'
   | 'createdBy'
   | 'createdAt'
   | 'modifiedBy'

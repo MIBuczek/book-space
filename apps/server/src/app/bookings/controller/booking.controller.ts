@@ -8,16 +8,20 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import {Request} from 'express';
 import {BookingService} from '../service/booking.service';
 import {BookingDto} from '../models/booking.dto';
+import {ConflictsQueryDto} from '../models/conflicts-query.dto';
 import {AuthGuard} from '@nestjs/passport';
 import {BookedTimeDto} from '../models/booked-time.dto';
 import {OptionalJwtAuthGuard} from '../../authorization/guards/optional-jwt-auth.guard';
 import {CurrentUser} from '../../authorization/decorators/current-user.decorator';
+import {RolesGuard} from '../../authorization/guards/roles.guard';
+import {Roles} from '../../authorization/decorators/roles.decorator';
 import {actingUserId, canModifyBooking, IActingUser, isStaff} from '../../authorization/ownership';
 import {serializePublicBookings} from '../models/booking.serializer';
 
@@ -50,6 +54,26 @@ export class BookingController {
     const bookings = await this.bookingService.findAllBooking(staff);
 
     return staff ? bookings : serializePublicBookings(bookings);
+  }
+
+  /**
+   * The conflicting unaccepted bookings for one facility-month (FR-015).
+   *
+   * Administrator-only: the matrix gives the conflict counter to administrators, and
+   * the answer names bookings a non-administrator is not entitled to see. `@Roles`
+   * and `RolesGuard` are applied per route rather than at the class, because the rest
+   * of this controller is public or any-authenticated.
+   *
+   * Declared before `@Get(':_id')`. Express matches routes in declaration order, so
+   * the reverse order would make `conflicts` a booking id and answer `404`/`500`
+   * instead of the conflicts. `delete-routes.spec.ts` guards the same class of
+   * mistake for the delete routes.
+   */
+  @Get('conflicts')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('ADMIN')
+  getConflicts(@Query() query: ConflictsQueryDto) {
+    return this.bookingService.findConflictingBookingIds(query.city, query.building, query.month);
   }
 
   @Get(':_id')

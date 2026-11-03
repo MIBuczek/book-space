@@ -39,7 +39,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 ## Phase 4 — Booking domain logic
 
-- [ ] T018 [US3] Implement server-side conflict detection as a pure, unit-tested function reproducing the legacy semantics (same day, month match, overlapping hour ranges, accepted bookings excluded). (FR-015, research.md R5, SC-002)
+- [x] T018 [US3] Implement server-side conflict detection as a pure, unit-tested function reproducing the legacy semantics (same day, month match, overlapping hour ranges, accepted bookings excluded). (FR-015, research.md R5, SC-002)
 - [ ] T019 [US1] Implement cyclical booking expansion on the server, with the week-count calculation corrected and covered by tests including a year boundary. (FR-013, spec.md edge cases)
 - [ ] T020 [US3] Add `POST /api/bookings/{_id}/approve` and `POST /api/bookings/{_id}/archive`; approval returns the conflicts and requires `force` to proceed when conflicts exist. (FR-017, contracts/openapi.yaml)
 - [ ] T021 [US3] Block editing or deleting a time slot whose status is not `INITIAL`, on the server, with a clear error. (FR-018, FR-017)

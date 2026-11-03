@@ -42,6 +42,8 @@ interface IBooking {
   /** Derived: true when `selectedOptions` is non-empty. */
   extraOptions: boolean;
   selectedOptions: ISelectedExtraOption[];
+  /** Ids of the unaccepted bookings this one conflicts with (FR-015). Derived on read. */
+  conflicts?: string[];
   createdBy?: string;
   createdAt?: Date;
   modifiedBy?: string;

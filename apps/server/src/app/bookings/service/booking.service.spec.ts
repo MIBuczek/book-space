@@ -73,6 +73,53 @@ describe('BookingService', () => {
     });
   });
 
+  describe('findConflictingBookingIds', () => {
+    const slot = (start: string, end: string) => ({
+      day: new Date('2026-03-04T00:00:00Z'),
+      startHours: new Date(start),
+      endHours: new Date(end),
+    });
+
+    beforeEach(() => {
+      modelMock.find.mockReset();
+      modelMock.find.mockResolvedValue([]);
+    });
+
+    it('scopes the query to the facility and month', async () => {
+      await service.findConflictingBookingIds('siechnice', 'hala', 3);
+
+      expect(modelMock.find).toHaveBeenCalledWith({
+        'place.city': 'siechnice',
+        'place.place': 'hala',
+        month: 3,
+      });
+    });
+
+    it('returns the ids of the conflicting unaccepted bookings', async () => {
+      modelMock.find.mockResolvedValue([
+        {_id: 'a', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
+        {_id: 'b', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
+      ]);
+
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).resolves.toEqual(['a', 'b']);
+    });
+
+    it('excludes an accepted booking from the reported ids', async () => {
+      modelMock.find.mockResolvedValue([
+        {_id: 'accepted', month: 3, accepted: true, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
+        {_id: 'pending', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
+      ]);
+
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).resolves.toEqual(['pending']);
+    });
+
+    it('maps a driver failure to an HTTP error', async () => {
+      modelMock.find.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).rejects.toMatchObject({message: 'connection lost'});
+    });
+  });
+
   describe('updateBooking', () => {
     beforeEach(() => {
       modelMock.updateOne.mockReset();

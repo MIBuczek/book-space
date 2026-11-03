@@ -104,13 +104,13 @@ export default {
   // exists today.
   //
   // SC-008 names four domain modules — bookings, conflicts, reports and
-  // authorisation. Only `authorization` exists: conflicts and reports have no
-  // source at all (T018/T019/T026 are unbuilt), and `bookings` is at ~68%
-  // statements, below the 80% the criterion requires. So this group covers the one
-  // module that can meet the target today, and a `bookings`/`conflicts`/`reports`
-  // group is added as each of those tasks lands. Setting a group for a module that
-  // cannot reach 80% would fail the build for a reason unrelated to the change
-  // that introduced it.
+  // authorisation. Two exist: `authorization` and, since T018, `conflicts`. The
+  // conflict rules are pure and fully exercised, so the group below mechanises the
+  // 80% floor for that module. `bookings` is still ~68% statements, below the 80% the
+  // criterion requires, and `reports` has no source at all (T026 is unbuilt), so a
+  // group is added for each as its task lands. Setting a group for a module that
+  // cannot reach 80% would fail the build for a reason unrelated to the change that
+  // introduced it.
   //
   // `users` is deliberately not a group even though it now measures 100%: SC-008
   // does not name it, and a group whose files are all at 100% would be a second
@@ -126,6 +126,17 @@ export default {
     // means a new file arriving with no tests fails immediately at 0%, which is
     // the desired behaviour for a domain module.
     '**/src/app/authorization/**/*.ts': {
+      statements: 80,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+    },
+    // The conflict rules (T018) are the second SC-008 module. The file measures
+    // 100% and 80 is the criterion's floor; the group exists so the algorithm cannot
+    // gain a branch without a test. Both groups take their files out of `global`, so
+    // the global figure is measured *without* them — re-derive it from the per-file
+    // rows rather than reading the report's `total`.
+    '**/src/app/bookings/conflicts/**/*.ts': {
       statements: 80,
       branches: 80,
       functions: 80,
