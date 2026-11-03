@@ -37,14 +37,22 @@ export class BookingService {
 
   async updateBooking(_id: string, booking: Partial<Booking>) {
     try {
-      const result = await this.bookingModel.updateOne({_id}, booking);
+      // The owner reference is never updatable. The update body is typed
+      // `Partial<BookingDto>`, and a mapped type is erased at runtime, so the global
+      // pipe sees `Object` and whitelists nothing on this route — a caller could
+      // otherwise send `createdBy` and hand the booking to themselves. Stripping it
+      // here is the enforcement that does not depend on the DTO being a class.
+      const updates = {...booking};
+      delete updates.createdBy;
+
+      const result = await this.bookingModel.updateOne({_id}, updates);
       // The changed field names are logged, not their values: they identify an
       // approval or an archive without recording personal data. The names are
       // mapped to a fixed action so a caller cannot inject a new label.
       this.logger.log('booking.updated', {
         bookingId: _id,
         actorId: currentActorId(),
-        action: describeBookingChange(booking),
+        action: describeBookingChange(updates),
       });
       return result;
     } catch (e) {

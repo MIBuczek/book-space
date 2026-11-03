@@ -30,6 +30,20 @@ const isStaff = (user: IActingUser | undefined): boolean =>
 const normalise = (value: TCreatorRef): string => (typeof value === 'string' ? value.trim().toLowerCase() : '');
 
 /**
+ * Reads the acting user's id as a string.
+ *
+ * `IActingUser._id` is declared a `string`, but the value on the request is a
+ * hydrated Mongoose document's `ObjectId`, which is an object. `normalise` reads
+ * only strings, so passing the raw id would make `ownsRecord` answer "not owned"
+ * for the record's own creator — the check would deny everyone rather than the
+ * wrong person. Converting here is what keeps the comparison working against the
+ * real request; the integration spec exercises it end to end, where a string-only
+ * unit test cannot see the difference.
+ */
+const actingUserId = (user: IActingUser | undefined): string | undefined =>
+  user?._id === undefined ? undefined : String(user._id);
+
+/**
  * Exact identity comparison, replacing the legacy substring check
  * (`record.createdBy.includes(user.email)`), which two ways was wrong: an empty
  * e-mail matched every record, and a prefix matched an unintended address.
@@ -48,15 +62,23 @@ const ownsRecord = (createdBy: TCreatorRef, actor: TCreatorRef): boolean => {
 /**
  * Whether `user` may modify a booking. An administrator may modify any; every
  * other role may modify only what it created (authorization matrix, note 4).
+ *
+ * A booking that is `null` or `undefined` is not owned. The caller normally loads
+ * the booking first and answers `404` when it is missing, but making the check
+ * itself fail closed means a future caller cannot accidentally read ownership off
+ * a record that was never found.
  */
-const canModifyBooking = (user: IActingUser | undefined, booking: {createdBy?: TCreatorRef}): boolean => {
-  if (!user) {
+const canModifyBooking = (
+  user: IActingUser | undefined,
+  booking: {createdBy?: TCreatorRef} | null | undefined
+): boolean => {
+  if (!user || !booking) {
     return false;
   }
   if (user.role === 'ADMIN') {
     return true;
   }
-  return ownsRecord(booking.createdBy, user._id) || ownsRecord(booking.createdBy, user.email);
+  return ownsRecord(booking.createdBy, actingUserId(user)) || ownsRecord(booking.createdBy, user.email);
 };
 
-export {ownsRecord, canModifyBooking, isStaff, IActingUser, TCreatorRef};
+export {ownsRecord, canModifyBooking, isStaff, actingUserId, IActingUser, TCreatorRef};

@@ -1,4 +1,16 @@
-import {Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards} from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {Request} from 'express';
 import {BookingService} from '../service/booking.service';
 import {BookingDto} from '../models/booking.dto';
@@ -6,7 +18,7 @@ import {AuthGuard} from '@nestjs/passport';
 import {BookedTimeDto} from '../models/booked-time.dto';
 import {OptionalJwtAuthGuard} from '../../authorization/guards/optional-jwt-auth.guard';
 import {CurrentUser} from '../../authorization/decorators/current-user.decorator';
-import {IActingUser, isStaff} from '../../authorization/ownership';
+import {actingUserId, canModifyBooking, IActingUser, isStaff} from '../../authorization/ownership';
 import {serializePublicBookings} from '../models/booking.serializer';
 
 @Controller('bookings')
@@ -46,18 +58,34 @@ export class BookingController {
     return this.bookingService.findBooking(_id);
   }
 
+  /**
+   * Creates a booking and stamps its creator.
+   *
+   * The ownership reference is taken from the authenticated user, never from the
+   * body: a caller-supplied `createdBy` would let a staff member attribute a booking
+   * to someone else and then be unable to edit it, or — worse — attribute it to a
+   * person whose identity they are about to impersonate. The DTO does not declare
+   * the field, so `whitelist`/`forbidNonWhitelisted` already rejects a body that
+   * tries to set it; stamping here is the positive half of that.
+   */
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  createBooking(@Body() newBooking: BookingDto) {
-    return this.bookingService.createBooking(newBooking);
+  createBooking(@Body() newBooking: BookingDto, @CurrentUser() user: IActingUser) {
+    return this.bookingService.createBooking({...newBooking, createdBy: actingUserId(user)});
   }
 
+  /**
+   * Updates a booking, after checking the caller owns it (FR-023, matrix note 4).
+   *
+   * The record is loaded first so the decision is made against the stored owner
+   * rather than anything the caller sent. A missing booking is `404`; a booking the
+   * caller may not modify is `403`. An administrator bypasses the owner check inside
+   * `canModifyBooking`, which is where the "any booking" row of the matrix lives.
+   */
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateBooking(
-    @Param('_id') _id: string,
-    @Body() booking: Partial<BookingDto>
-  ) {
+  async updateBooking(@Param('_id') _id: string, @Body() booking: Partial<BookingDto>, @CurrentUser() user: IActingUser) {
+    await this.assertCanModify(_id, user);
     return this.bookingService.updateBooking(_id, booking);
   }
 
@@ -72,7 +100,27 @@ export class BookingController {
 
   @Delete(':_id')
   @UseGuards(AuthGuard('jwt'))
-  deleteBooking(@Param('_id') _id: string) {
+  async deleteBooking(@Param('_id') _id: string, @CurrentUser() user: IActingUser) {
+    await this.assertCanModify(_id, user);
     return this.bookingService.deleteBooking(_id);
+  }
+
+  /**
+   * Loads the booking and refuses the request unless the caller may modify it.
+   *
+   * `404` and `403` are kept distinct on purpose. Collapsing them would hide whether
+   * a booking exists, but the caller is already authenticated and the `GET` route
+   * already reveals that, so the distinction costs nothing and a `403` tells a
+   * legitimate staff member they reached the wrong record rather than that it is
+   * missing.
+   */
+  private async assertCanModify(_id: string, user: IActingUser): Promise<void> {
+    const booking = await this.bookingService.findBooking(_id);
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+    if (!canModifyBooking(user, booking)) {
+      throw new ForbiddenException('You may only modify a booking you created');
+    }
   }
 }
