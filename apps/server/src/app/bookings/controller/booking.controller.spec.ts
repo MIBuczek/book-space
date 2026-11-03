@@ -39,6 +39,7 @@ describe('BookingController', () => {
   let findConflictingBookingIds: jest.Mock;
   let setApproval: jest.Mock;
   let setArchive: jest.Mock;
+  let updateBookedTimes: jest.Mock;
 
   beforeEach(async () => {
     findAllBooking = jest.fn().mockResolvedValue([storedBooking()]);
@@ -49,11 +50,12 @@ describe('BookingController', () => {
     findConflictingBookingIds = jest.fn().mockResolvedValue(['b2', 'b3']);
     setApproval = jest.fn().mockResolvedValue({booking: storedBooking({accepted: true}), conflicts: []});
     setArchive = jest.fn().mockResolvedValue(storedBooking({archive: true}));
+    updateBookedTimes = jest.fn().mockResolvedValue({matchedCount: 1, modifiedCount: 1});
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
       providers: [
-        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking, findConflictingBookingIds, setApproval, setArchive}},
+        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking, findConflictingBookingIds, setApproval, setArchive, updateBookedTimes}},
         {provide: getModelToken('User'), useValue: {}},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
@@ -213,6 +215,45 @@ describe('BookingController', () => {
       findBooking.mockResolvedValue(null);
 
       await expect(controller.updateBooking('missing', {} as never, EMPLOYEE)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('updateBookedTimes', () => {
+    const slot = () => ({
+      day: new Date('2026-03-04T00:00:00.000Z'),
+      startHours: new Date('2026-03-04T08:00:00.000Z'),
+      endHours: new Date('2026-03-04T10:00:00.000Z'),
+      status: 'INITIAL' as const,
+    });
+
+    it('passes the slot list to the service for the owner', async () => {
+      findBooking.mockResolvedValue(storedBooking({createdBy: 'u2'}));
+      const slots = [slot()];
+
+      await controller.updateBookedTimes('b1', slots, EMPLOYEE);
+
+      expect(updateBookedTimes).toHaveBeenCalledWith('b1', slots);
+    });
+
+    it('refuses a different staff member with 403 and does not write', async () => {
+      findBooking.mockResolvedValue(storedBooking({createdBy: 'u2'}));
+
+      await expect(controller.updateBookedTimes('b1', [slot()], OTHER_EMPLOYEE)).rejects.toBeInstanceOf(ForbiddenException);
+      expect(updateBookedTimes).not.toHaveBeenCalled();
+    });
+
+    it('lets an administrator replace the slots of any booking', async () => {
+      findBooking.mockResolvedValue(storedBooking({createdBy: 'u2'}));
+
+      await controller.updateBookedTimes('b1', [slot()], ADMIN);
+
+      expect(updateBookedTimes).toHaveBeenCalled();
+    });
+
+    it('answers 404 for a booking that does not exist', async () => {
+      findBooking.mockResolvedValue(null);
+
+      await expect(controller.updateBookedTimes('missing', [slot()], EMPLOYEE)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

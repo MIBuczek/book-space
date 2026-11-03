@@ -8,6 +8,7 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  ParseArrayPipe,
   Post,
   Put,
   Query,
@@ -22,6 +23,7 @@ import {ArchiveDto} from '../models/archive.dto';
 import {ConflictsQueryDto} from '../models/conflicts-query.dto';
 import {AuthGuard} from '@nestjs/passport';
 import {BookedTimeDto} from '../models/booked-time.dto';
+import {VALIDATION_PIPE_OPTIONS} from '../../config/validation-options';
 import {OptionalJwtAuthGuard} from '../../authorization/guards/optional-jwt-auth.guard';
 import {CurrentUser} from '../../authorization/decorators/current-user.decorator';
 import {RolesGuard} from '../../authorization/guards/roles.guard';
@@ -151,12 +153,29 @@ export class BookingController {
     return this.bookingService.updateBooking(_id, booking);
   }
 
-  @Put(':_id/booked_times')
+  /**
+   * Replaces the booking's slot list, after the same ownership check the generic update
+   * uses and with the resolved-slot rule enforced (FR-018, FR-023).
+   *
+   * The path is `booked-times`, matching `contracts/openapi.yaml`. The route previously
+   * read `booked_times`, so the contract and the implementation disagreed on the URL and a
+   * client written against the contract would have reached a `404`.
+   *
+   * The body is a top-level array, which the global `ValidationPipe` does not validate:
+   * Nest's pipe declines an `Array` metatype, so each item would reach the service
+   * unchecked. `ParseArrayPipe` validates each item against `BookedTimeDto` and is given
+   * the same options the global pipe uses, so `whitelist`, `forbidNonWhitelisted` and the
+   * 422 status hold here too. The old body type (`Partial<BookedTimeDto>`) was both the
+   * wrong shape for an array and erased at runtime, so nothing was validated at all.
+   */
+  @Put(':_id/booked-times')
   @UseGuards(AuthGuard('jwt'))
-  updateBookedTimes(
+  async updateBookedTimes(
     @Param('_id') _id: string,
-    @Body() bookedTimes: Partial<BookedTimeDto>
+    @Body(new ParseArrayPipe({items: BookedTimeDto, ...VALIDATION_PIPE_OPTIONS})) bookedTimes: BookedTimeDto[],
+    @CurrentUser() user: IActingUser
   ) {
+    await this.assertCanModify(_id, user);
     return this.bookingService.updateBookedTimes(_id, bookedTimes);
   }
 

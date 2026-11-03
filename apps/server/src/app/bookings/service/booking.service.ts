@@ -1,8 +1,10 @@
-import {HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/common';
+import {ConflictException, HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking, TBooking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
 import {BookedTime} from '../schemas/booked-time.schemta';
+import {BookedTimeDto} from '../models/booked-time.dto';
+import {findResolvedSlotViolation, resolvedSlotMessage} from '../slots/resolved-slots';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
@@ -55,6 +57,13 @@ export class BookingService {
       delete updates.createdBy;
       delete updates.accepted;
       delete updates.archive;
+      // `bookedTimes` is stripped for the same reason as the decision fields: the slot
+      // list has its own route (`PUT /bookings/{_id}/booked-times`) where the resolved-slot
+      // rule (FR-018) runs. A `BookingDto` declares `bookedTimes`, so leaving it settable
+      // here would let an owner replace the slots on the generic update and skip that
+      // rule entirely — the guard would exist on one route and be absent on the other
+      // that writes the same field.
+      delete updates.bookedTimes;
 
       // After stripping the fields above an update can be empty — a caller who sent
       // only `accepted`, or the ownership spec's default body. MongoDB rejects an empty
@@ -81,10 +90,50 @@ export class BookingService {
     }
   }
 
-  async updateBookedTimes(_id: string, bookedTimes: Partial<BookedTime>) {
+  /**
+   * Replaces a booking's slot list, refusing to edit or delete a resolved slot (FR-018).
+   *
+   * The rule is stated over a replacement because that is what the route does: the body is
+   * the complete desired list. `findResolvedSlotViolation` compares it against the stored
+   * list and reports the first resolved slot that is missing or different; either is
+   * refused with `409` and the message the UI shows, and the record is left untouched
+   * because the check runs before the write.
+   *
+   * The booking is read here rather than passed in from the controller's ownership check:
+   * the rule needs the *stored* slots, and reading them where the decision is made keeps
+   * the check and the write in one method. The read is on the primary key.
+   *
+   * `modifiedBy`/`modifiedAt` are stamped with the write (FR-016), so a slot change is
+   * attributable like an approval.
+   */
+  async updateBookedTimes(_id: string, bookedTimes: BookedTimeDto[]) {
     try {
-      return await this.bookingModel.updateOne({_id}, {bookedTimes});
+      const booking = await this.bookingModel.findOne({_id});
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      const violation = findResolvedSlotViolation(booking.bookedTimes ?? [], bookedTimes);
+      if (violation) {
+        this.logger.warn('booking.booked_times.rejected', {
+          bookingId: _id,
+          actorId: currentActorId(),
+          reason: violation.kind,
+        });
+        throw new ConflictException(resolvedSlotMessage(violation.kind));
+      }
+
+      const result = await this.bookingModel.updateOne(
+        {_id},
+        {bookedTimes, modifiedBy: currentActorId(), modifiedAt: new Date()}
+      );
+      this.logger.log('booking.booked_times.updated', {bookingId: _id, actorId: currentActorId()});
+      return result;
     } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
+      this.logger.error('booking.booked_times.failed', {bookingId: _id, actorId: currentActorId(), error: errorMessage(e)});
       throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }

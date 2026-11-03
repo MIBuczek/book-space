@@ -392,7 +392,15 @@ paths:
       - $ref: '#/components/parameters/Id'
     put:
       tags: [bookings]
-      summary: Replace or update the time slots of a booking
+      summary: Replace the time slots of a booking (owner, office or administrator)
+      description: >
+        The body is the complete desired slot list, not a patch: a slot absent from it is
+        deleted. A slot whose stored `status` is not `INITIAL` has been resolved and is
+        immutable (FR-018) — it must appear in the body unchanged, or the request is
+        refused with `409` and the stored record is left untouched. Reverting a resolved
+        slot to `INITIAL` counts as an edit and is refused too. Slots with status
+        `INITIAL` may be changed, removed, and added to freely. Ownership is the same as
+        the generic booking update: the creator, or an administrator.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -402,7 +410,21 @@ paths:
               type: array
               items: {$ref: '#/components/schemas/BookedTimeDto'}
       responses:
-        '200': {description: Updated}
+        '200':
+          description: Updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The replacement would edit or delete a resolved slot (FR-018)
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /bookings/{_id}/approve:
     parameters:

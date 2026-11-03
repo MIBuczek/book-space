@@ -261,4 +261,83 @@ describe('BookingService', () => {
       await expect(service.setArchive('missing', true)).rejects.toMatchObject({status: 404});
     });
   });
+
+  describe('updateBookedTimes', () => {
+    const DAY = new Date('2026-03-04T00:00:00.000Z');
+    const slot = (overrides: Record<string, unknown> = {}) => ({
+      day: DAY,
+      startHours: new Date('2026-03-04T08:00:00.000Z'),
+      endHours: new Date('2026-03-04T10:00:00.000Z'),
+      status: 'INITIAL' as const,
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      modelMock.findOne.mockReset();
+      modelMock.updateOne.mockReset();
+      modelMock.updateOne.mockResolvedValue({matchedCount: 1, modifiedCount: 1});
+    });
+
+    it('replaces the slots when every resolved slot is preserved', async () => {
+      modelMock.findOne.mockResolvedValue({bookedTimes: [slot({status: 'DONE', participants: 4})]});
+      const incoming = [slot({status: 'DONE', participants: 4})];
+
+      await service.updateBookedTimes('b1', incoming);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).toMatchObject({bookedTimes: incoming});
+    });
+
+    it('refuses to delete a resolved slot and does not write', async () => {
+      modelMock.findOne.mockResolvedValue({bookedTimes: [slot({status: 'DONE'})]});
+
+      await expect(service.updateBookedTimes('b1', [])).rejects.toMatchObject({
+        status: 409,
+        message: 'Nie można skasować pola które zostało rozliczone',
+      });
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('refuses to edit a resolved slot and does not write', async () => {
+      modelMock.findOne.mockResolvedValue({bookedTimes: [slot({status: 'DONE'})]});
+
+      await expect(
+        service.updateBookedTimes('b1', [slot({status: 'DONE', endHours: new Date('2026-03-04T11:00:00.000Z')})])
+      ).rejects.toMatchObject({status: 409});
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('records the actor and the timestamp with the write', async () => {
+      modelMock.findOne.mockResolvedValue({bookedTimes: []});
+
+      await service.updateBookedTimes('b1', [slot()]);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).toHaveProperty('modifiedAt');
+    });
+
+    it('answers 404 for a booking that does not exist', async () => {
+      modelMock.findOne.mockResolvedValue(null);
+
+      await expect(service.updateBookedTimes('missing', [slot()])).rejects.toMatchObject({status: 404});
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateBooking strips the fields owned by other routes', () => {
+    beforeEach(() => {
+      modelMock.updateOne.mockReset();
+      modelMock.updateOne.mockResolvedValue({matchedCount: 1, modifiedCount: 1});
+    });
+
+    it('does not write bookedTimes, so the resolved-slot rule cannot be bypassed', async () => {
+      // A `BookingDto` declares `bookedTimes`; without the strip an owner could replace
+      // the slots here and skip the FR-018 check that runs on the booked-times route.
+      await service.updateBooking('b1', {bookedTimes: [], comments: 'x'} as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).not.toHaveProperty('bookedTimes');
+      expect(update).toMatchObject({comments: 'x'});
+    });
+  });
 });
