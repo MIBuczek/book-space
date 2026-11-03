@@ -93,6 +93,17 @@ export class Booking {
     default: () => false
   })
   archive!: boolean;
+
+  /**
+   * The user reference of the booking's creator, used for the ownership decision
+   * (authorization matrix note 4). Optional because records migrated from the legacy
+   * collection may carry an e-mail here, or nothing at all, and the owner check
+   * treats both as "no ownership" rather than failing to load the record.
+   */
+  @Prop({
+    type: String
+  })
+  createdBy?: string;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

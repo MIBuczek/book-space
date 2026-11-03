@@ -54,9 +54,18 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
    which is what the unit spec's fail-closed cases pin.
 3. **Client and facility delete routes are broken.** Both controllers declare
    `@Delete('_id')` instead of `@Delete(':_id')`, so the route never matches a real identifier.
-4. **Booking ownership is compared by e-mail substring.** `filterBookingsPerPlace` and
+4. ~~**Booking ownership is compared by e-mail substring.** `filterBookingsPerPlace` and
    `checkRecordActionPermission` use `record.createdBy.includes(user.email)`. This must become
-   an exact identity comparison on a user reference.
+   an exact identity comparison on a user reference.~~ **Resolved (T017).** The booking schema
+   now carries a `createdBy` user reference, stamped from the authenticated user on create and
+   never from the request body. `canModifyBooking` compares it for exact equality (case-folded,
+   whitespace-trimmed) and treats a missing or empty identity on either side as "not owned", so
+   the legacy `''.includes('')` case no longer matches everyone. Update and delete load the
+   stored record and refuse a non-owner with `403` before the write, and the service strips
+   `createdBy` from the update payload so a caller cannot reassign ownership.
+   `booking-ownership.integration.spec.ts` proves the owner/non-owner/administrator split over
+   real HTTP against real signed tokens; it also covers the `ObjectId` id the acting user
+   actually carries, which a string-only unit test would not.
 5. **`summaryUserRestriction` is a hardcoded account.** It should become configuration
    (see open question 3).
 6. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to

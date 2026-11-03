@@ -35,7 +35,7 @@ acceptance criteria pass and the tests it names exist and are green.
 - [ ] T014 [US2] Add a `RolesGuard` and a `@Roles(...)` decorator, plus a `@CurrentUser()` decorator, implementing the capability matrix. (FR-003, FR-004, FR-005)
 - [ ] T015 [US2] Restrict every `users` endpoint to administrators and add integration tests proving an employee receives `403`. (authorization matrix note 1, FR-004)
 - [ ] T016 [US1] Restrict the public booking read path so an anonymous caller receives only accepted, non-archived bookings with `personName`, `personEmail`, `personPhone` and `comments` removed. (FR-005, authorization matrix note 6)
-- [ ] T017 [US3] Enforce booking ownership: an exact identity comparison replaces the e-mail-substring check, so a non-admin staff member can only edit or delete bookings they created. (FR-023, authorization matrix note 4)
+- [x] T017 [US3] Enforce booking ownership: an exact identity comparison replaces the e-mail-substring check, so a non-admin staff member can only edit or delete bookings they created. (FR-023, authorization matrix note 4)
 
 ## Phase 4 — Booking domain logic
 

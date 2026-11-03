@@ -68,4 +68,17 @@ describe('canModifyBooking', () => {
     expect(canModifyBooking(undefined, booking)).toBe(false);
     expect(canModifyBooking({role: 'EMPLOYEE'}, booking)).toBe(false);
   });
+
+  it('matches when the actor id is an ObjectId rather than a string', () => {
+    // The id on a real request is a hydrated document's `ObjectId`, not the `string`
+    // the interface declares. Reading it without conversion made the record's own
+    // creator look like a non-owner.
+    const objectId = {toString: () => 'user-1'};
+    expect(canModifyBooking({role: 'EMPLOYEE', _id: objectId as unknown as string}, booking)).toBe(true);
+  });
+
+  it('does not treat a missing booking as owned by anyone', () => {
+    expect(canModifyBooking({role: 'ADMIN', _id: 'user-1'}, null)).toBe(false);
+    expect(canModifyBooking({role: 'ADMIN', _id: 'user-1'}, undefined)).toBe(false);
+  });
 });

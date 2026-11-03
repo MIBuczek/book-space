@@ -355,6 +355,15 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`nick` is not in the booking schema yet.** T010 adds it. A test that seeds `nick` and
   reads it back will find nothing — Mongoose drops fields the schema does not declare — so the
   calendar-label assertions wait for T010 and the redaction list is the control meanwhile.
+- **Booking ownership is an exact identity on `createdBy`, and the acting user's `_id` is an
+  `ObjectId`.** `canModifyBooking` (T017) compares the booking's `createdBy` against the
+  caller's id or e-mail with `ownsRecord`, which fails closed on an empty identity on either
+  side. Two traps: (1) the `_id` on a real request is a hydrated document's `ObjectId`, not the
+  `string` `IActingUser` declares, so `normalise` reads it as `''` and denies the record's own
+  creator unless it is `String()`-converted — a string-only unit test passes and only the
+  integration spec catches it; (2) the update route takes `Partial<BookingDto>`, a mapped type
+  erased at runtime, so the global pipe whitelists nothing and the *service* has to strip
+  `createdBy` or a caller reassigns ownership of a booking to themselves.
 - **A per-directory threshold group removes its files from `global`.** Jest's `global` key
   aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
   `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the

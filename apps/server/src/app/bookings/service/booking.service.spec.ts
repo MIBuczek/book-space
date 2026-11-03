@@ -72,4 +72,22 @@ describe('BookingService', () => {
       await expect(service.findAllBooking(false)).rejects.toMatchObject({message: 'connection lost'});
     });
   });
+
+  describe('updateBooking', () => {
+    beforeEach(() => {
+      modelMock.updateOne.mockReset();
+      modelMock.updateOne.mockResolvedValue({matchedCount: 1});
+    });
+
+    it('does not pass a caller-supplied createdBy to the driver', async () => {
+      // The update route takes `Partial<BookingDto>`, a mapped type erased at runtime,
+      // so the global pipe whitelists nothing on it. A caller could otherwise reassign
+      // ownership of a booking to themselves.
+      await service.updateBooking('b1', {createdBy: 'attacker', accepted: true} as never);
+
+      const [, updates] = modelMock.updateOne.mock.calls[0];
+      expect(updates).not.toHaveProperty('createdBy');
+      expect(updates).toMatchObject({accepted: true});
+    });
+  });
 });
