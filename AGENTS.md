@@ -364,6 +364,21 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   integration spec catches it; (2) the update route takes `Partial<BookingDto>`, a mapped type
   erased at runtime, so the global pipe whitelists nothing and the *service* has to strip
   `createdBy` or a caller reassigns ownership of a booking to themselves.
+- **Conflict detection is pure and lives in `bookings/conflicts/conflicts.ts` (T018).** The
+  overlap test is *strict* inside-or-contains, so a touching interval (`end === start`) is not a
+  conflict; `day` is compared as an instant, matching the legacy `checkDay`, so a "same local
+  calendar day" rewrite would diverge from the SC-002 reference. An accepted booking is excluded
+  as a *reported* id but still participates as a comparison target — only the reported booking
+  has to be unaccepted. `conflicts.spec.ts` holds an independent transcription of the legacy
+  algorithm and asserts agreement over 200 generated sets; do not "simplify" it by importing the
+  new code from both sides, which would prove nothing.
+- **`GET /bookings/conflicts` must stay declared before `@Get(':_id')`.** Express matches routes
+  in declaration order, so the reverse order makes `conflicts` a booking id and answers `500` on
+  the `ObjectId` cast instead of the conflicts. `@Roles('ADMIN')` is on the route, not the class:
+  the rest of `BookingController` is public or any-authenticated.
+- **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
+  its files out of the `global` pool, so the global figure is measured without it — re-derive it
+  from the per-file rows, not the report's `total`.
 - **A per-directory threshold group removes its files from `global`.** Jest's `global` key
   aggregates only the files no *more specific* glob key matches, and the `coverage-summary.json`
   `total` row still counts everything. So with `'**/src/app/authorization/**/*.ts'` at 80, the

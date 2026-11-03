@@ -36,6 +36,7 @@ describe('BookingController', () => {
   let createBooking: jest.Mock;
   let updateBooking: jest.Mock;
   let deleteBooking: jest.Mock;
+  let findConflictingBookingIds: jest.Mock;
 
   beforeEach(async () => {
     findAllBooking = jest.fn().mockResolvedValue([storedBooking()]);
@@ -43,11 +44,12 @@ describe('BookingController', () => {
     createBooking = jest.fn().mockResolvedValue(storedBooking());
     updateBooking = jest.fn().mockResolvedValue({matchedCount: 1});
     deleteBooking = jest.fn().mockResolvedValue({deletedCount: 1});
+    findConflictingBookingIds = jest.fn().mockResolvedValue(['b2', 'b3']);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BookingController],
       providers: [
-        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking}},
+        {provide: BookingService, useValue: {findAllBooking, findBooking, createBooking, updateBooking, deleteBooking, findConflictingBookingIds}},
         {provide: getModelToken('User'), useValue: {}},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
@@ -114,6 +116,18 @@ describe('BookingController', () => {
 
       expect(findAllBooking).toHaveBeenCalledWith(false);
       expect(result[0]).not.toHaveProperty('personName');
+    });
+  });
+
+  describe('getConflicts', () => {
+    it('passes the facility and month to the service', async () => {
+      await controller.getConflicts({city: 'siechnice', building: 'hala', month: 3});
+
+      expect(findConflictingBookingIds).toHaveBeenCalledWith('siechnice', 'hala', 3);
+    });
+
+    it('returns the ids the service produced', async () => {
+      await expect(controller.getConflicts({city: 'siechnice', building: 'hala', month: 3})).resolves.toEqual(['b2', 'b3']);
     });
   });
 

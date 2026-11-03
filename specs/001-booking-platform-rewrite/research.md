@@ -99,6 +99,17 @@ A booking only participates in conflict checks when it is not accepted
 
 **Consequence**: the server owns a pure, tested function; the UI only displays the result.
 
+**Landed (T018).** `apps/server/src/app/bookings/conflicts/conflicts.ts` holds the rules as
+`findConflictingBookingIds` (plus `slotsConflict`), free of Nest and Mongoose. The overlap test
+is strict-inside-or-contains, so a touching interval (`end === start`) is not a conflict;
+`day` is compared as an instant, matching the legacy `checkDay`; an accepted booking is excluded
+as a *reported* id but still participates as a comparison target, which is what the legacy
+`checkConflicts` did. The server query is scoped to one facility-month
+(`GET /bookings/conflicts`, administrator-only) and the comparison runs over that set. SC-002 is
+met by `conflicts.spec.ts`, which carries an independent transcription of the legacy algorithm
+and asserts agreement over 200 generated sets (~900 booking pairs), not by calling the new code
+from both sides. Approval-with-`force` (T020) is where the result is enforced before a write.
+
 ---
 
 ## R6 — Facilities and cities as data

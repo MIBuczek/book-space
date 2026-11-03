@@ -451,8 +451,12 @@ paths:
   /bookings/conflicts:
     get:
       tags: [bookings]
-      x-status: to-build
       summary: Return conflicting unaccepted bookings for a facility and month
+      description: >
+        The ids of the unaccepted bookings that conflict with at least one other booking
+        in the same facility and month. Administrator-only: the matrix gives the conflict
+        counter to administrators. Declared before `/bookings/{_id}` so the literal
+        segment is not read as an identifier.
       security: [{bearerAuth: []}]
       parameters:
         - name: city
@@ -475,6 +479,12 @@ paths:
               schema:
                 type: array
                 items: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /reporting/summary:
     get:
