@@ -52,6 +52,7 @@ describe('resolved slot immutability over HTTP', () => {
     type: 'INDIVIDUAL',
     place: {place: BUILDING, city: CITY},
     size: 'X/X',
+    nick: 'Rezerwacja Kowalscy',
     personName: 'Jan Kowalski',
     personEmail: 'jan@example.com',
     personPhone: '500100200',

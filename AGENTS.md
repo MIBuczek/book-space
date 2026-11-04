@@ -368,9 +368,30 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   issued kept working until the token expired. Found by the integration case that deactivates
   a user and re-uses the token it already holds. `=== false` rather than a falsy test, so a
   legacy document with no `active` field stays active.
-- **`nick` is not in the booking schema yet.** T010 adds it. A test that seeds `nick` and
-  reads it back will find nothing — Mongoose drops fields the schema does not declare — so the
-  calendar-label assertions wait for T010 and the redaction list is the control meanwhile.
+- **The booking schema now carries `nick`, `discount`, `extraOptions` and `selectedOptions` (T010).**
+  `nick` is required (3–100) because the public calendar shows it in place of the redacted
+  personal fields; a booking without it would be unlabelled to an anonymous caller.
+  `discount` is an optional string validated against `^[0-9]{1,3}%$` in the schema *and* the
+  DTO — the schema is what stops a direct write from storing `10`, the DTO is what answers
+  `422` at the boundary. `extraOptions` is *derived*: the service sets it from
+  `selectedOptions.length > 0` on create, and the DTO does not declare it, so a caller cannot
+  supply a second, contradictory value. It is a stored boolean rather than a virtual because
+  the legacy reporting reads it directly and a virtual is absent from a projection or an
+  aggregation. The DTO no longer `implements Booking` for the same reason
+  `building.dto.ts` does not: the request body and the stored document are deliberately
+  different shapes (server-owned audit fields, the derived flag).
+- **The booking indexes are asserted against a real `mongod`, not the schema object.** A
+  declared index, a built index and an index the query planner actually picks are three
+  different claims; `booking-indexes.integration.spec.ts` proves all three via `listIndexes()`
+  and `explain('queryPlanner')`. `reset()` drops the database and the indexes with it, so
+  `createIndexes()` runs before each test. The recency index is `{createdAt: -1, _id: -1}`,
+  not `{createdAt: -1}` as `data-model.md` wrote it: `createdAt` alone is not a total order,
+  so two bookings created in the same millisecond could swap between pages.
+- **A raw-driver call inside an integration spec does not type-check against
+  `Model<Booking>`.** `create` and `find(...).explain(...)` use shapes the hydrated-document
+  overloads reject (`TS2769`, `TS2352`), and `nx test` fails the whole suite to run because of
+  it. Declare the three methods the spec touches as a local structural type and cast only the
+  index key, rather than widening to `any` or pretending the document type fits.
 - **A boolean query flag inverts under `enableImplicitConversion`.** The global pipe runs with
   `transformOptions.enableImplicitConversion`, which coerces a query string with
   `Boolean(value)` — and `Boolean('false')` is `true`. So a bare `@IsBoolean() archive?: boolean`

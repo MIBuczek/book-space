@@ -127,22 +127,27 @@ Current schema: `apps/server/src/app/bookings/schemas/booking.schema.ts`
 | `accepted` | boolean | required, default `false` |
 | `archive` | boolean | required, default `false` |
 | `comments` | string | optional, ≤525 (legacy `message`) |
-| `paymentMethod` | enum `CASH` \| `TRANSFER` \| `CARD` | required |
+| `paymentMethod` | enum `CASH` \| `TRANSFER` \| `FREE` | required |
 | `discount` | string | **[new]** optional, `^[0-9]{1,3}%$`, 0–100 |
 | `extraOptions` | boolean | **[new]** derived; true when `selectedOptions` is non-empty |
 | `selectedOptions` | `SelectedExtraOption[]` | **[new]** lighting / sanitary add-ons with from/to hours |
 | `createdBy` / `createdAt` / `modifiedBy` / `modifiedAt` | string / Date | **[new]** audit fields |
 
-**Note on `paymentMethod`**: the legacy application offers `transfer`, `cash`, `free` and
-historically `invoice` (mapped to `transfer`). The new enum has `CASH`, `TRANSFER`, `CARD` —
-it drops `free` (Bezpłatne) and adds `CARD`, which the business does not currently use.
-**This must be reconciled**: `free` is used in production data and its loss would change
-reporting. Recommended enum: `CASH | TRANSFER | FREE`.
+**Note on `paymentMethod`** (resolved, CHK015): the legacy application offers `transfer`,
+`cash`, `free` and historically `invoice` (mapped to `transfer`). The pre-rewrite target
+enum was `CASH`, `TRANSFER`, `CARD` — it dropped `free` (Bezpłatne) and added `CARD`, which
+the business does not use. The enum is now `CASH | TRANSFER | FREE`: `FREE` is retained
+because production data uses it and its loss would change reporting, and `CARD` is dropped
+because it was never offered. The runtime list and the type are one declaration in
+`libs/models/booking.model.ts`, so a DTO that validates with `IsEnum(PAYMENTS)` cannot drift
+from `TPayment` again.
 
 **Indexes** (needed for FR-043 and conflict queries):
 - `{ 'place.city': 1, 'place.place': 1, month: 1, accepted: 1, archive: 1 }`
 - `{ clientId: 1, accepted: 1 }`
-- `{ createdAt: -1 }`
+- `{ createdAt: -1, _id: -1 }` — `createdAt` alone is not a total order, so two bookings
+  created in the same millisecond could swap between pages and a record could be skipped or
+  repeated. `_id` trailing it is what makes the list's sort a stable cursor.
 
 **Changes needed**:
 - Add the fields marked **[new]**.

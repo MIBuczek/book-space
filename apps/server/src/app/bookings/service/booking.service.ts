@@ -1,6 +1,7 @@
 import {ConflictException, HttpException, HttpStatus, Injectable, NotFoundException, UnprocessableEntityException} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking, TBooking} from '../schemas/booking.schema';
+import {BookingDto} from '../models/booking.dto';
 import {Model} from 'mongoose';
 import {BookedTime} from '../schemas/booked-time.schemta';
 import {BookedTimeDto} from '../models/booked-time.dto';
@@ -13,16 +14,6 @@ import {currentActorId} from '../../logging/request-context';
 import {findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
 import {StructuredHttpException} from '../../config/structured-http-exception';
 
-const CHANGE_LABELS: Array<[keyof Booking, string]> = [
-  ['accepted', 'approval'],
-  ['archive', 'archive'],
-];
-
-const describeBookingChange = (booking: Partial<Booking>): string => {
-  const labels = CHANGE_LABELS.filter(([field]) => field in booking).map(([, label]) => label);
-  return labels.length > 0 ? labels.join('+') : 'fields';
-};
-
 @Injectable()
 export class BookingService {
   constructor(
@@ -30,9 +21,26 @@ export class BookingService {
     private readonly logger: StructuredLogger
   ) {}
 
-  async createBooking(booking: Booking) {
+  /**
+   * Creates a booking and stamps its server-owned fields.
+   *
+   * `createdBy` is taken from the caller rather than the body (FR-016): the controller reads
+   * it from the authenticated user, so a body that set it cannot attribute the booking to
+   * someone else. `createdAt`/`modifiedAt` default to now on the schema, so they are not
+   * set here.
+   *
+   * `extraOptions` is *derived* from `selectedOptions` (data-model.md): it is a stored
+   * boolean rather than a virtual because the legacy reporting reads it directly. Computing
+   * it here, from the same body the add-ons come from, is what keeps the two from disagreeing
+   * — a caller-supplied `extraOptions` would be a second source of truth for the same fact.
+   */
+  async createBooking(booking: BookingDto, createdBy: string | undefined) {
     try {
-      const created = await this.bookingModel.create(booking);
+      const created = await this.bookingModel.create({
+        ...booking,
+        createdBy,
+        extraOptions: (booking.selectedOptions?.length ?? 0) > 0,
+      });
       this.logger.log('booking.created', {bookingId: created._id, actorId: currentActorId()});
       return created;
     } catch (e) {
@@ -66,6 +74,13 @@ export class BookingService {
       // rule entirely — the guard would exist on one route and be absent on the other
       // that writes the same field.
       delete updates.bookedTimes;
+      // `extraOptions` is derived from `selectedOptions`, so it is never taken from the
+      // body: a caller could otherwise set the flag and the add-ons to disagree. When the
+      // add-ons change, the flag is recomputed from them here.
+      delete updates.extraOptions;
+      if (updates.selectedOptions) {
+        updates.extraOptions = updates.selectedOptions.length > 0;
+      }
 
       // After stripping the fields above an update can be empty — a caller who sent
       // only `accepted`, or the ownership spec's default body. MongoDB rejects an empty
@@ -77,13 +92,14 @@ export class BookingService {
       }
 
       const result = await this.bookingModel.updateOne({_id}, updates);
-      // The changed field names are logged, not their values: they identify an
-      // approval or an archive without recording personal data. The names are
-      // mapped to a fixed action so a caller cannot inject a new label.
+      // The field names are logged, not their values, so a booking's content is not
+      // recorded. `accepted`/`archive` are stripped above, so this update can only carry
+      // the descriptive fields (a comment, a contact detail); the fixed label keeps a
+      // caller from injecting one through a field name.
       this.logger.log('booking.updated', {
         bookingId: _id,
         actorId: currentActorId(),
-        action: describeBookingChange(updates),
+        action: 'fields',
       });
       return result;
     } catch (e) {

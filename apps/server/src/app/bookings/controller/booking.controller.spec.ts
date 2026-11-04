@@ -196,7 +196,7 @@ describe('BookingController', () => {
     it('stamps the creator from the authenticated user, not the body', async () => {
       await controller.createBooking({} as never, EMPLOYEE);
 
-      expect(createBooking).toHaveBeenCalledWith(expect.objectContaining({createdBy: 'u2'}));
+      expect(createBooking).toHaveBeenCalledWith({}, 'u2');
     });
 
     it('does not let a body-supplied createdBy win over the authenticated user', async () => {
@@ -204,7 +204,7 @@ describe('BookingController', () => {
       // controller is what decides the value, so it is asserted here too.
       await controller.createBooking({createdBy: 'someone-else'} as never, EMPLOYEE);
 
-      expect(createBooking).toHaveBeenCalledWith(expect.objectContaining({createdBy: 'u2'}));
+      expect(createBooking).toHaveBeenCalledWith({createdBy: 'someone-else'}, 'u2');
     });
   });
 

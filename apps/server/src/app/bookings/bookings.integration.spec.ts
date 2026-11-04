@@ -22,6 +22,7 @@ describe('public booking read path', () => {
     type: 'INDIVIDUAL',
     place: {place: 'Hala', city: 'siechnice'},
     size: 'X/X',
+    nick: 'Rezerwacja Kowalscy',
     personName: 'Jan Kowalski',
     personEmail: 'jan@example.com',
     personPhone: '500100200',
