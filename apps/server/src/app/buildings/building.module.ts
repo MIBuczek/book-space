@@ -5,6 +5,7 @@ import {MongooseModule} from '@nestjs/mongoose';
 import {BuildingSchema} from './schemas/building.schema';
 import {JwtStrategy} from '../strategy/jwt.strategy';
 import {AuthorizationModule} from '../authorization/authorization.module';
+import {ReferenceDataService} from './seed/reference-data.service';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import {AuthorizationModule} from '../authorization/authorization.module';
     MongooseModule.forFeature([{name: 'Building', schema: BuildingSchema}])
   ],
   controllers: [BuildingController],
-  providers: [JwtStrategy, BuildingService]
+  providers: [JwtStrategy, BuildingService, ReferenceDataService]
 })
 export class BuildingModule {}

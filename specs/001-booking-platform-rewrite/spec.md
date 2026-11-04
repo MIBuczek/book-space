@@ -18,7 +18,7 @@ Every functional requirement below is traceable to code in that repository.
 ## 1. Context and Problem Statement
 
 Siechnicka Inwestycyjna Spółka Komunalna (SISK) runs four municipal locations
-(Siechnice, Radwanice, Święta Katarzyna, Żerniki Wrocławskie) containing 13 rentable
+(Siechnice, Radwanice, Święta Katarzyna, Żerniki Wrocławskie) containing 12 rentable
 sport facilities (halls, fitness rooms, pitches, courts, Orlik). Hourly bookings are
 requested by the public and approved by SISK staff.
 

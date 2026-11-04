@@ -60,6 +60,11 @@ describe('BuildingSchema validation', () => {
     expect(errorsFor({city: 'wroclaw'})).toHaveProperty('city');
   });
 
+  it('accepts a facility with no street or zipCode', () => {
+    // No legacy facility carries an address (spec.md §4, FR-009), so both are optional.
+    expect(errorsFor({street: undefined, zipCode: undefined})).toEqual({});
+  });
+
   it('rejects a zip code with a character the pattern does not allow', () => {
     expect(errorsFor({zipCode: '55-01A'})).toHaveProperty('zipCode');
   });

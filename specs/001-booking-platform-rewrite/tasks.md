@@ -24,10 +24,10 @@ acceptance criteria pass and the tests it names exist and are green.
 
 - [ ] T007 [US2] Extend the `users` schema with `role` (`ADMIN|OFFICE|EMPLOYEE`), `city`, `buildings`, `active`; add a serialiser that never returns `password`; fix password hashing so update paths re-hash correctly; enforce `recheckPassword` equality in the DTO. (FR-002, FR-004, data-model.md users, CHK017)
 - [ ] T008 [US4] Extend the `clients` schema with `nick`, audit timestamps, and the NIP-required-for-`COMPANY` rule; align `zipCode` validation between schema and DTO. (FR-025, FR-026, data-model.md clients)
-- [ ] T009 [US4] Extend the `buildings` schema with `property`, `sizes`, `lighting`, `toilets`, employee references; add the uniqueness constraint on `property` + `city`. (FR-007, FR-008, FR-009, data-model.md buildings)
+- [x] T009 [US4] Extend the `buildings` schema with `property`, `sizes`, `lighting`, `toilets`, employee references; add the uniqueness constraint on `property` + `city`. (FR-007, FR-008, FR-009, data-model.md buildings)
 - [x] T010 [US1] Extend the `bookings` schema with `nick`, `discount`, `extraOptions`, `selectedOptions` and the audit fields; reconcile `paymentMethod` to `CASH|TRANSFER|FREE`; add the indexes for facility+month, client and recency. (FR-011, FR-016, FR-043, CHK015)
 - [x] T011 [US1] Add `endHours > startHours` validation to `BookedTime`, coerce `participants` to a number, and rename the file `booked-time.schemta.ts` → `booked-time.schema.ts`. (FR-012, data-model.md bookedTimes)
-- [ ] T012 [US4] Seed the four cities and twelve facilities from `spec.md` §4 as idempotent seed data, and expose them through `GET /api/buildings`. (FR-007, research.md R6)
+- [x] T012 [US4] Seed the four cities and twelve facilities from `spec.md` §4 as idempotent seed data, and expose them through `GET /api/buildings`. (FR-007, research.md R6)
 
 ## Phase 3 — Authentication and authorisation
 

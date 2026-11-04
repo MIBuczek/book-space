@@ -780,7 +780,7 @@ components:
 
     BuildingDto:
       type: object
-      required: [name, property, city, sizes, email, phone, street, zipCode]
+      required: [name, property, city, sizes, email, phone]
       properties:
         name: {type: string, minLength: 3, maxLength: 125}
         property: {type: string}
@@ -792,7 +792,7 @@ components:
         toilets: {type: boolean}
         email: {type: string, format: email}
         phone: {type: string, minLength: 3, maxLength: 15}
-        street: {type: string}
+        street: {type: string, description: 'Optional: no legacy facility carries an address.'}
         zipCode: {type: string, minLength: 6, maxLength: 6}
         employees:
           type: array

@@ -38,6 +38,22 @@ describe('BuildingDto', () => {
     ).resolves.toHaveLength(0);
   });
 
+  it('accepts a payload without street and zipCode', async () => {
+    // No legacy facility carries an address (spec.md §4, FR-009), so the seed supplies
+    // neither and both must be optional — a required field would force invented data.
+    const payload = validPayload();
+    delete (payload as Record<string, unknown>).street;
+    delete (payload as Record<string, unknown>).zipCode;
+
+    await expect(validateDto(payload)).resolves.toHaveLength(0);
+  });
+
+  it('still validates a zipCode when one is supplied', async () => {
+    const errors = await validateDto(validPayload({zipCode: '55-0'}));
+
+    expect(fieldNames(errors)).toContain('zipCode');
+  });
+
   it('requires a property key', async () => {
     const payload = validPayload();
     delete (payload as Record<string, unknown>).property;

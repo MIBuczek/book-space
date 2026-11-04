@@ -42,15 +42,17 @@ export class BuildingDto {
   })
   city!: TCity;
 
+  @Validator.IsOptional()
   @Validator.Length(3, 125, {
     message: 'Number of characters need to be between 3 and 125'
   })
-  street!: string;
+  street?: string;
 
+  @Validator.IsOptional()
   @Validator.Length(6, 6, {
     message: 'Number of characters need to be exactly 6'
   })
-  zipCode!: string;
+  zipCode?: string;
 
   @Validator.ArrayMinSize(1, {
     message: 'At least one rentable size need to be added'
