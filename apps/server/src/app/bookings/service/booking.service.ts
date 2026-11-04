@@ -3,7 +3,7 @@ import {InjectModel} from '@nestjs/mongoose';
 import {Booking, TBooking} from '../schemas/booking.schema';
 import {BookingDto} from '../models/booking.dto';
 import {Model} from 'mongoose';
-import {BookedTime} from '../schemas/booked-time.schemta';
+import {BookedTime} from '../schemas/booked-time.schema';
 import {BookedTimeDto} from '../models/booked-time.dto';
 import {BookingQueryDto} from '../models/booking-query.dto';
 import {BookingRangeRequiredError, buildBookingQuery, resolveBookingListRequest} from '../list/booking-list';

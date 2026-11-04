@@ -85,3 +85,64 @@ describe('BookingSchema validation', () => {
     expect(doc.selectedOptions).toHaveLength(1);
   });
 });
+
+/**
+ * T011: the slot rules the schema enforces defensively, behind the DTO.
+ *
+ * The DTO answers `422` at the boundary; the schema is what stops a direct write — a
+ * migration or a script — from storing an interval that breaks conflict detection. The
+ * embedded subdocument is validated as part of the parent, so `this` in the `endHours`
+ * validator is the slot.
+ */
+describe('BookingSchema embedded booked times', () => {
+  const slot = (overrides: Record<string, unknown> = {}) => ({
+    day: new Date('2026-03-04T00:00:00Z'),
+    startHours: new Date('2026-03-04T08:00:00Z'),
+    endHours: new Date('2026-03-04T10:00:00Z'),
+    status: 'INITIAL',
+    ...overrides,
+  });
+
+  const slotErrors = (overrides: Record<string, unknown>) =>
+    errorsFor({bookedTimes: [slot(overrides)]});
+
+  it('accepts a valid slot', () => {
+    expect(errorsFor({bookedTimes: [slot()]})).toEqual({});
+  });
+
+  it('rejects an end before the start', () => {
+    const errors = slotErrors({
+      startHours: new Date('2026-03-04T10:00:00Z'),
+      endHours: new Date('2026-03-04T08:00:00Z'),
+    });
+
+    expect(errors['bookedTimes.0.endHours']).toBeDefined();
+  });
+
+  it('rejects an end equal to the start', () => {
+    const errors = slotErrors({
+      startHours: new Date('2026-03-04T10:00:00Z'),
+      endHours: new Date('2026-03-04T10:00:00Z'),
+    });
+
+    expect(errors['bookedTimes.0.endHours']).toBeDefined();
+  });
+
+  it('rejects participants above 50', () => {
+    const errors = slotErrors({participants: 51});
+
+    expect(errors['bookedTimes.0.participants']).toBeDefined();
+  });
+
+  it('rejects participants below 0', () => {
+    const errors = slotErrors({participants: -1});
+
+    expect(errors['bookedTimes.0.participants']).toBeDefined();
+  });
+
+  it('rejects a status outside the enum', () => {
+    const errors = slotErrors({status: 'QUIT'});
+
+    expect(errors['bookedTimes.0.status']).toBeDefined();
+  });
+});

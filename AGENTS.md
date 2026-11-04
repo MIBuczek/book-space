@@ -380,6 +380,31 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   aggregation. The DTO no longer `implements Booking` for the same reason
   `building.dto.ts` does not: the request body and the stored document are deliberately
   different shapes (server-owned audit fields, the derived flag).
+- **`BookingDto.bookedTimes` had no `@ValidateNested` (T011).** The field carried only
+  `@ArrayMinSize(1)`, so the global pipe checked that the array was non-empty and nothing
+  inside it — every per-slot rule (the `endHours`/`startHours` order, `participants`, the
+  status enum) was absent on the create path, which is where the issue's crafted payload
+  arrives. `PUT /bookings/{_id}/booked-times` was already covered because it attaches
+  `ParseArrayPipe({items: BookedTimeDto})`, and that masked the gap: one route enforced the
+  slot rules, the other wrote the same field without them. When a rule is attached to a
+  route that names a DTO, check whether the *other* route that writes the field nests it.
+- **The interval rule is cross-field, so it is a `ValidatorConstraint`, not a single-property
+  decorator (T011).** `endHours > startHours` compares two siblings; `@Min` compares against a
+  constant. `AfterStartHours` returns `true` for a non-`Date` value so a malformed field gets
+  one message (`@IsDate`'s) rather than two for the same problem. The schema repeats the rule
+  as a `function`-form `validate` so `this` is the subdocument — an arrow function has no
+  `this` and would compare against `undefined`. The DTO is the boundary (`422`); the schema is
+  what stops a migration or a script writing an inverted interval directly.
+- **The schema file was renamed `booked-time.schemta.ts` → `booked-time.schema.ts` (T011).**
+  The misspelling was load-bearing only in import paths; the rename used `git mv` so the
+  history follows. `jest.config.ts`'s coverage comment referred to the old name and to the
+  file as a blocker for a `bookings/**` threshold group — it now has a spec.
+- **A per-file coverage group cannot be set for `bookings/` yet.** Jest applies a glob
+  threshold to each matching file, and `models/booking-query.dto.ts` measures 75% branches
+  (the `BooleanQuery` transform's guard arms). That is unrelated to the booking domain rules,
+  so a `bookings/**` group would fail on a file T045 owns. The two schema files that blocked
+  it earlier cleared with T011: `booked-time.schema.ts` gained its spec and
+  `booking.schema.ts` reaches 100% because the nested validation executes its validators.
 - **The booking indexes are asserted against a real `mongod`, not the schema object.** A
   declared index, a built index and an index the query planner actually picks are three
   different claims; `booking-indexes.integration.spec.ts` proves all three via `listIndexes()`

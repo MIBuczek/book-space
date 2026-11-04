@@ -108,13 +108,14 @@ export default {
   // conflict rules are pure and fully exercised, so the group below mechanises the
   // 80% floor for that module. `reports` has no source at all (T026 is unbuilt).
   //
-  // `bookings` now measures ~89% statements in aggregate (T020 took the service from
-  // 68% to 84%), but a per-file group cannot be set yet: Jest applies a glob threshold
-  // to each matching file, and two schema files would fail it for reasons unrelated to
-  // behaviour — `schemas/booked-time.schemta.ts` is 0% (its body is never executed) and
-  // `schemas/booking.schema.ts` reports 0% functions. The aggregate is the number
-  // SC-008 is about; the group lands with the task that gives those files a spec, and
-  // setting it earlier would fail the build on the change that introduced it.
+  // `bookings` now measures ~98% in aggregate, but a per-file group cannot be set yet:
+  // Jest applies a glob threshold to each matching file, and `models/booking-query.dto.ts`
+  // measures 75% branches — the `BooleanQuery` transform's guard arms are not all
+  // exercised. The aggregate is the number SC-008 is about; the group lands with T045,
+  // which owns the domain-coverage criterion, and setting it earlier would fail the build
+  // on a file T011 did not touch. The two schema files that blocked it before are now
+  // covered: `booked-time.schema.ts` gained its spec in T011 and `booking.schema.ts`
+  // reaches 100% because the nested validation executes its validators.
   //
   // `users` is deliberately not a group even though it now measures 100%: SC-008
   // does not name it, and a group whose files are all at 100% would be a second

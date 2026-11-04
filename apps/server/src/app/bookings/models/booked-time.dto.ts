@@ -1,6 +1,7 @@
 import {IBookedTime} from '@models/booked-time.model';
 import {BOOKING_STATUSES, TSingleBookingStatus} from '@models/booked-time.model';
 import * as Validator from 'class-validator';
+import {AfterStartHours} from './after-start-hours.validator';
 
 /**
  * One time slot in a request body.
@@ -31,6 +32,7 @@ export class BookedTimeDto implements IBookedTime {
   @Validator.IsDate({
     message: 'Value need to be Date type.'
   })
+  @Validator.Validate(AfterStartHours)
   endHours!: Date;
 
   @Validator.IsEnum(BOOKING_STATUSES, {
