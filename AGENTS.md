@@ -549,6 +549,15 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   a `string` on the booking but an enum union on the building, and Mongoose's overloads reject
   the wider type (`buildBookingQuery` does the same). `booking-size.integration.spec.ts` iterates
   every seeded facility and proves both the accept and the reject path over HTTP.
+- **A booking whose own slots overlap is accepted and warned, not refused (T053, FR-012).**
+  `bookings/slots/intra-booking-overlap.ts` reuses the booking-versus-booking `slotsConflict`
+  predicate, so "overlap" means the same thing on both checks and a touching interval
+  (`end === next start`) is not one. The legacy form warned ("Niektóre godziny rezerwacji
+  konfliktują ze sobą") and let the request through, so the server does the same and records
+  `booking.create.intra_overlap` / `booking.booked_times.intra_overlap`. The rule is attached
+  to *both* routes that write `bookedTimes` — create and the replacement — because a rule on
+  one route and absent on the other is the recurring defect here. `spec.md` FR-012 and §5
+  Edge Cases, and `data-model.md`, carry the decision.
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.
