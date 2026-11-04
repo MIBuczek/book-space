@@ -21,10 +21,10 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 | Reschedule a single slot | ❌ | ✅ | ✅ | ✅ | `RecordOpenItem` (`hasRight = isAdmin \|\| isEmployee`) |
 | See bookings awaiting approval filter | ❌ | ❌ | ❌ | ✅ | `Bookings.tsx` (`user?.isAdmin`) |
 | See the conflict counter | ❌ | ❌ | ❌ | ✅ | `Bookings.tsx` |
-| Read clients | ❌ | ❌ | ✅ | ✅ | `adminSeeContentCredentials` |
-| Create/update/delete clients | ❌ | ❌ | ❌ | ✅ | `Clients.tsx` (`adminCredentials`) |
-| Read facilities and employees | ❌ | ✅ | ✅ | ✅ | `Building.tsx`, `hasRightsToSeeContent` |
-| Create/update/delete facilities | ❌ | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab |
+| Read clients | ❌ | ❌ | ✅ | ✅ | `adminSeeContentCredentials` — **enforced (T025)**: `ClientController` is `@Roles('OFFICE','ADMIN')` |
+| Create/update/delete clients | ❌ | ❌ | ❌ | ✅ | `Clients.tsx` (`adminCredentials`) — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
+| Read facilities and employees | ❌ | ✅ | ✅ | ✅ | `Building.tsx`, `hasRightsToSeeContent` — **enforced (T025)**: `BuildingController` is `@Roles('EMPLOYEE','OFFICE','ADMIN')` |
+| Create/update/delete facilities | ❌ | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
 | Generate summary reports | ❌ | ❌ | ✅ | ✅ | `summaryUserRestriction` |
 | Generate summary reports (denied account) | ❌ | ❌ | ❌ | ❌ | `mkulakowski@umsiechnice.pl` |
 | Read/update users | ❌ | ❌ | ❌ | ✅ | `UsersController` (`AuthGuard('jwt')` + `RolesGuard`, `@Roles('ADMIN')`) |

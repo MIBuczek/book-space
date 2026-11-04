@@ -7,6 +7,7 @@ import {ClientController} from './clients/controller/client.controller';
 import {ClientService} from './clients/service/client.service';
 import {BuildingController} from './buildings/controller/building.controller';
 import {BuildingService} from './buildings/service/building.service';
+import {RolesGuard} from './authorization/guards/roles.guard';
 
 // These routes are declared with a literal `_id` segment instead of a parameter, so
 // `DELETE /api/<resource>/<real-id>` never matches and the handlers are unreachable.
@@ -29,6 +30,11 @@ describe('DELETE routes by id', () => {
       ]
     })
       .overrideGuard(AuthGuard('jwt'))
+      .useValue({canActivate: () => true})
+      // This suite is about route matching, not authorisation, so the role guard is
+      // stubbed too. Both controllers now carry `@Roles`, and a real `RolesGuard` would
+      // answer 403 before the request ever reached the handler under test.
+      .overrideGuard(RolesGuard)
       .useValue({canActivate: () => true})
       .compile();
 

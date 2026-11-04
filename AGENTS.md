@@ -317,7 +317,18 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   `getAllAndOverride`, so a route-level `@Roles` overrides the class one and a route without
   any inherits it. `UsersController` relies on this (T015): every route is administrator-only,
   and the integration spec fails with `200` where it expects `403` if the decorators are
-  removed.
+  removed. `ClientController` (T025) uses the same shape with a wider class default
+  (`@Roles('OFFICE','ADMIN')`) and narrower route overrides (`@Roles('ADMIN')` on the writes),
+  and `BuildingController` is `@Roles('EMPLOYEE','OFFICE','ADMIN')` with the same
+  administrator-only writes — so "read for staff, write for admin" is one class decorator plus
+  three route decorators, not five per-route decisions.
+- **A new `@Roles` on a controller breaks every unit spec that boots it with only
+  `overrideGuard(AuthGuard('jwt'))`.** The real `RolesGuard` then runs, reads the (absent) role
+  off the stub request and answers `403` before the handler is reached, so a spec about route
+  matching or handler wiring fails for an unrelated reason. `delete-routes.spec.ts` and
+  `client.controller.spec.ts` both had to add `.overrideGuard(RolesGuard)`. When you attach
+  `RolesGuard` to a controller, grep the specs that construct it and stub the guard where the
+  spec is not itself about authorisation — the integration spec is where the role rule belongs.
 - **The last active administrator is protected in `UserService`, and the role comes from the
   database (T015).** `removesLastAdministrator` reads the target's *stored* role — a
   request-supplied role would let the rule be skipped by a body that claims the target is not
