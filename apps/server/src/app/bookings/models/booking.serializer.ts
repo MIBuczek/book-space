@@ -1,12 +1,18 @@
 /**
- * Fields a public caller must never receive, per authorization-matrix note 6.
+ * Fields a public caller must never receive, per authorization-matrix note 6 and
+ * issue #20.
  *
  * The legacy client showed the calendar label (`nick`) to a public visitor and the
  * tenant's name to staff, but that was a display choice, not a control — the API
- * returned everything. These four are personal data, so they are removed at the
- * boundary rather than hidden by the client.
+ * returned everything. These are personal data or an internal reference, so they are
+ * removed at the boundary rather than hidden by the client.
+ *
+ * `clientId` is here because it points at a client record the public caller cannot
+ * read or act on, and because issue #20's acceptance criteria name it alongside the
+ * personal fields. The matrix's note 6 lists only the four personal fields; where the
+ * two disagree the narrower disclosure wins, so the reference is redacted too.
  */
-const PUBLIC_BOOKING_REDACTIONS = ['personName', 'personEmail', 'personPhone', 'comments'] as const;
+const PUBLIC_BOOKING_REDACTIONS = ['personName', 'personEmail', 'personPhone', 'comments', 'clientId'] as const;
 
 /**
  * The fields a booking response can carry, so the serialiser's return type names

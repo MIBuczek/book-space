@@ -23,6 +23,7 @@ describe('public booking read path', () => {
     place: {place: 'Hala', city: 'siechnice'},
     size: 'X/X',
     nick: 'Rezerwacja Kowalscy',
+    clientId: 'client-ref-9f8e7d',
     personName: 'Jan Kowalski',
     personEmail: 'jan@example.com',
     personPhone: '500100200',
@@ -121,6 +122,9 @@ describe('public booking read path', () => {
     expect(text).not.toContain('jan@example.com');
     expect(text).not.toContain('500100200');
     expect(text).not.toContain('Proszę o kontakt');
+    // `clientId` is an internal reference, not a display field: the public calendar
+    // renders `nick`, never the client record it points at (issue #20).
+    expect(text).not.toContain('client-ref-9f8e7d');
   });
 
   it('keeps the fields the calendar renders', async () => {
@@ -149,6 +153,8 @@ describe('public booking read path', () => {
     // is present and carries its personal fields.
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({personName: 'Jan Kowalski', personEmail: 'jan@example.com'});
+    // The reference is redacted only on the public path; staff receive it.
+    expect(items[0]).toMatchObject({clientId: 'client-ref-9f8e7d'});
   });
 
   it('serves the full record to an administrator', async () => {

@@ -71,18 +71,20 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 6. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to
    "Rezerwacja", while staff see `person`. The API MUST NOT return `personName`,
    `personEmail`, `personPhone` or `comments` to a public caller — the legacy client simply
-   chose not to display them, which is not a control.~~ **Resolved (T016).** Those four fields
-   are removed by `serializePublicBooking` before the response leaves the API, from a single
-   `const` list that the spec asserts one name at a time. The integration spec asserts the
-   anonymous response *text* does not contain the name, e-mail or phone at all — a field
+   chose not to display them, which is not a control.~~ **Resolved (T016, #20).** Those four
+   fields are removed by `serializePublicBooking` before the response leaves the API, from a
+   single `const` list that the spec asserts one name at a time. `clientId` is removed with
+   them: issue #20's acceptance criteria name it alongside the personal fields, and it points
+   at a client record a public caller cannot read or act on. Where this note and the issue
+   disagree the narrower disclosure wins. The integration spec asserts the anonymous response
+   *text* does not contain the name, e-mail, phone or client reference at all — a field
    present but `undefined` still travels, and a property assertion would not see it.
 
-   `nick` is not in the booking schema yet; T010 adds it. Until then the public calendar
-   label is whatever the schema carries, and the redaction list is the control regardless of
-   which label field exists.
+   `nick` is in the booking schema (T010) and is the public calendar label. The redaction
+   list is the control regardless of which label field exists.
 
    The two shapes are one route, not two. `GET /api/bookings` is public and staff answers
-   differ by *four fields*, so a second endpoint would be a second place for the redaction to
+   differ by *five fields*, so a second endpoint would be a second place for the redaction to
    be forgotten. The guard (`OptionalJwtAuthGuard`) accepts an absent credential but refuses
    an invalid one: downgrading an expired token to an anonymous request would answer a caller
    whose session just ended with a silently redacted calendar instead of a prompt to sign in.
