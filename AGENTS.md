@@ -384,9 +384,11 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   cases caught, not review. Both inputs are fail-closed: `request.isPublic` must be exactly
   `false` and the user must carry a recognised role, so an unmarked request and a user with no
   role both read as public.
-- **`serializePublicBooking` deletes four named fields and goes through `toJSON`.** The list
+- **`serializePublicBooking` deletes five named fields and goes through `toJSON`.** The list
   is a `const` tuple asserted one name at a time, because a redaction list that is wrong is a
-  data leak and a count assertion would not catch a missing name. It spreads `toJSON()` rather
+  data leak and a count assertion would not catch a missing name. `clientId` is one of the
+  five: it is a foreign key into the client records, so leaving it in lets an anonymous caller
+  enumerate clients (issue #20). It spreads `toJSON()` rather
   than the document: Mongoose data lives on internals, so spreading a document directly yields
   the schema's internals, not the fields. Assert against the raw response *text* in an
   integration test — a field present but `undefined` still travels, and `toHaveProperty`
