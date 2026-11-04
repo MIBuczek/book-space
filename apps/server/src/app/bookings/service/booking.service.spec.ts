@@ -115,7 +115,8 @@ describe('BookingService', () => {
       await expect(
         service.createBooking(
           {size: '3/4', place: {place: 'sala-fitness', city: 'siechnice'}} as never,
-          'u2'
+          'u2',
+          false
         )
       ).rejects.toMatchObject({status: 422});
       expect(modelMock.create).not.toHaveBeenCalled();
@@ -126,7 +127,8 @@ describe('BookingService', () => {
 
       await service.createBooking(
         {size: '1/2', place: {place: 'hala-sportowa', city: 'siechnice'}} as never,
-        'u2'
+        'u2',
+        false
       );
 
       expect(modelMock.create).toHaveBeenCalled();
@@ -137,7 +139,7 @@ describe('BookingService', () => {
       // as a size error.
       buildingModelMock.findOne.mockResolvedValue(null);
 
-      await service.createBooking({size: '3/4', place: {place: 'unknown', city: 'siechnice'}} as never, 'u2');
+      await service.createBooking({size: '3/4', place: {place: 'unknown', city: 'siechnice'}} as never, 'u2', false);
 
       expect(modelMock.create).toHaveBeenCalled();
     });

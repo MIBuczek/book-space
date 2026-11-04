@@ -44,8 +44,6 @@ describe('booking size rule over HTTP', () => {
         status: 'INITIAL',
       },
     ],
-    accepted: false,
-    archive: false,
     paymentMethod: 'CASH',
   });
 

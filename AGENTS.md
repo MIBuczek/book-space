@@ -566,6 +566,13 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   check. The service writes `accepted: false, archive: false` regardless of the body; the
   contract keeps the two on the `Booking` *response* shape only. The existing create specs that
   still sent the flags now get a `422` from `forbidNonWhitelisted`, which is the intended signal.
+- **A PR that is green on its base can be red once a sibling PR merges.** T052 (#152) and T023
+  (#148) each passed CI on the pre-merge `main`, but T023 changed `createBooking` to take a third
+  `isPublic` argument and removed `accepted`/`archive` from `BookingDto`, and T052's specs were
+  written against the old shape. Merging them in sequence left `main` red — a *semantic* conflict
+  the text merge cannot see, because the two changes touch different lines. When two open PRs
+  touch the same method signature or request body, merge one, rebase the other, and re-run tests;
+  do not trust each PR's own green run.
 - **`updateBooking` stamps `modifiedBy`/`modifiedAt` after the empty-body check (T023).** The
   stamp must come *after* the "strip left nothing" early return, or a no-op request becomes a
   write that only records who asked for nothing. Stamping is what makes the generic update
