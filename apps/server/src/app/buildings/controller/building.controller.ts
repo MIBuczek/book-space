@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
 import {BuildingService} from '../service/building.service';
-import {BuildingDto} from '../models/building.dto';
+import {BuildingDto, UpdateBuildingDto} from '../models/building.dto';
 
 @Controller('buildings')
 export class BuildingController {
@@ -38,7 +38,7 @@ export class BuildingController {
   @UseGuards(AuthGuard('jwt'))
   updateBuilding(
     @Param('_id') _id: string,
-    @Body() building: Partial<BuildingDto>
+    @Body() building: UpdateBuildingDto
   ) {
     return this.buildingService.updateBuilding(_id, building);
   }

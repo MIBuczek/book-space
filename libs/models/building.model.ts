@@ -19,7 +19,13 @@ interface IBuilding {
   phone: string;
   street: string;
   zipCode: string;
-  /** User references; the response resolves them to display names. */
+  /**
+   * Employee display names for the Facilities tab (FR-009), matching the legacy
+   * `building-data-const.ts`. A reference-based model (data-model.md's recommendation) waits
+   * for user management (T051): the seed carries names, and a reference would resolve to
+   * nothing until the staff users exist. The field stays `string[]`, so switching to ids
+   * later is a data migration rather than a contract change.
+   */
   employees: string[];
 }
 
