@@ -44,8 +44,21 @@ docker compose up --build   # ui on :4200, api on :3000
 
 ## Seed reference data
 
-Facilities and cities are data, not constants (research.md R6). Seed the four cities and the
-twelve facilities from spec.md section 4, then create one administrator account.
+Facilities and cities are data, not constants (research.md R6). The twelve facilities from
+spec.md section 4 are seeded from `apps/server/src/app/buildings/seed/facility-seed.ts` by
+`ReferenceDataService`, which upserts each on its `{city, property}` key. The seed is
+authoritative, so it only runs when asked:
+
+```bash
+SEED_REFERENCE_DATA=true yarn nx serve server   # or set it in apps/server/.env
+```
+
+Running it twice is safe: it matches on the key, so a second run leaves twelve documents
+rather than adding twelve more, and it completes a partially seeded database rather than
+skipping it. Then create one administrator account.
+
+The four cities are a string enum, not a collection, so seeding the twelve facilities *is*
+seeding the four cities — there is no separate `/cities` resource.
 
 ## Verify the specification is met
 

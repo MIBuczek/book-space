@@ -58,18 +58,22 @@ export class Building {
   })
   city!: TCity;
 
+  /**
+   * The facility's postal address. Optional, not required: neither spec.md §4, FR-009 nor
+   * the legacy `building-data-const.ts` carries an address, and the legacy admin form shows
+   * only phone and e-mail. A `required` field would force the seed to invent twelve
+   * municipal addresses, so the field is optional and the seed supplies none.
+   */
   @Prop({
-    type: String,
-    required: [true, 'Please add client street']
+    type: String
   })
-  street!: string;
+  street?: string;
 
   @Prop({
     type: String,
-    required: [true, 'Please add client zip code'],
     validate: [(val: string) => validator.matches(val, /^[\d./-]+$/)]
   })
-  zipCode!: string;
+  zipCode?: string;
 
   /**
    * The areas that can be rented at this facility, as fractions of a hall.

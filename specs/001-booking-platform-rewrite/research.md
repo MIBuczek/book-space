@@ -172,6 +172,28 @@ user management (T051) does not exist yet, so a reference would resolve to nothi
 Facilities tab (FR-009) would be empty. The field type is unchanged, so adopting references
 later is a data migration, not a contract change.
 
+**Landing (T012)**: the seed is `apps/server/src/app/buildings/seed/facility-seed.ts`
+(the twelve facilities) plus `ReferenceDataService`, which upserts each facility on the
+`{city, property}` key. The upsert is what makes it idempotent *and* able to complete a
+partially seeded database; an "insert if empty" guard would skip a database an administrator
+had already touched. The constant is authoritative, so the bootstrap hook that runs it is
+gated on `SEED_REFERENCE_DATA=true` and is otherwise off, so a production database is only
+seeded deliberately.
+
+Two discrepancies the legacy data forced into the open:
+
+- **Twelve facilities, not thirteen.** `spec.md` §1's introduction says "13 rentable sport
+  facilities" while §4's per-city tables and the legacy constant both list twelve. Twelve is
+  what the seed writes; the intro's count is the outlier.
+- **No facility address.** `spec.md` §4, FR-009 and the legacy `building-data-const.ts` carry
+  no `street`/`zipCode`; the only municipal address in the legacy repository is SISK's own
+  office in the footer, which is not a facility. The schema and contract had both fields
+  `required`, so the seed would have had to invent twelve addresses. They are now optional
+  (schema, DTO, contract, `data-model.md`), and the seed supplies neither. FR-009 enumerates
+  facility contact details as e-mail, phone, lighting and toilets, so an address was never a
+  requirement — the `required` flag was a copy of the client schema, down to its error text
+  ("Please add client street").
+
 ---
 
 ## R7 — Reporting and export

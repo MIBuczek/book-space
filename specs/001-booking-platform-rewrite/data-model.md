@@ -88,8 +88,8 @@ Reference data: legacy `building-data-const.ts`
 | `toilets` | boolean | **[new]** default `false` |
 | `email` | string | required, valid e-mail (facility notification address) |
 | `phone` | string | required, 3–15 |
-| `street` | string | required |
-| `zipCode` | string | required, 6 characters |
+| `street` | string | optional (see below) |
+| `zipCode` | string | optional, 6 characters, `^[\d./-]+$` |
 | `employees` | string[] | **[new]** names or user references for the Facilities tab |
 
 **Changes needed**:
@@ -99,7 +99,12 @@ Reference data: legacy `building-data-const.ts`
 - `employees` is typed as `Array<TUser>` but the legacy data holds plain names. **Decided
   (T009)**: store names for display; references plus a resolved display name wait for user
   management (T051), which does not exist yet and would leave the Facilities tab empty.
-- Seed data: the 12 facilities in the spec's section 4.
+- Seed data: the 12 facilities in the spec's section 4, seeded by `ReferenceDataService`
+  (T012) on the `{city, property}` key. See research.md R6.
+- `street`/`zipCode` are **optional, not required** (T012). Neither spec.md §4, FR-009 nor the
+  legacy `building-data-const.ts` carries a facility address; the fields were `required` only
+  because the building schema was copied from the client schema, error text included. Making
+  them optional is what lets the seed hold real data rather than twelve invented addresses.
 - `BuildingSchema` was missing the `@Schema()` decorator on the class, unlike the other
   schemas; T009 added it. Verified against `SchemaFactory.createForClass`, which only reads
   the `@Prop` metadata the decorator registers.

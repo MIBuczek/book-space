@@ -17,8 +17,9 @@ interface IBuilding {
   toilets: boolean;
   email: string;
   phone: string;
-  street: string;
-  zipCode: string;
+  /** Optional: no legacy facility carries an address (spec.md §4, FR-009). */
+  street?: string;
+  zipCode?: string;
   /**
    * Employee display names for the Facilities tab (FR-009), matching the legacy
    * `building-data-const.ts`. A reference-based model (data-model.md's recommendation) waits

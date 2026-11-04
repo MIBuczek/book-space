@@ -521,6 +521,25 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **Test scaffolding is excluded from coverage** (`/src/testing/`). It is ~98% covered by its
   own spec, so counting it inflated the global figure from 54.18% to 67.44% without a line of
   production code changing.
+- **The reference seed is idempotent by upsert, not by "insert if empty" (T012).**
+  `ReferenceDataService` (`buildings/seed/`) matches each facility on the `{city, property}`
+  key the schema already declares unique, so a second run leaves twelve documents and a
+  *partially* seeded database is completed rather than skipped. An "is the collection empty?"
+  guard looks equivalent and is not: it skips the whole seed the moment an administrator has
+  created one facility by hand. The constant (`facility-seed.ts`) is authoritative, so the
+  seed `$set`s every field and reverts an edit — which is why the `onApplicationBootstrap`
+  hook runs only when `SEED_REFERENCE_DATA` is the exact string `true`. Do not route that flag
+  through `validateEnv`: `enableImplicitConversion` coerces with `Boolean(value)` and
+  `Boolean('false')` is `true`, so a boolean field would turn the seed on whenever the
+  variable was present at all (same trap as the query-flag note above).
+- **`street`/`zipCode` on a facility are optional, and that is deliberate (T012).** Neither
+  `spec.md` §4, FR-009 nor the legacy `building-data-const.ts` carries a facility address —
+  the only municipal address in the legacy repository is SISK's own office in the footer.
+  Both fields were `required` because the building schema was copied from the client schema,
+  error strings included ("Please add client street"). Requiring them would have forced the
+  seed to invent twelve addresses, so they are optional in the schema, DTO, contract and
+  `data-model.md`. `spec.md` §4's per-city tables, CHK004 and the legacy constant all list
+  **twelve** facilities; §1's introduction said "13" and was corrected to match.
 - E2E projects are not part of the CI gate: `ui-e2e` still asserts the Nx starter text.
 
 ## CI
