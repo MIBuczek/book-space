@@ -159,14 +159,14 @@ from `TPayment` again.
 
 ## bookedTimes (embedded) — [change]
 
-Current schema: `apps/server/src/app/bookings/schemas/booked-time.schemta.ts`
-(note the file name typo: `schemta` → `schema`)
+Current schema: `apps/server/src/app/bookings/schemas/booked-time.schema.ts`
+(the file name typo `schemta` was corrected in T011)
 
 | Field | Type | Rules |
 |-------|------|-------|
 | `day` | Date | required; the calendar day |
 | `startHours` | Date | required |
-| `endHours` | Date | required; must be after `startHours` |
+| `endHours` | Date | required; must be strictly after `startHours` |
 | `status` | enum `INITIAL` \| `DONE` \| `CANCELED` | required, default `INITIAL` |
 | `participants` | number | 0–50, optional |
 | `comments` | string | ≤525, optional |
@@ -176,6 +176,11 @@ Current schema: `apps/server/src/app/bookings/schemas/booked-time.schemta.ts`
 - The legacy status value `QUIT` maps to `CANCELED` during migration.
 - `participants` is a string in the legacy UI and a number in the schema; the migration must
   coerce, and the API must reject non-numeric input.
+
+**Landed in T011**: the schema file was renamed, `endHours > startHours` is enforced in the DTO
+(cross-field, `422`) and defensively in the schema, and `participants` is bounded 0–50 with the
+schema rejecting a non-integer. `BookingDto.bookedTimes` now carries `@ValidateNested`, so the
+create path validates each slot — it previously checked only that the array was non-empty.
 
 ---
 

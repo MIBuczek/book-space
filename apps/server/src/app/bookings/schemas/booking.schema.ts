@@ -1,6 +1,6 @@
 import {HydratedDocument} from 'mongoose';
 import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
-import {TBookedTime, BookedTimeSchema} from '../schemas/booked-time.schemta';
+import {TBookedTime, BookedTimeSchema} from '../schemas/booked-time.schema';
 import {SelectedExtraOptionSchema} from '../schemas/selected-extra-option.schema';
 import {TClientType, TPayment, IPlace} from '@models/booking.model';
 import {ISelectedExtraOption} from '@models/selected-extra-option.model';

@@ -1,5 +1,6 @@
 import {CLIENT_TYPES, PAYMENTS, TClientType, IPlace, TPayment} from '@models/booking.model';
-import {TBookedTime} from '../schemas/booked-time.schemta';
+import {TBookedTime} from '../schemas/booked-time.schema';
+import {BookedTimeDto} from './booked-time.dto';
 import {SelectedExtraOptionDto} from './selected-extra-option.dto';
 import {Type} from 'class-transformer';
 import * as Validator from 'class-validator';
@@ -86,6 +87,8 @@ export class BookingDto {
   @Validator.ArrayMinSize(1, {
     message: 'At least one booked time need to be added.'
   })
+  @Validator.ValidateNested({each: true})
+  @Type(() => BookedTimeDto)
   bookedTimes!: TBookedTime[];
 
   @Validator.IsBoolean({

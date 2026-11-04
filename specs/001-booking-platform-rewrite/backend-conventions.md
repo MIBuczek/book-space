@@ -309,8 +309,8 @@ preference; it is not a bug fix, and it should not be described as one.
 (which has no `controller/` or `service/` subdirectory) and that is fine — it is consistent across
 all six features and changing it would be churn.
 
-One known typo: `bookings/schemas/booked-time.schemta.ts`. Already scheduled for rename in `T011`;
-do not add new references to the misspelled path.
+One known typo: `bookings/schemas/booked-time.schemta.ts` was renamed to `booked-time.schema.ts`
+in `T011`; do not add new references to the misspelled path.
 
 ### 8. NestJS 11 specifics
 
