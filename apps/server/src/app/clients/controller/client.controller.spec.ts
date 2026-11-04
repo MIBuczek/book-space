@@ -4,6 +4,7 @@ import {getModelToken} from '@nestjs/mongoose';
 import {AuthGuard} from '@nestjs/passport';
 import {ClientController} from './client.controller';
 import {ClientService} from '../service/client.service';
+import {RolesGuard} from '../../authorization/guards/roles.guard';
 
 describe('ClientController', () => {
   let controller: ClientController;
@@ -33,6 +34,10 @@ describe('ClientController', () => {
       ],
     })
       .overrideGuard(AuthGuard('jwt'))
+      .useValue({canActivate: () => true})
+      // This suite exercises handler wiring, not authorisation, so the role guard is
+      // stubbed; the role rules are pinned in the integration spec.
+      .overrideGuard(RolesGuard)
       .useValue({canActivate: () => true})
       .compile();
 

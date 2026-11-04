@@ -46,7 +46,7 @@ acceptance criteria pass and the tests it names exist and are green.
 - [x] T022 [US1] Add period filtering and pagination to `GET /api/bookings` (from/to, city, building, accepted, archive, clientId, page, limit) and replace the unbounded read. (FR-020, FR-022, FR-043, research.md R9)
 - [x] T023 [US1] Implement the booking creation path for public callers including RODO acknowledgement, and the `PUT /api/bookings/{_id}/booked-times` replacement that preserves resolved slots. (FR-011, FR-012, research.md R5) — the slot-preservation half landed with T021; the public create path now requires the RODO acknowledgement for an anonymous caller, forces `accepted`/`archive` to `false`, and records it on the booking. Size-vs-facility validation is **T052 (#119)** and the `month` rework is **T054 (#121)**, deliberately out of this task's scope.
 - [x] ~~T024 [US4] Fix the client and facility delete routes (`@Delete('_id')` → `@Delete(':_id')`) and add regression tests.~~ **Moved to `002-dependency-modernization` U027 (#88)**, which also renames the buildings controller's copy-pasted `...Client` handlers. Issue #28 closed as a duplicate. (authorization matrix note 3, CHK016)
-- [ ] T025 [US4] Restrict client and facility writes to the roles in the capability matrix and add tests for each role. (FR-010, FR-024, FR-004)
+- [x] T025 [US4] Restrict client and facility writes to the roles in the capability matrix and add tests for each role. (FR-010, FR-024, FR-004)
 
 ## Phase 5 — Reporting and notifications
 
