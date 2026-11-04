@@ -54,7 +54,18 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
    which is what the unit spec's fail-closed cases pin.
 3. **Client and facility delete routes are broken.** Both controllers declare
    `@Delete('_id')` instead of `@Delete(':_id')`, so the route never matches a real identifier.
-4. ~~**Booking ownership is compared by e-mail substring.** `filterBookingsPerPlace` and
+   *(The `:_id` form is now used in both controllers; `delete-routes.spec.ts` pins it.)*
+4. ~~**Client and facility writes were open to any authenticated caller.**~~ **Resolved
+   (T025).** `ClientController` and `BuildingController` carried `AuthGuard('jwt')` alone, so
+   any authenticated user could create, update and delete clients and facilities. Both now
+   carry `@UseGuards(AuthGuard('jwt'), RolesGuard)` with `@Roles('ADMIN')` at the class, and
+   the read routes widen to `OFFICE` (clients) or `EMPLOYEE`/`OFFICE`/`ADMIN` (facilities).
+   The *narrow* rule is the class default, so a route added later is administrator-only until
+   it is explicitly opened — declaring the wide audience at the class would leave a new route
+   writable by everyone. `client-facility-roles.integration.spec.ts` proves the `401`/`403`/`200`
+   split over real HTTP against real signed tokens; removing the decorators turns its employee
+   and office cases from `403` back to `200`.
+5. ~~**Booking ownership is compared by e-mail substring.** `filterBookingsPerPlace` and
    `checkRecordActionPermission` use `record.createdBy.includes(user.email)`. This must become
    an exact identity comparison on a user reference.~~ **Resolved (T017).** The booking schema
    now carries a `createdBy` user reference, stamped from the authenticated user on create and
@@ -66,9 +77,9 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
    `booking-ownership.integration.spec.ts` proves the owner/non-owner/administrator split over
    real HTTP against real signed tokens; it also covers the `ObjectId` id the acting user
    actually carries, which a string-only unit test would not.
-5. **`summaryUserRestriction` is a hardcoded account.** It should become configuration
+6. **`summaryUserRestriction` is a hardcoded account.** It should become configuration
    (see open question 3).
-6. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to
+7. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to
    "Rezerwacja", while staff see `person`. The API MUST NOT return `personName`,
    `personEmail`, `personPhone` or `comments` to a public caller — the legacy client simply
    chose not to display them, which is not a control.~~ **Resolved (T016).** Those four fields

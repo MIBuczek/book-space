@@ -7,6 +7,7 @@ import {ClientController} from './clients/controller/client.controller';
 import {ClientService} from './clients/service/client.service';
 import {BuildingController} from './buildings/controller/building.controller';
 import {BuildingService} from './buildings/service/building.service';
+import {RolesGuard} from './authorization/guards/roles.guard';
 
 // These routes are declared with a literal `_id` segment instead of a parameter, so
 // `DELETE /api/<resource>/<real-id>` never matches and the handlers are unreachable.
@@ -29,6 +30,12 @@ describe('DELETE routes by id', () => {
       ]
     })
       .overrideGuard(AuthGuard('jwt'))
+      .useValue({canActivate: () => true})
+      // These routes are role-gated (T025). This spec is about *routing* — whether a
+      // request with an id matches the handler — so the role guard is overridden too;
+      // otherwise a correctly-routed request is refused `403` and the test would be
+      // measuring authorisation, not the route pattern.
+      .overrideGuard(RolesGuard)
       .useValue({canActivate: () => true})
       .compile();
 

@@ -301,6 +301,19 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   any inherits it. `UsersController` relies on this (T015): every route is administrator-only,
   and the integration spec fails with `200` where it expects `403` if the decorators are
   removed.
+- **On a mixed read/write resource, the *narrow* rule goes at the class and reads widen per
+  route (T025).** `ClientController` and `BuildingController` are `@Roles('ADMIN')` at the class
+  and the `@Get` routes carry `@Roles('OFFICE','ADMIN')` / `@Roles('EMPLOYEE','OFFICE','ADMIN')`.
+  Declaring the wide audience at the class and narrowing the writes per route looks equivalent
+  on the routes that exist, but it makes a route added later *writable by everyone* — the
+  failure mode the class default exists to prevent. The class is the safe default; the route
+  decorator is the exception.
+- **A routing spec that overrides `AuthGuard('jwt')` must override `RolesGuard` too once the
+  route is role-gated.** `delete-routes.spec.ts` tests whether `DELETE /clients/:id` *matches*
+  the handler, not who may call it. When T025 added `RolesGuard` to the controller the
+  correctly-routed requests started answering `403`, so the spec failed for a reason unrelated
+  to its subject. Override every guard between the request and the handler, or the test
+  measures the first one.
 - **`RolesGuard` returns `403`; `AuthGuard('jwt')` returns `401`.** A guard that returns
   `false` makes Nest answer `403`, so an authentication stand-in must *throw*
   `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a
