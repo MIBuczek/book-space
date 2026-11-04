@@ -216,9 +216,11 @@ paths:
         required: true
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/ClientDto'}
+            schema: {$ref: '#/components/schemas/UpdateClientDto'}
       responses:
         '200': {description: Updated}
+        '422':
+          $ref: '#/components/responses/ValidationError'
     delete:
       tags: [clients]
       x-status: fix-route
@@ -762,14 +764,40 @@ components:
       properties:
         type: {type: string, enum: [INDIVIDUAL, COMPANY]}
         name: {type: string, minLength: 3, maxLength: 125}
-        nick: {type: string}
+        nick: {type: string, minLength: 3, maxLength: 125}
         contactPerson: {type: string, minLength: 3, maxLength: 125}
         phone: {type: string, minLength: 3, maxLength: 15}
         email: {type: string, format: email}
         street: {type: string, minLength: 3, maxLength: 125}
         city: {type: string, minLength: 3, maxLength: 125}
         zipCode: {type: string, pattern: '^[\\d./-]+$', minLength: 6, maxLength: 6}
-        nip: {type: string, description: Required when type is COMPANY}
+        nip:
+          type: string
+          minLength: 10
+          maxLength: 15
+          pattern: '^[\\d./-]+$'
+          description: >-
+            Required when type is COMPANY (10–15 characters); refused when type is
+            INDIVIDUAL. A company without it is 422.
+
+    UpdateClientDto:
+      type: object
+      description: Every field optional; a company must still end up with a NIP.
+      properties:
+        type: {type: string, enum: [INDIVIDUAL, COMPANY]}
+        name: {type: string, minLength: 3, maxLength: 125}
+        nick: {type: string, minLength: 3, maxLength: 125}
+        contactPerson: {type: string, minLength: 3, maxLength: 125}
+        phone: {type: string, minLength: 3, maxLength: 15}
+        email: {type: string, format: email}
+        street: {type: string, minLength: 3, maxLength: 125}
+        city: {type: string, minLength: 3, maxLength: 125}
+        zipCode: {type: string, pattern: '^[\\d./-]+$', minLength: 6, maxLength: 6}
+        nip:
+          type: string
+          minLength: 10
+          maxLength: 15
+          pattern: '^[\\d./-]+$'
 
     Client:
       allOf:
@@ -777,6 +805,8 @@ components:
         - type: object
           properties:
             _id: {type: string}
+            createdAt: {type: string, format: date-time}
+            updatedAt: {type: string, format: date-time}
 
     BuildingDto:
       type: object

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import {ClientService} from '../service/client.service';
 import {AuthGuard} from '@nestjs/passport';
-import {ClientDto} from '../models/client.dto';
+import {ClientDto, UpdateClientDto} from '../models/client.dto';
 
 @Controller('clients')
 export class ClientController {
@@ -36,7 +36,7 @@ export class ClientController {
 
   @Put(':_id')
   @UseGuards(AuthGuard('jwt'))
-  updateClient(@Param('_id') _id: string, @Body() client: Partial<ClientDto>) {
+  updateClient(@Param('_id') _id: string, @Body() client: UpdateClientDto) {
     return this.clientService.updateClient(_id, client);
   }
 

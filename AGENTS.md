@@ -141,7 +141,24 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`Partial<SomeDto>` in a controller erases validation.** `Partial<T>` is a type, gone at
   runtime, so the global `ValidationPipe` sees `Object` and validates nothing — no `whitelist`,
   no `forbidNonWhitelisted`, no field rules. Any route whose body is a partial needs a concrete
-  class (`UpdateUserDto`), not a mapped type. The same applies to `Pick`/`Omit`.
+  class (`UpdateUserDto`, `UpdateClientDto`), not a mapped type. The same applies to
+  `Pick`/`Omit`. `client.controller.ts` carried this defect on `PUT /clients/{_id}` until T008.
+- **Mongoose does not run a custom validator on an absent value.** `validate: {validator}` runs
+  only when the path has a value, so a "required when another field says so" rule cannot live
+  there alone — a document that omits the path entirely is silently valid. `client.schema.ts`
+  splits the NIP rule across `required: [function, message]` (the only validator Mongoose runs
+  when the value is missing) and the custom `validate` (the format and the not-for-individual
+  case). A spec that only ever supplies a *present, malformed* value passes with the `required`
+  half missing, which is why `client.schema.spec.ts` pins the omitted-`nip` company case.
+- **A Mongoose custom validator must be a `function`, not an arrow.** Mongoose calls it with
+  `this` bound to the document; an arrow captures the module's `this`, so `this.type` is
+  `undefined` and every conditional rule reads the wrong field. `function (this: Client, val)`.
+- **A conditional field rule cannot live in a partial-update DTO.** A `PATCH`/`PUT` body may
+  carry one half of a cross-field rule (`type` without `nip`) or the other, so a DTO constraint
+  sees only one side — and `updateOne` does not run the schema validator. The rule has to be
+  re-checked on the *merged* record in the service, which is the only point both halves are
+  visible. `ClientService.updateClient` merges `{...current.toObject(), ...body}` and refuses a
+  company left without a NIP; a DTO-only implementation would let that through.
 - **The global `ValidationPipe` does not validate a top-level array body.** Nest's pipe
   declines an `Array` metatype (`toValidate` excludes it), so `@Body() x: SomeDto[]` reaches the
   handler unchecked — no `whitelist`, no field rules, and an extra property is silently kept.
