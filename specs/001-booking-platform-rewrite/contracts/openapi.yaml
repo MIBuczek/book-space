@@ -762,14 +762,19 @@ components:
       properties:
         type: {type: string, enum: [INDIVIDUAL, COMPANY]}
         name: {type: string, minLength: 3, maxLength: 125}
-        nick: {type: string}
+        nick: {type: string, description: Optional display label carried from the legacy client form.}
         contactPerson: {type: string, minLength: 3, maxLength: 125}
         phone: {type: string, minLength: 3, maxLength: 15}
         email: {type: string, format: email}
         street: {type: string, minLength: 3, maxLength: 125}
         city: {type: string, minLength: 3, maxLength: 125}
         zipCode: {type: string, pattern: '^[\\d./-]+$', minLength: 6, maxLength: 6}
-        nip: {type: string, description: Required when type is COMPANY}
+        nip:
+          type: string
+          description: >
+            Required when `type` is `COMPANY` and refused when it is `INDIVIDUAL`. The
+            rule is conditional on the sibling `type`, so it is not in the `required`
+            list; a company that omits it fails validation with the field named.
 
     Client:
       allOf:
@@ -777,6 +782,8 @@ components:
         - type: object
           properties:
             _id: {type: string}
+            createdAt: {type: string, format: date-time, description: Server-owned.}
+            updatedAt: {type: string, format: date-time, description: Server-owned.}
 
     BuildingDto:
       type: object

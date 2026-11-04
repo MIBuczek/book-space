@@ -58,17 +58,26 @@ Current schema: `apps/server/src/app/clients/schemas/client.schema.ts`
 | `street` | string | required, 3–125 |
 | `city` | string | required, 3–125 |
 | `zipCode` | string | required, 6 characters, `^[\d./-]+$` |
-| `nip` | string | optional; required when `type = COMPANY` (enforced in the DTO, not the schema) |
+| `nip` | string | required when `type = COMPANY`, refused when `INDIVIDUAL` (T008); enforced in the DTO *and* the schema |
 | `createdAt` / `updatedAt` | Date | **[new]** audit fields |
 
-**Changes needed**:
-- Add `nick`, audit timestamps, and a unique index on `name`+`city` or on `nip` for companies
-  (decide during clarification — open question 4 relates to audit only, not uniqueness).
-- `zipCode` validation currently requires exactly 6 characters; Polish postal codes are
-  `NN-NNN` (6 characters) so this is correct, but the DTO must mirror it.
-- The delete route in `client.controller.ts` is `@Delete('_id')` — it is missing the colon and
-  therefore never matches a real id. **Defect to fix.**
-- `BuildingDto` has the same `@Delete('_id')` defect in `building.controller.ts`.
+**Changes landed (T008)**:
+- `nick`, `createdAt`/`updatedAt` added. The audit fields are explicit properties rather
+  than the `timestamps` schema option, matching `users` and `bookings`, so a projection
+  returns the same names everywhere. `updatedAt` is written by the service on the update
+  path, because `updateOne` runs no document middleware and a hook would not fire for the
+  route that changes a client.
+- The NIP rule is conditional on `type`, so it is a document-level `pre('validate')` hook in
+  the schema and a `NipForClientType` constraint in the DTO. The DTO is the boundary (`422`);
+  the schema is what stops a direct write. Because `updateOne` bypasses document validators,
+  the service re-checks the rule against the *stored* type when an update carries `nip`.
+- `zipCode` is exactly 6 characters matching `^[\d./-]+$` in both the schema and the DTO.
+- **No uniqueness constraint.** A `name`+`city` or `nip` unique index was considered and
+  rejected: the legacy data has no such constraint, so adding one would fail the migration
+  on existing duplicates. A plain `{name: 1}` index is declared instead, which is what the
+  Clients-tab search by name uses.
+- The delete routes in `client.controller.ts` and `building.controller.ts` now read
+  `@Delete(':_id')`; the missing colon is fixed.
 
 ---
 

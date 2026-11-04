@@ -138,6 +138,27 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   therefore hashes the password itself before calling the driver; a refactor that moves hashing
   back into the schema alone silently stores plaintext (CHK017). `user.service.spec.ts` asserts
   the hash reaches the driver, which is the only place that defect is visible.
+- **A `@ValidateIf` applies to every decorator on the property, so two of them skip each
+  other (T008).** The client NIP rule is "required for a company, refused for an individual".
+  Written as two `@ValidateIf` blocks on one `nip` property — one selecting `COMPANY`, one
+  selecting `INDIVIDUAL` — each skips the other's validators, so neither branch runs and the
+  field validates as absent. A `@ValidatorConstraint` that reads `args.object` expresses both
+  branches in one place. The `users` DTO's single `@ValidateIf` is fine because it has one
+  condition, not two.
+- **`@IsOptional()` on a cross-field constraint suppresses the case the rule exists for
+  (T008).** `@IsOptional()` makes class-validator skip *every* validator on the property when
+  the value is `undefined`, so `@IsOptional() @Validate(NipForClientType)` never ran for a
+  company that omitted `nip` — the exact failure it was added to catch. The constraint allows
+  an absent value itself, so `@IsOptional()` was not needed.
+- **`updateOne` runs no document middleware, so a schema hook is not the control on an update
+  path (T008, same shape as the bcrypt note).** The clients schema validates the NIP rule in
+  `pre('validate')`, which `create` runs and `updateOne` does not. A `PUT` that sets a `nip` on
+  an individual therefore has to be refused by the service, which loads the stored `type`
+  first. The integration spec pins it because the schema alone looks sufficient.
+- **`ClientDto` no longer `implements Client` (T008).** It did, which forced the DTO to declare
+  the server-owned `createdAt`/`updatedAt` as required and let a caller set them. The request
+  body and the stored document are different shapes; `building.dto.ts` and `booking.dto.ts`
+  already take this position.
 - **`Partial<SomeDto>` in a controller erases validation.** `Partial<T>` is a type, gone at
   runtime, so the global `ValidationPipe` sees `Object` and validates nothing — no `whitelist`,
   no `forbidNonWhitelisted`, no field rules. Any route whose body is a partial needs a concrete
