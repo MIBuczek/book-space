@@ -13,12 +13,12 @@ acceptance criteria pass and the tests it names exist and are green.
 
 ## Phase 1 — Foundation and security (blocks everything)
 
-- [ ] T001 [P] Rotate and remove committed secrets; add `.env` to `.gitignore` and a CI guard that fails on a committed `.env` or on a known key pattern. (FR/NFR-001, research.md R3)
-- [ ] T002 [P] Add a global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) and a global exception filter that returns the `Error`/`ValidationError` shapes in `contracts/openapi.yaml`. (NFR-003)
-- [ ] T003 [P] Extend `libs/models` with the target types: `TClientType`, `TPayment` (`CASH|TRANSFER|FREE`), `TSingleBookingStatus` (`INITIAL|DONE|CANCELED`), `IPlace`, `IUser` with `role`/`city`/`buildings`, `IBooking`, `IBookedTime`, `ISelectedExtraOption`, `JwtPayload`, `IValidationError`. (plan.md, data-model.md)
-- [ ] T004 [P] Add structured logging and a request correlation id. (NFR-008)
-- [ ] T005 [P] Configure CI: lint, unit tests, build for both applications, and the secret guard from T001. (NFR-004, SC-008)
-- [ ] T006 [P] Add a test harness for API integration tests: an ephemeral MongoDB instance (test container or in-memory server) with per-suite database reset. (NFR-004)
+- [x] T001 [P] Rotate and remove committed secrets; add `.env` to `.gitignore` and a CI guard that fails on a committed `.env` or on a known key pattern. (FR/NFR-001, research.md R3)
+- [x] T002 [P] Add a global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) and a global exception filter that returns the `Error`/`ValidationError` shapes in `contracts/openapi.yaml`. (NFR-003)
+- [x] T003 [P] Extend `libs/models` with the target types: `TClientType`, `TPayment` (`CASH|TRANSFER|FREE`), `TSingleBookingStatus` (`INITIAL|DONE|CANCELED`), `IPlace`, `IUser` with `role`/`city`/`buildings`, `IBooking`, `IBookedTime`, `ISelectedExtraOption`, `JwtPayload`, `IValidationError`. (plan.md, data-model.md)
+- [x] T004 [P] Add structured logging and a request correlation id. (NFR-008)
+- [x] T005 [P] Configure CI: lint, unit tests, build for both applications, and the secret guard from T001. (NFR-004, SC-008)
+- [x] T006 [P] Add a test harness for API integration tests: an ephemeral MongoDB instance (test container or in-memory server) with per-suite database reset. (NFR-004)
 
 ## Phase 2 — Data model and reference data
 
@@ -31,7 +31,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 ## Phase 3 — Authentication and authorisation
 
-- [ ] T013 [US2] Complete the auth module: `/auth/sign-in` returns the user without the password hash, `/auth/me` returns the current user with resolved role and assignments, `/auth/sign-out` is documented as stateless, and failures never reveal whether the e-mail exists. (FR-001, FR-002, contracts/authorization-matrix.md)
+- [x] T013 [US2] Complete the auth module: `/auth/sign-in` returns the user without the password hash, `/auth/me` returns the current user with resolved role and assignments, `/auth/sign-out` is documented as stateless, and failures never reveal whether the e-mail exists. (FR-001, FR-002, contracts/authorization-matrix.md)
 - [ ] T014 [US2] Add a `RolesGuard` and a `@Roles(...)` decorator, plus a `@CurrentUser()` decorator, implementing the capability matrix. (FR-003, FR-004, FR-005)
 - [x] T015 [US2] Restrict every `users` endpoint to administrators and add integration tests proving an employee receives `403`. (authorization matrix note 1, FR-004) — the class carries `@UseGuards(AuthGuard('jwt'), RolesGuard)` and `@Roles('ADMIN')`, so a route added later is restricted by default. The last-active-administrator rule is enforced in `UserService`: a delete, a deactivation or a demotion that would remove the final administrator answers `409` (`UserService.removesLastAdministrator`), and the write never reaches the driver.
 - [ ] T016 [US1] Restrict the public booking read path so an anonymous caller receives only accepted, non-archived bookings with `personName`, `personEmail`, `personPhone` and `comments` removed. (FR-005, authorization matrix note 6)
