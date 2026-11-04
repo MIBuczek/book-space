@@ -109,6 +109,51 @@ describe('UserService', () => {
 
       expect(model.updateOne).not.toHaveBeenCalled();
     });
+
+    it('refuses to demote the last active administrator (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(0);
+
+      await expect(service.updateUser('admin-1', {role: 'EMPLOYEE'} as never)).rejects.toMatchObject({status: 409});
+      expect(model.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('refuses to deactivate the last active administrator (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(0);
+
+      await expect(service.updateUser('admin-1', {active: false} as never)).rejects.toMatchObject({status: 409});
+      expect(model.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('allows demoting an administrator when another active one remains (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(1);
+
+      await service.updateUser('admin-1', {role: 'EMPLOYEE'} as never);
+
+      expect(model.updateOne).toHaveBeenCalled();
+    });
+
+    it('allows an ordinary field change on the last administrator (T015)', async () => {
+      // Renaming or re-emailing the sole administrator does not remove the last
+      // administrator, so the rule must not fire on an unrelated edit.
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(0);
+
+      await service.updateUser('admin-1', {firstName: 'Grace'} as never);
+
+      expect(model.updateOne).toHaveBeenCalled();
+    });
+
+    it('does not protect a user who is not currently an active administrator (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'office-1', role: 'OFFICE', active: true});
+
+      await service.updateUser('office-1', {role: 'EMPLOYEE'} as never);
+
+      expect(model.countDocuments).not.toHaveBeenCalled();
+      expect(model.updateOne).toHaveBeenCalled();
+    });
   });
 
   describe('createUser', () => {
@@ -125,11 +170,42 @@ describe('UserService', () => {
 
   describe('deleteUser', () => {
     it('deletes by id', async () => {
+      model.findOne.mockResolvedValue({_id: 'user-1', role: 'EMPLOYEE', active: true});
       model.deleteOne.mockResolvedValue({deletedCount: 1});
 
       await service.deleteUser('user-1');
 
       expect(model.deleteOne).toHaveBeenCalledWith({_id: 'user-1'});
+    });
+
+    it('refuses to delete the last active administrator (T015)', async () => {
+      // Deleting the only administrator would leave nobody able to manage staff, so the
+      // write is refused with a `409` before the driver is reached.
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(0);
+
+      await expect(service.deleteUser('admin-1')).rejects.toMatchObject({status: 409});
+      expect(model.deleteOne).not.toHaveBeenCalled();
+    });
+
+    it('deletes an administrator when another active one remains (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'admin-1', role: 'ADMIN', active: true});
+      model.countDocuments.mockResolvedValue(1);
+      model.deleteOne.mockResolvedValue({deletedCount: 1});
+
+      await service.deleteUser('admin-1');
+
+      expect(model.deleteOne).toHaveBeenCalledWith({_id: 'admin-1'});
+    });
+
+    it('does not treat a non-administrator as protected (T015)', async () => {
+      model.findOne.mockResolvedValue({_id: 'office-1', role: 'OFFICE', active: true});
+      model.deleteOne.mockResolvedValue({deletedCount: 1});
+
+      await service.deleteUser('office-1');
+
+      expect(model.countDocuments).not.toHaveBeenCalled();
+      expect(model.deleteOne).toHaveBeenCalledWith({_id: 'office-1'});
     });
   });
 

@@ -11,6 +11,9 @@ import bcrypt from 'bcrypt';
 /** The fields a caller may change. `password` is hashed separately; `recheckPassword` is never stored. */
 const UPDATABLE_FIELDS = ['firstName', 'lastName', 'email', 'role', 'city', 'buildings', 'active'] as const;
 
+/** The message the last-administrator rule answers with (T015). */
+const LAST_ADMIN_MESSAGE = 'The last active administrator cannot be removed';
+
 @Injectable()
 export class UserService {
   constructor(@InjectModel('User') private userModel: Model<User>) {}
@@ -43,6 +46,10 @@ export class UserService {
    * The update is built from an allow-list rather than spread from the body: the
    * parameter is typed `Partial<UserDto>`, but a type is erased at runtime, so a
    * spread would let an unexpected key reach the driver.
+   *
+   * A change that would remove the last active administrator — a demotion or a
+   * deactivation — is refused (T015, acceptance criterion 3). An ordinary edit to the
+   * same account, such as a rename, is allowed.
    */
   async updateUser(_id: string, user: Partial<UserDto>) {
     const {password, recheckPassword, ...rest} = user;
@@ -51,12 +58,16 @@ export class UserService {
       throw new HttpException(handleUserWriteError(new Error('Incorrect recheck_password')), HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
+    const update: Record<string, unknown> = {};
+    for (const field of UPDATABLE_FIELDS) {
+      if (rest[field] !== undefined) {
+        update[field] = rest[field];
+      }
+    }
+
     try {
-      const update: Record<string, unknown> = {};
-      for (const field of UPDATABLE_FIELDS) {
-        if (rest[field] !== undefined) {
-          update[field] = rest[field];
-        }
+      if (await this.removesLastAdministrator(_id, update)) {
+        throw new HttpException(LAST_ADMIN_MESSAGE, HttpStatus.CONFLICT);
       }
 
       if (password !== undefined) {
@@ -65,16 +76,51 @@ export class UserService {
 
       return await this.userModel.updateOne({_id}, update);
     } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
       throw new HttpException(handleUserWriteError(e), errorStatus(e));
     }
   }
 
   async deleteUser(_id: string) {
     try {
+      if (await this.removesLastAdministrator(_id, {active: false})) {
+        throw new HttpException(LAST_ADMIN_MESSAGE, HttpStatus.CONFLICT);
+      }
+
       return await this.userModel.deleteOne({_id});
     } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
       throw new HttpException(errorMessage(e), errorStatus(e));
     }
+  }
+
+  /**
+   * True when `_id` is the only active administrator and `changes` would take it out of
+   * that state — by deactivating it or by moving it off the `ADMIN` role (T015).
+   *
+   * The current role is read from the stored document rather than from the request: a
+   * caller-supplied role would let the rule be skipped by claiming the target is not an
+   * administrator. The count excludes the target itself, so "another active
+   * administrator remains" is one query and cannot be fooled by a concurrent count.
+   */
+  private async removesLastAdministrator(_id: string, changes: Record<string, unknown>): Promise<boolean> {
+    const removingRole = changes.role !== undefined && changes.role !== 'ADMIN';
+    const deactivating = changes.active === false;
+    if (!removingRole && !deactivating) {
+      return false;
+    }
+
+    const target = await this.userModel.findOne({_id});
+    if (!target || target.role !== 'ADMIN' || target.active === false) {
+      return false;
+    }
+
+    const remaining = await this.userModel.countDocuments({role: 'ADMIN', active: true, _id: {$ne: _id}});
+    return remaining === 0;
   }
 
   async findAllUser() {
