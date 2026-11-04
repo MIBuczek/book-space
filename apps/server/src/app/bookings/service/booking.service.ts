@@ -3,6 +3,7 @@ import {InjectModel} from '@nestjs/mongoose';
 import {Booking, TBooking} from '../schemas/booking.schema';
 import {BookingDto} from '../models/booking.dto';
 import {Model} from 'mongoose';
+import {Building} from '../../buildings/schemas/building.schema';
 import {BookedTime} from '../schemas/booked-time.schema';
 import {BookedTimeDto} from '../models/booked-time.dto';
 import {BookingQueryDto} from '../models/booking-query.dto';
@@ -13,13 +14,42 @@ import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
 import {findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
 import {StructuredHttpException} from '../../config/structured-http-exception';
+import {isSizeOffered, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
 
 @Injectable()
 export class BookingService {
   constructor(
     @InjectModel('Booking') private bookingModel: Model<Booking>,
+    @InjectModel('Building') private buildingModel: Model<Building>,
     private readonly logger: StructuredLogger
   ) {}
+
+  /**
+   * Refuses a size the referenced facility does not offer (FR-031, T052).
+   *
+   * The rule only applies when the facility resolves. `place.place` is the facility
+   * `property` key and `place.city` scopes it, matching the `{city, property}` unique
+   * index the buildings schema declares. A booking whose facility is missing is left to
+   * T059 (#126), which owns referential integrity: refusing it here would reject
+   * legacy-shaped data and every fixture that uses a placeholder facility name, and would
+   * report a missing facility as a size error.
+   */
+  private async assertSizeOffered(size: string, place: {place: string; city: string} | undefined): Promise<void> {
+    if (!place?.place) {
+      return;
+    }
+    // The filter is built as a plain record rather than a typed `FilterQuery<Building>`:
+    // `city` is a string on the booking but an enum union on the building, and Mongoose's
+    // overloads reject the wider type. `buildBookingQuery` builds its filter the same way.
+    const filter: Record<string, unknown> = {property: place.place};
+    if (place.city !== undefined) {
+      filter.city = place.city;
+    }
+    const facility = await this.buildingModel.findOne(filter, {sizes: 1});
+    if (!isSizeOffered(size, facility)) {
+      throw new UnprocessableEntityException(SIZE_NOT_OFFERED_MESSAGE);
+    }
+  }
 
   /**
    * Creates a booking and stamps its server-owned fields.
@@ -54,6 +84,7 @@ export class BookingService {
     }
 
     try {
+      await this.assertSizeOffered(booking.size, booking.place);
       const created = await this.bookingModel.create({
         ...booking,
         createdBy,
@@ -100,6 +131,18 @@ export class BookingService {
       delete updates.extraOptions;
       if (updates.selectedOptions) {
         updates.extraOptions = updates.selectedOptions.length > 0;
+      }
+
+      // The size rule is checked against the *effective* pair, not the body alone: a
+      // caller may change only the size, only the facility, or both, and each must be
+      // validated against the facility that will actually be stored. Reading the record
+      // only when the body touches `size` or `place` keeps the check off the common
+      // descriptive update.
+      if (updates.size !== undefined || updates.place !== undefined) {
+        const stored = await this.bookingModel.findOne({_id}, {size: 1, place: 1});
+        if (stored) {
+          await this.assertSizeOffered(updates.size ?? stored.size, updates.place ?? stored.place);
+        }
       }
 
       // After stripping the fields above an update can be empty — a caller who sent

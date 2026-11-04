@@ -23,11 +23,17 @@ describe('BookingService', () => {
     countDocuments: jest.fn()
   };
 
+  // The size rule (T052) reads the facility on write. A stub that resolves no facility
+  // leaves the rule inert, which is what every case here except the size cases wants.
+  const buildingModelMock = {findOne: jest.fn()};
+
   beforeEach(async () => {
+    buildingModelMock.findOne.mockReset();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookingService,
         {provide: getModelToken('Booking'), useValue: modelMock},
+        {provide: getModelToken('Building'), useValue: buildingModelMock},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
       ]
@@ -101,6 +107,39 @@ describe('BookingService', () => {
       await service.createBooking({selectedOptions: []} as never, 'u2', false);
 
       expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({extraOptions: false}));
+    });
+
+    it('refuses a size the referenced facility does not offer with 422', async () => {
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1']});
+
+      await expect(
+        service.createBooking(
+          {size: '3/4', place: {place: 'sala-fitness', city: 'siechnice'}} as never,
+          'u2'
+        )
+      ).rejects.toMatchObject({status: 422});
+      expect(modelMock.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a size the facility offers', async () => {
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1', '1/2']});
+
+      await service.createBooking(
+        {size: '1/2', place: {place: 'hala-sportowa', city: 'siechnice'}} as never,
+        'u2'
+      );
+
+      expect(modelMock.create).toHaveBeenCalled();
+    });
+
+    it('leaves a booking whose facility does not resolve to the integrity task', async () => {
+      // The facility question is T059's; a placeholder facility name must not be reported
+      // as a size error.
+      buildingModelMock.findOne.mockResolvedValue(null);
+
+      await service.createBooking({size: '3/4', place: {place: 'unknown', city: 'siechnice'}} as never, 'u2');
+
+      expect(modelMock.create).toHaveBeenCalled();
     });
 
     it('maps a driver error onto an HTTP exception', async () => {
@@ -276,6 +315,37 @@ describe('BookingService', () => {
       expect(updates).not.toHaveProperty('accepted');
       expect(updates).not.toHaveProperty('archive');
       expect(updates).toMatchObject({comments: 'x'});
+    });
+
+    it('refuses an update that sets a size the stored facility does not offer', async () => {
+      modelMock.findOne.mockResolvedValue({size: '1/1', place: {place: 'sala-fitness', city: 'siechnice'}});
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1']});
+
+      await expect(service.updateBooking('b1', {size: '3/4'} as never)).rejects.toMatchObject({status: 422});
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('checks the size against the new facility when only the place changes', async () => {
+      // The stored size is fine for the stored facility but not for the new one, so the
+      // rule has to be applied to the effective pair rather than to the body alone.
+      modelMock.findOne.mockResolvedValue({size: '3/4', place: {place: 'boisko-sztuczna-nawierzchnia', city: 'siechnice'}});
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1']});
+
+      await expect(
+        service.updateBooking('b1', {place: {place: 'sala-fitness', city: 'siechnice'}} as never)
+      ).rejects.toMatchObject({status: 422});
+    });
+
+    it('does not run the size rule when the booking does not exist', async () => {
+      // A missing record is a `404` from the controller's ownership check; the service
+      // must not turn it into a size error by reading a facility for a booking it could
+      // not load.
+      modelMock.findOne.mockResolvedValue(null);
+
+      await service.updateBooking('b1', {size: '3/4'} as never);
+
+      expect(buildingModelMock.findOne).not.toHaveBeenCalled();
+      expect(modelMock.updateOne).toHaveBeenCalled();
     });
   });
 

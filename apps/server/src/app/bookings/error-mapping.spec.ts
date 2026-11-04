@@ -41,6 +41,7 @@ describe('BookingService error mapping (regression)', () => {
       providers: [
         BookingService,
         {provide: getModelToken('Booking'), useValue: modelMock},
+        {provide: getModelToken('Building'), useValue: {findOne: jest.fn()}},
         {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}},
       ],
