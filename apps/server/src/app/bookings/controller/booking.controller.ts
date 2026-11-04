@@ -21,6 +21,7 @@ import {BookingDto} from '../models/booking.dto';
 import {ApprovalDto} from '../models/approval.dto';
 import {ArchiveDto} from '../models/archive.dto';
 import {ConflictsQueryDto} from '../models/conflicts-query.dto';
+import {BookingQueryDto} from '../models/booking-query.dto';
 import {AuthGuard} from '@nestjs/passport';
 import {BookedTimeDto} from '../models/booked-time.dto';
 import {VALIDATION_PIPE_OPTIONS} from '../../config/validation-options';
@@ -52,14 +53,32 @@ export class BookingController {
    * user must carry a recognised role, so an authenticated request that lost its user
    * is public too. Widening the scope takes a positive signal on each, and the
    * narrowest reading is the default.
+   *
+   * The response is the contract's `{items, total, page, limit}` envelope. `total` is the
+   * count before pagination, so a client can page without a second request. `items` is
+   * redacted for a public caller, never the envelope: redacting the envelope would drop
+   * the paging fields the client needs.
+   *
+   * `all` (load every record, skipping the default academic year) is administrator-only
+   * (issue #26). A non-administrator who asks for it is refused rather than quietly given
+   * the academic year, so the request and the answer cannot disagree. The check reads the
+   * authenticated role, never the query, so a caller cannot grant it to themselves.
    */
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
-  async getAllBookings(@Req() request: Request, @CurrentUser() user: IActingUser | undefined) {
+  async getAllBookings(
+    @Req() request: Request,
+    @Query() query: BookingQueryDto,
+    @CurrentUser() user: IActingUser | undefined
+  ) {
     const staff = request.isPublic === false && isStaff(user);
-    const bookings = await this.bookingService.findAllBooking(staff);
+    if (query.all === true && user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Only an administrator may load every record');
+    }
 
-    return staff ? bookings : serializePublicBookings(bookings);
+    const page = await this.bookingService.findAllBooking(query, staff);
+
+    return staff ? page : {...page, items: serializePublicBookings(page.items)};
   }
 
   /**

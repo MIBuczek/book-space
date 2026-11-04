@@ -48,8 +48,12 @@ describe('public booking read path', () => {
     await ctx.reset();
   });
 
-  const getBookings = (token?: string) =>
-    fetch(`${ctx.baseUrl}/bookings`, {
+  // The public calendar must name a period (T022). The helper supplies a wide one so the
+  // specs that are about redaction are not also about the range rule.
+  const PUBLIC_PERIOD = 'from=2020-01-01T00:00:00.000Z&to=2030-01-01T00:00:00.000Z';
+
+  const getBookings = (token?: string, query = PUBLIC_PERIOD) =>
+    fetch(`${ctx.baseUrl}/bookings?${query}`, {
       headers: token ? {authorization: `Bearer ${token}`} : {},
     });
 
@@ -83,17 +87,26 @@ describe('public booking read path', () => {
   it('hides an unaccepted booking from an anonymous caller', async () => {
     await bookingModel.create(booking({accepted: false}));
 
-    const body = (await (await getBookings()).json()) as Array<Record<string, unknown>>;
+    const body = (await (await getBookings()).json()) as {items: Array<Record<string, unknown>>};
 
-    expect(body).toEqual([]);
+    expect(body.items).toEqual([]);
   });
 
   it('hides an archived booking from an anonymous caller', async () => {
     await bookingModel.create(booking({archive: true}));
 
-    const body = (await (await getBookings()).json()) as Array<Record<string, unknown>>;
+    const body = (await (await getBookings()).json()) as {items: Array<Record<string, unknown>>};
 
-    expect(body).toEqual([]);
+    expect(body.items).toEqual([]);
+  });
+
+  it('refuses an anonymous read with no period', async () => {
+    await bookingModel.create(booking());
+
+    const response = await fetch(`${ctx.baseUrl}/bookings`);
+
+    // The unbounded read is what exposed the whole history; the contract answers 422.
+    expect(response.status).toBe(422);
   });
 
   it('does not put the tenant personal data in the anonymous body at all', async () => {
@@ -112,7 +125,8 @@ describe('public booking read path', () => {
   it('keeps the fields the calendar renders', async () => {
     await bookingModel.create(booking());
 
-    const [first] = (await (await getBookings()).json()) as Array<Record<string, unknown>>;
+    const {items} = (await (await getBookings()).json()) as {items: Array<Record<string, unknown>>};
+    const [first] = items;
 
     expect(first).toMatchObject({
         size: 'X/X',
@@ -128,22 +142,26 @@ describe('public booking read path', () => {
     await bookingModel.create(booking({accepted: false}));
     const token = await signIn('employee@example.com', 'EMPLOYEE');
 
-    const body = (await (await getBookings(token)).json()) as Array<Record<string, unknown>>;
+    const {items} = (await (await getBookings(token)).json()) as {items: Array<Record<string, unknown>>};
 
     // The unfiltered read is what the matrix gives staff, so the unaccepted booking
     // is present and carries its personal fields.
-    expect(body).toHaveLength(1);
-    expect(body[0]).toMatchObject({personName: 'Jan Kowalski', personEmail: 'jan@example.com'});
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({personName: 'Jan Kowalski', personEmail: 'jan@example.com'});
   });
 
   it('serves the full record to an administrator', async () => {
     await bookingModel.create(booking({archive: true}));
     const token = await signIn('admin@example.com', 'ADMIN');
 
-    const body = (await (await getBookings(token)).json()) as Array<Record<string, unknown>>;
+    // The archived record is only in scope when the caller asks for the archive; the
+    // default list is non-archived for staff as well, matching the legacy read.
+    const {items} = (await (
+      await getBookings(token, `${PUBLIC_PERIOD}&archive=true`)
+    ).json()) as {items: Array<Record<string, unknown>>};
 
-    expect(body).toHaveLength(1);
-    expect(body[0]).toHaveProperty('personPhone', '500100200');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveProperty('personPhone', '500100200');
   });
 
   it('refuses an invalid token rather than answering as anonymous', async () => {

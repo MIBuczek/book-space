@@ -219,6 +219,34 @@ record limit.
 **Consequence**: the default view loads the current academic year, with an explicit "all
 records" option for administrators.
 
+**Landed (T022).** `apps/server/src/app/bookings/list/` holds the rule:
+`academic-year.ts` derives the current period (August turn-over, facility-local midnights)
+and `booking-list.ts` resolves the request into a filter and a page, as pure functions with
+their own specs. `GET /api/bookings` takes `from`, `to`, `city`, `building`, `accepted`,
+`archive` (default `false`), `clientId`, `page`, `limit` (default 50, max 200) and `all`,
+and answers the contract's `{items, total, page, limit}` envelope; `total` is a
+`countDocuments` on the same filter, so it is the pre-pagination count.
+
+Two decisions the pure module fixes:
+
+- **The period filters `createdAt`, not the slot date.** The legacy `getBookingsDataByDate`
+  was `orderBy('createdAt'), startAt, endAt`, and `data-model.md` indexes `{createdAt: -1}`
+  for this read. `createdAt` was not on the booking schema; T022 adds it (immutable,
+  defaulted) so the range has a field to range over. A booking's creation time is not its
+  ObjectId timestamp once migrated, so a real field is what the migration can supply.
+- **An anonymous caller must name a period.** The public calendar is the one path an
+  unauthenticated caller reaches, so an unbounded read there is the exposure the issue
+  names; a missing bound is `422`. Staff default to the academic year, which is a
+  performance measure, not a boundary — they may read the history and `all=true`
+  (administrator-only) is how they ask.
+
+The `archive`/`accepted` flags are read with a `@BooleanQuery` transform, not a bare
+`@IsBoolean`. The global pipe's `enableImplicitConversion` coerces a query string with
+`Boolean(value)`, and `Boolean('false')` is `true`, so `?archive=false` would have asked
+for the archived records — a filter that inverts without an error. The transform reads the
+raw query value (`obj[key]`), which is still the string at that point. `booking-query.dto.spec.ts`
+runs the real pipe and pins `?archive=false`.
+
 ---
 
 ## R10 — Migration
