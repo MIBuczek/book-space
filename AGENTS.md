@@ -523,6 +523,19 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   empty (a caller who sent only `accepted`), and MongoDB rejects an empty update document, so the
   service returns a no-op success rather than a `500`. The approval integration spec pins that a
   generic update cannot change `accepted`.
+- **The booking size is validated against the facility's allowed sizes on write, and only when
+  the facility resolves (T052, FR-031).** `bookings/size/size-rule.ts` is the pure rule;
+  `BookingService.assertSizeOffered` looks the facility up by `{place.place, city}` and throws
+  `422` when the size is not in its `sizes`. A missing facility is *not* a size error — it is
+  left to T059 (#126), which owns referential integrity; treating it here as a size failure
+  would reject every fixture that uses a placeholder facility name (`hala`, `Hala`, `Sala A`)
+  and report the wrong problem. On update the rule reads the *effective* pair: a body that
+  changes only `size`, only `place`, or both is checked against the facility that will actually
+  be stored, so the read happens only when the body touches `size` or `place`. The lookup builds
+  its filter as a plain `Record<string, unknown>` rather than `FilterQuery<Building>`: `city` is
+  a `string` on the booking but an enum union on the building, and Mongoose's overloads reject
+  the wider type (`buildBookingQuery` does the same). `booking-size.integration.spec.ts` iterates
+  every seeded facility and proves both the accept and the reject path over HTTP.
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.

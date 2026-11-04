@@ -232,5 +232,5 @@ User                n ── 1 City           (via User.city)
 | User | e-mail format and uniqueness, password 6–30, names ≥3, role required, city required unless `ADMIN` |
 | Client | type enum, e-mail format, phone 3–15, zip `^[\d./-]+$` and length 6, NIP required for `COMPANY` |
 | Facility | `property` unique per city, `sizes` non-empty and from the allowed set, valid contact e-mail |
-| Booking | at least one `bookedTimes` entry, `month` 0–11, `size` matches the facility's allowed sizes, payment enum, discount 0–100 % |
+| Booking | at least one `bookedTimes` entry, `month` 0–11, `size` matches the facility's allowed sizes (enforced on create and update, T052), payment enum, discount 0–100 % |
 | BookedTime | `endHours` after `startHours`, `status` enum, `participants` 0–50 |
