@@ -32,6 +32,7 @@ describe('BookingService error mapping (regression)', () => {
     updateOne: jest.fn(),
     deleteOne: jest.fn(),
     deleteMany: jest.fn(),
+    countDocuments: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -65,7 +66,9 @@ describe('BookingService error mapping (regression)', () => {
   it('returns 500, not 200, when the database rejects', async () => {
     modelMock.find.mockRejectedValue(new Error('E11000 duplicate key error collection: bookings'));
 
-    const res = await fetch(`${baseUrl}/bookings`);
+    // Anonymous reads now require a period (T022), so the request carries one; the
+    // regression is about the error mapping, not the filter.
+    const res = await fetch(`${baseUrl}/bookings?from=2026-08-01T00:00:00.000Z&to=2026-08-31T00:00:00.000Z`);
 
     // Proves the request reached the service, not just the guard.
     expect(modelMock.find).toHaveBeenCalled();
@@ -75,11 +78,19 @@ describe('BookingService error mapping (regression)', () => {
 
   it('still reports success normally', async () => {
     modelMock.find.mockResolvedValue([]);
+    modelMock.countDocuments.mockResolvedValue(0);
 
-    const res = await fetch(`${baseUrl}/bookings`);
+    const res = await fetch(`${baseUrl}/bookings?from=2026-08-01T00:00:00.000Z&to=2026-08-31T00:00:00.000Z`);
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([]);
+    expect(await res.json()).toEqual({items: [], total: 0, page: 1, limit: 50});
+  });
+
+  it('refuses an anonymous read with no period before reaching the database', async () => {
+    const res = await fetch(`${baseUrl}/bookings`);
+
+    expect(res.status).toBe(422);
+    expect(modelMock.find).not.toHaveBeenCalled();
   });
 
   // Known gap, deferred to the global exception filter in T002. Documented here
@@ -87,7 +98,7 @@ describe('BookingService error mapping (regression)', () => {
   it('currently still returns the raw driver message to the caller', async () => {
     modelMock.find.mockRejectedValue(new Error('E11000 duplicate key error collection: bookings'));
 
-    const body = await (await fetch(`${baseUrl}/bookings`)).text();
+    const body = await (await fetch(`${baseUrl}/bookings?from=2026-08-01T00:00:00.000Z&to=2026-08-31T00:00:00.000Z`)).text();
 
     expect(body).toContain('E11000');
   });

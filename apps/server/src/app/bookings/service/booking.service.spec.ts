@@ -18,7 +18,8 @@ describe('BookingService', () => {
     findOneAndUpdate: jest.fn(),
     updateOne: jest.fn(),
     deleteOne: jest.fn(),
-    deleteMany: jest.fn()
+    deleteMany: jest.fn(),
+    countDocuments: jest.fn()
   };
 
   beforeEach(async () => {
@@ -39,37 +40,94 @@ describe('BookingService', () => {
   });
 
   describe('findAllBooking', () => {
+    const FROM = new Date('2026-08-01T00:00:00+02:00');
+    const TO = new Date('2026-09-30T23:59:59+02:00');
+
     beforeEach(() => {
       modelMock.find.mockReset();
+      modelMock.countDocuments.mockReset();
       modelMock.find.mockResolvedValue([]);
+      modelMock.countDocuments.mockResolvedValue(0);
     });
 
     it('restricts the public query to accepted, non-archived bookings', async () => {
-      await service.findAllBooking(false);
+      await service.findAllBooking({from: FROM, to: TO}, false);
 
-      expect(modelMock.find).toHaveBeenCalledWith({accepted: true, archive: false});
-    });
-
-    it('does not restrict the staff query', async () => {
-      await service.findAllBooking(true);
-
-      expect(modelMock.find).toHaveBeenCalledWith({});
+      const [criteria] = modelMock.find.mock.calls[0];
+      expect(criteria).toMatchObject({accepted: true, archive: false});
     });
 
     it('applies the restriction in the query, not after it', async () => {
       // The filter has to reach the database. Filtering the returned array would
       // read an unaccepted booking — the personal data on it — before discarding it.
-      await service.findAllBooking(false);
+      await service.findAllBooking({from: FROM, to: TO}, false);
 
-      const [filter] = modelMock.find.mock.calls[0];
-      expect(filter).not.toEqual({});
-      expect(Object.keys(filter).sort()).toEqual(['accepted', 'archive']);
+      const [criteria] = modelMock.find.mock.calls[0];
+      expect(Object.keys(criteria).sort()).toEqual(['accepted', 'archive', 'createdAt']);
     });
 
-    it('maps a driver failure to an HTTP error', async () => {
+    it('refuses a public request without a period', async () => {
+      await expect(service.findAllBooking({}, false)).rejects.toMatchObject({status: 422});
+      expect(modelMock.find).not.toHaveBeenCalled();
+    });
+
+    it('does not restrict the staff query', async () => {
+      await service.findAllBooking({from: FROM, to: TO}, true);
+
+      const [criteria] = modelMock.find.mock.calls[0];
+      expect(criteria).not.toHaveProperty('accepted');
+      expect(criteria.archive).toBe(false);
+    });
+
+    it('ranges the period over createdAt, inclusive on both ends', async () => {
+      await service.findAllBooking({from: FROM, to: TO}, true);
+
+      const [criteria] = modelMock.find.mock.calls[0];
+      expect(criteria.createdAt).toEqual({$gte: FROM, $lte: TO});
+    });
+
+    it('counts with the same filter it reads with', async () => {
+      await service.findAllBooking({from: FROM, to: TO}, true);
+
+      expect(modelMock.countDocuments).toHaveBeenCalledWith(modelMock.find.mock.calls[0][0]);
+    });
+
+    it('returns the contract envelope with the pre-pagination total', async () => {
+      modelMock.find.mockResolvedValue([{_id: 'b1'}]);
+      modelMock.countDocuments.mockResolvedValue(37);
+
+      const page = await service.findAllBooking({page: 3, limit: 10}, true);
+
+      expect(page).toEqual({items: [{_id: 'b1'}], total: 37, page: 3, limit: 10});
+    });
+
+    it('applies the sort, offset and page size to the read', async () => {
+      await service.findAllBooking({page: 3, limit: 10}, true);
+
+      const [, , options] = modelMock.find.mock.calls[0];
+      expect(options).toMatchObject({skip: 20, limit: 10, lean: true, sort: {createdAt: -1, _id: -1}});
+    });
+
+    it('defaults a staff request with no period to the academic year containing now', async () => {
+      // `now` is not injectable through the service, so this asserts the shape rather
+      // than an exact instant: a bounded createdAt range on both ends.
+      await service.findAllBooking({}, true);
+
+      const [criteria] = modelMock.find.mock.calls[0];
+      expect(criteria.createdAt).toHaveProperty('$gte');
+      expect(criteria.createdAt).toHaveProperty('$lte');
+    });
+
+    it('maps a driver failure on the read to an HTTP error', async () => {
       modelMock.find.mockRejectedValue(new Error('connection lost'));
 
-      await expect(service.findAllBooking(false)).rejects.toMatchObject({message: 'connection lost'});
+      await expect(service.findAllBooking({from: FROM, to: TO}, false)).rejects.toMatchObject({message: 'connection lost'});
+    });
+
+    it('maps a driver failure on the count to an HTTP error', async () => {
+      modelMock.countDocuments.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.findAllBooking({from: FROM, to: TO}, false)).rejects.toMatchObject({message: 'connection lost'});
     });
   });
 

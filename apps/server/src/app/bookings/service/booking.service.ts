@@ -1,9 +1,11 @@
-import {ConflictException, HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/common';
+import {ConflictException, HttpException, HttpStatus, Injectable, NotFoundException, UnprocessableEntityException} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {Booking, TBooking} from '../schemas/booking.schema';
 import {Model} from 'mongoose';
 import {BookedTime} from '../schemas/booked-time.schemta';
 import {BookedTimeDto} from '../models/booked-time.dto';
+import {BookingQueryDto} from '../models/booking-query.dto';
+import {BookingRangeRequiredError, buildBookingQuery, resolveBookingListRequest} from '../list/booking-list';
 import {findResolvedSlotViolation, resolvedSlotMessage} from '../slots/resolved-slots';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
@@ -316,18 +318,47 @@ export class BookingService {
   }
 
   /**
-   * Lists bookings at the level of detail the caller is entitled to.
+   * Lists bookings for a period, at the level of detail the caller is entitled to
+   * (FR-020, FR-022, FR-043).
    *
-   * `includeAll` is a parameter rather than something the service infers from the
-   * caller, so the scope decision is made once, in the controller, where the
-   * authenticated user is available. The public scope is the *filtered* query, not a
-   * post-filter of the full result: the query is what enforces FR-005 at the
-   * database, so an unaccepted booking is never read in the first place rather than
-   * read and discarded.
+   * `staff` is a parameter rather than something the service infers from the caller, so
+   * the scope decision is made once, in the controller, where the authenticated user is
+   * available. `resolveBookingListRequest` turns the validated query and the scope into a
+   * filter and a page; the public filter is the *filtered* query, not a post-filter of the
+   * full result, so FR-005 is enforced at the database and an unaccepted booking is never
+   * read in the first place.
+   *
+   * `total` is a separate `countDocuments` on the same filter, because the contract's
+   * `total` is the count *before* pagination and reading a page cannot produce it.
+   *
+   * The two reads share one filter and run together. The projection is `.lean()`, as
+   * backend-conventions §4 requires for a read path that only serialises: hydrating a
+   * document per row buys nothing here and the serializer accepts a plain object.
    */
-  async findAllBooking(includeAll: boolean) {
+  async findAllBooking(query: BookingQueryDto, staff: boolean) {
+    let resolved: ReturnType<typeof resolveBookingListRequest>;
     try {
-      return await this.bookingModel.find(includeAll ? {} : {accepted: true, archive: false});
+      resolved = resolveBookingListRequest(query, {staff, now: new Date()});
+    } catch (e) {
+      if (e instanceof BookingRangeRequiredError) {
+        throw new UnprocessableEntityException(e.message);
+      }
+      throw e;
+    }
+
+    const {filter, pagination} = resolved;
+    const criteria = buildBookingQuery(filter);
+    try {
+      const [items, total] = await Promise.all([
+        this.bookingModel.find(criteria, null, {
+          sort: {createdAt: -1, _id: -1},
+          skip: pagination.skip,
+          limit: pagination.limit,
+          lean: true
+        }),
+        this.bookingModel.countDocuments(criteria)
+      ]);
+      return {items, total, page: pagination.page, limit: pagination.limit};
     } catch (e) {
       throw new HttpException(errorMessage(e), errorStatus(e));
     }

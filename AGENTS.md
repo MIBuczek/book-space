@@ -371,6 +371,26 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **`nick` is not in the booking schema yet.** T010 adds it. A test that seeds `nick` and
   reads it back will find nothing — Mongoose drops fields the schema does not declare — so the
   calendar-label assertions wait for T010 and the redaction list is the control meanwhile.
+- **A boolean query flag inverts under `enableImplicitConversion`.** The global pipe runs with
+  `transformOptions.enableImplicitConversion`, which coerces a query string with
+  `Boolean(value)` — and `Boolean('false')` is `true`. So a bare `@IsBoolean() archive?: boolean`
+  turns `?archive=false` into `true`, and the filter silently asks for the opposite of what was
+  sent. A `@Transform` that reads the callback's `value` does **not** help: `value` is already
+  coerced by the time the transform runs. Read the raw source instead — the callback's `obj[key]`
+  is still the string. `@BooleanQuery()` in `booking-query.dto.ts` is that transform; it is
+  applied to `accepted`, `archive` and `all`. `booking-query.dto.spec.ts` drives the real
+  `ValidationPipe` (a hand-built `plainToInstance` would not reproduce it).
+- **`GET /bookings` returns an envelope, and a public caller must name a period.** The list
+  answers `{items, total, page, limit}` (the `IPaginated` shape), not a bare array; `total` is a
+  separate `countDocuments` on the same filter, so it is the pre-pagination count. An anonymous
+  request without both `from` and `to` is `422` (`BookingRangeRequiredError` →
+  `UnprocessableEntityException`), because the unbounded read is the exposure issue #26 names.
+  Staff default to the current academic year; `all=true` is administrator-only and refused with
+  `403` for anyone else. The period filters `createdAt` (a field T022 adds to the schema), not
+  the slot date, matching the legacy `getBookingsDataByDate`. The `items` are redacted for a
+  public caller, never the envelope — redacting the envelope would drop the paging fields.
+  Specs that hit `GET /bookings` anonymously (`error-mapping.spec.ts`,
+  `bookings.integration.spec.ts`) must now pass a period.
 - **Booking ownership is an exact identity on `createdBy`, and the acting user's `_id` is an
   `ObjectId`.** `canModifyBooking` (T017) compares the booking's `createdBy` against the
   caller's id or e-mail with `ownsRecord`, which fails closed on an empty identity on either

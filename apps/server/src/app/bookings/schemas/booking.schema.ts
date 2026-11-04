@@ -106,6 +106,23 @@ export class Booking {
   createdBy?: string;
 
   /**
+   * When the booking was created (FR-016, FR-020). Immutable and defaulted, matching
+   * the `users` schema's `createdAt`.
+   *
+   * The booking-list period filter (`from`/`to`) ranges over this field, following the
+   * legacy `getBookingsDataByDate`, which ordered and bounded the query on `createdAt`.
+   * It is a real field rather than a projection of `_id`, because the migration supplies
+   * it for legacy records (research.md R10) and a migrated booking's creation time is not
+   * its ObjectId timestamp.
+   */
+  @Prop({
+    type: Date,
+    immutable: true,
+    default: () => new Date()
+  })
+  createdAt?: Date;
+
+  /**
    * Who last modified the booking, and when (FR-016).
    *
    * Written by the decision routes (approve/archive) and by any future write path,
@@ -125,3 +142,15 @@ export class Booking {
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);
+
+/**
+ * The booking-list read shape (FR-020, FR-022, FR-043, data-model.md indexes).
+ *
+ * The list filters on the period, then the facility and archive, and sorts by recency.
+ * The compound key leads with `createdAt` because the period is the bound every list
+ * request carries, and `_id` trails it so the sort is total: two bookings created in the
+ * same millisecond would otherwise order arbitrarily between pages and a record could be
+ * skipped or repeated. `data-model.md` names `{createdAt: -1}`; the extra key is what
+ * makes it a stable cursor rather than a partial order.
+ */
+BookingSchema.index({createdAt: -1, _id: -1});

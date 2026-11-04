@@ -42,7 +42,7 @@ describe('BookingController', () => {
   let updateBookedTimes: jest.Mock;
 
   beforeEach(async () => {
-    findAllBooking = jest.fn().mockResolvedValue([storedBooking()]);
+    findAllBooking = jest.fn().mockResolvedValue({items: [storedBooking()], total: 1, page: 1, limit: 50});
     findBooking = jest.fn().mockResolvedValue(storedBooking({createdBy: 'u2'}));
     createBooking = jest.fn().mockResolvedValue(storedBooking());
     updateBooking = jest.fn().mockResolvedValue({matchedCount: 1});
@@ -74,54 +74,81 @@ describe('BookingController', () => {
     });
 
     it('redacts the response for a public caller', async () => {
-      const result = await controller.getAllBookings({isPublic: true} as never, undefined);
+      const result = await controller.getAllBookings({isPublic: true} as never, {}, undefined);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).not.toHaveProperty('personName');
-      expect(result[0]).not.toHaveProperty('personEmail');
-      expect(result[0]).not.toHaveProperty('personPhone');
-      expect(result[0]).not.toHaveProperty('comments');
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).not.toHaveProperty('personName');
+      expect(result.items[0]).not.toHaveProperty('personEmail');
+      expect(result.items[0]).not.toHaveProperty('personPhone');
+      expect(result.items[0]).not.toHaveProperty('comments');
+    });
+
+    it('keeps the paging fields on the redacted envelope', async () => {
+      const result = await controller.getAllBookings({isPublic: true} as never, {}, undefined);
+
+      expect(result).toMatchObject({total: 1, page: 1, limit: 50});
     });
 
     it('asks the service for the restricted set for a public caller', async () => {
-      await controller.getAllBookings({isPublic: true} as never, undefined);
+      await controller.getAllBookings({isPublic: true} as never, {}, undefined);
 
-      expect(findAllBooking).toHaveBeenCalledWith(false);
+      expect(findAllBooking).toHaveBeenCalledWith({}, false);
     });
 
     it('returns the full record to an administrator', async () => {
-      const result = await controller.getAllBookings({isPublic: false} as never, ADMIN);
+      const result = await controller.getAllBookings({isPublic: false} as never, {}, ADMIN);
 
-      expect(result[0]).toHaveProperty('personName', 'Jan Kowalski');
-      expect(result[0]).toHaveProperty('personEmail', 'jan@example.com');
+      expect(result.items[0]).toHaveProperty('personName', 'Jan Kowalski');
+      expect(result.items[0]).toHaveProperty('personEmail', 'jan@example.com');
     });
 
     it('returns the full record to an employee', async () => {
       // The matrix gives every staff role the unfiltered read, not only administrators.
-      const result = await controller.getAllBookings({isPublic: false} as never, EMPLOYEE);
+      const result = await controller.getAllBookings({isPublic: false} as never, {}, EMPLOYEE);
 
-      expect(findAllBooking).toHaveBeenCalledWith(true);
-      expect(result[0]).toHaveProperty('personName', 'Jan Kowalski');
+      expect(findAllBooking).toHaveBeenCalledWith({}, true);
+      expect(result.items[0]).toHaveProperty('personName', 'Jan Kowalski');
     });
 
     it('fails closed when the guard did not mark the request', async () => {
       // `isPublic` absent means the guard never ran. Serving the full record there
       // would leak personal data on any routing mistake, so absent reads as public.
-      const result = await controller.getAllBookings({} as never, undefined);
+      const result = await controller.getAllBookings({} as never, {}, undefined);
 
-      expect(result[0]).not.toHaveProperty('personName');
-      expect(findAllBooking).toHaveBeenCalledWith(false);
+      expect(result.items[0]).not.toHaveProperty('personName');
+      expect(findAllBooking).toHaveBeenCalledWith({}, false);
     });
 
     it('fails closed when a user is present but carries no recognised role', async () => {
       // A user object that is not staff must not widen the scope; only a role does.
-      const result = await controller.getAllBookings({isPublic: false} as never, {
+      const result = await controller.getAllBookings({isPublic: false} as never, {}, {
         _id: 'u3',
         email: 'nobody@example.com',
       });
 
-      expect(findAllBooking).toHaveBeenCalledWith(false);
-      expect(result[0]).not.toHaveProperty('personName');
+      expect(findAllBooking).toHaveBeenCalledWith({}, false);
+      expect(result.items[0]).not.toHaveProperty('personName');
+    });
+
+    it('refuses a non-administrator who asks for every record', async () => {
+      await expect(controller.getAllBookings({isPublic: false} as never, {all: true}, EMPLOYEE)).rejects.toBeInstanceOf(
+        ForbiddenException
+      );
+      expect(findAllBooking).not.toHaveBeenCalled();
+    });
+
+    it('lets an administrator ask for every record', async () => {
+      await controller.getAllBookings({isPublic: false} as never, {all: true}, ADMIN);
+
+      expect(findAllBooking).toHaveBeenCalledWith({all: true}, true);
+    });
+
+    it('refuses a public caller who asks for every record', async () => {
+      // `isPublic` reads as public even if the flag is somehow absent, so `all` cannot
+      // be used to widen an unauthenticated read.
+      await expect(controller.getAllBookings({isPublic: true} as never, {all: true}, undefined)).rejects.toBeInstanceOf(
+        ForbiddenException
+      );
     });
   });
 

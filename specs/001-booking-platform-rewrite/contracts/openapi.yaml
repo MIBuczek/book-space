@@ -287,15 +287,21 @@ paths:
       tags: [bookings]
       summary: List bookings for a period
       description: >
-        A public caller receives only accepted, non-archived bookings with personal
-        fields removed. Staff receive the full record within their scope.
+        Returns the `{items, total, page, limit}` envelope; `total` is the count before
+        pagination. A public caller receives only accepted, non-archived bookings with
+        personal fields removed, and must supply both `from` and `to` (a missing bound is
+        `422`). Staff receive the full record; a staff request with no period defaults to
+        the current academic year (1 August - 31 August), and `all=true` (administrator
+        only) loads every record. The period filters `createdAt`.
       security: []
       parameters:
         - name: from
           in: query
+          description: Inclusive lower bound of the period, matched against `createdAt`.
           schema: {type: string, format: date-time}
         - name: to
           in: query
+          description: Inclusive upper bound of the period, matched against `createdAt`.
           schema: {type: string, format: date-time}
         - name: city
           in: query
@@ -318,6 +324,10 @@ paths:
         - name: limit
           in: query
           schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        - name: all
+          in: query
+          description: Load every record, skipping the academic-year default. Administrator only.
+          schema: {type: boolean, default: false}
       responses:
         '200':
           description: Paged bookings
@@ -332,6 +342,8 @@ paths:
                   total: {type: integer}
                   page: {type: integer}
                   limit: {type: integer}
+        '422':
+          description: A public caller did not supply a period.
     post:
       tags: [bookings]
       summary: Create a booking request (public)
