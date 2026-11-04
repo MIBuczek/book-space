@@ -166,7 +166,11 @@ MongoDB, and serve them from `GET /api/buildings`. Extend the schema with `city`
 a `buildings` collection from Firebase. `generate-building-function.ts` prefers the database
 and falls back to the constant. The Buildings tab shows employee lists from the constant.
 
-**Consequence**: one source of truth; the fallback constant disappears.
+**Consequence**: one source of truth; the fallback constant disappears. `employees` stores
+display names rather than user references (T009): the legacy constant holds names, and staff
+user management (T051) does not exist yet, so a reference would resolve to nothing and the
+Facilities tab (FR-009) would be empty. The field type is unchanged, so adopting references
+later is a data migration, not a contract change.
 
 ---
 

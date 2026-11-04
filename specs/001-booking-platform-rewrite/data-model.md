@@ -96,12 +96,13 @@ Reference data: legacy `building-data-const.ts`
 - The current schema has no `property`, `sizes`, `lighting`, `toilets`; it cannot identify a
   facility. Legacy `IBuilding.size` is renamed to `sizes`, `extra.lighting`/`extra.toilets`
   are promoted to top-level booleans.
-- `employees` is typed as `Array<TUser>` but the legacy data holds plain names. Decide: store
-  names for display, or references to `users`. **Recommended**: references plus a resolved
-  display name in the response.
+- `employees` is typed as `Array<TUser>` but the legacy data holds plain names. **Decided
+  (T009)**: store names for display; references plus a resolved display name wait for user
+  management (T051), which does not exist yet and would leave the Facilities tab empty.
 - Seed data: the 12 facilities in the spec's section 4.
-- `BuildingSchema` is missing the `@Schema()` decorator on the class, unlike the other
-  schemas — verify that `SchemaFactory.createForClass` behaves as intended.
+- `BuildingSchema` was missing the `@Schema()` decorator on the class, unlike the other
+  schemas; T009 added it. Verified against `SchemaFactory.createForClass`, which only reads
+  the `@Prop` metadata the decorator registers.
 
 ---
 
