@@ -17,6 +17,16 @@ import * as Validator from 'class-validator';
  * a body that could set them would let a caller attribute a booking to someone else.
  * `whitelist`/`forbidNonWhitelisted` rejects them.
  *
+ * `accepted` and `archive` are absent too (T023): a booking is created unapproved and
+ * unarchived, and the flags are administrator decisions taken on the approve/archive routes.
+ * Leaving them in the body made the rule optional — a public submission could set
+ * `accepted: true` and skip the conflict check the approve route enforces (FR-017). The
+ * service forces both to `false` on create regardless of the caller.
+ *
+ * `rodoAcknowledgement` is declared because the global pipe's `whitelist` would otherwise
+ * strip it before the service could read it; it is optional here and required by the service
+ * for a public submission (FR-011).
+ *
  * The class no longer `implements Booking`: the schema now carries server-owned fields
  * (`extraOptions`, the audit stamps) that the request body must not, so the interface and
  * the DTO are deliberately different shapes. `building.dto.ts` dropped the same clause for
@@ -91,10 +101,21 @@ export class BookingDto {
   @Type(() => BookedTimeDto)
   bookedTimes!: TBookedTime[];
 
+  /**
+   * The RODO acknowledgement (FR-011). The legacy form collected it and refused to submit
+   * without it (`handlerDisableApproveBtn`).
+   *
+   * Optional in the DTO, required for a public submission: the rule is enforced in the
+   * service, which is the only place that knows whether the request came from an anonymous
+   * visitor or from staff entering a booking on a tenant's behalf. Declaring it here rather
+   * than in the service alone is what keeps `whitelist` from stripping it before the rule
+   * can read it.
+   */
+  @Validator.IsOptional()
   @Validator.IsBoolean({
-    message: 'Accepted value need to be boolean type.'
+    message: 'RODO acknowledgement need to be boolean type.'
   })
-  accepted!: boolean;
+  rodoAcknowledgement?: boolean;
 
   @Validator.IsOptional()
   @Validator.MaxLength(525, {
@@ -120,9 +141,4 @@ export class BookingDto {
   @Validator.ValidateNested({each: true})
   @Type(() => SelectedExtraOptionDto)
   selectedOptions?: SelectedExtraOptionDto[];
-
-  @Validator.IsBoolean({
-    message: 'Archive value need to be boolean type.'
-  })
-  archive!: boolean;
 }

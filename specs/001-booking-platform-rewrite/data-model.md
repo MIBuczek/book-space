@@ -143,12 +143,20 @@ Current schema: `apps/server/src/app/bookings/schemas/booking.schema.ts`
 | `bookedTimes` | `BookedTime[]` | required, at least 1 |
 | `accepted` | boolean | required, default `false` |
 | `archive` | boolean | required, default `false` |
+| `rodoAcknowledgement` | boolean | **[new]** optional, default `false`; required for a public submission (FR-011) |
 | `comments` | string | optional, ≤525 (legacy `message`) |
 | `paymentMethod` | enum `CASH` \| `TRANSFER` \| `FREE` | required |
 | `discount` | string | **[new]** optional, `^[0-9]{1,3}%$`, 0–100 |
 | `extraOptions` | boolean | **[new]** derived; true when `selectedOptions` is non-empty |
 | `selectedOptions` | `SelectedExtraOption[]` | **[new]** lighting / sanitary add-ons with from/to hours |
 | `createdBy` / `createdAt` / `modifiedBy` / `modifiedAt` | string / Date | **[new]** audit fields |
+
+**Note on `accepted`/`archive` and the request body** (T023): both are stored fields but are
+**not** part of `BookingDto` — the create body and the approve/archive bodies are the only
+places they are written, and the create path forces them to `false` regardless of the caller.
+A body that tries to set either is refused by `forbidNonWhitelisted`. The contract keeps them
+on the `Booking` response shape only. `rodoAcknowledgement` is on `BookingDto` (optional) and
+is required by the service for a public submission.
 
 **Note on `paymentMethod`** (resolved, CHK015): the legacy application offers `transfer`,
 `cash`, `free` and historically `invoice` (mapped to `transfer`). The pre-rewrite target

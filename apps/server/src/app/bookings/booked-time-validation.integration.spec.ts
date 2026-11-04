@@ -14,7 +14,11 @@ import {createMongoTestContext, MongoTestContext} from '../../testing/mongo-test
  */
 describe('booked-time validation over HTTP', () => {
   let ctx: MongoTestContext;
-  let bookingModel: {create: (doc: Record<string, unknown>) => Promise<{_id: unknown}>};
+  let bookingModel: {
+    create: (doc: Record<string, unknown>) => Promise<{_id: unknown}>;
+    countDocuments: (filter: Record<string, unknown>) => Promise<number>;
+    findOne: (filter: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+  };
   let userModel: {create: (doc: Record<string, unknown>) => Promise<{_id: unknown}>};
 
   const PASSWORD = 'correct horse battery';
@@ -63,8 +67,7 @@ describe('booked-time validation over HTTP', () => {
     personPhone: '500100200',
     month: 3,
     bookedTimes,
-    accepted: false,
-    archive: false,
+    rodoAcknowledgement: true,
     paymentMethod: 'CASH',
   });
 
@@ -196,6 +199,58 @@ describe('booked-time validation over HTTP', () => {
       const {token} = await signIn('admin@example.com', 'ADMIN');
 
       const response = await createBooking(createBody([slot()]), token);
+
+      expect(response.status).toBe(201);
+    });
+  });
+
+  /**
+   * T023. The public create path: the route accepts an anonymous caller, a public
+   * submission must carry the RODO acknowledgement, and the administrator flags cannot be
+   * set from the body. These are HTTP-level claims — the service spec drives the rules with
+   * a mock, but only a request shows that the DTO, the guard and the service agree on what
+   * "public" means and that a body-supplied flag is refused before the service sees it.
+   */
+  describe('POST /bookings (T023)', () => {
+    const postAnonymously = (body: unknown) =>
+      fetch(`${ctx.baseUrl}/bookings`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+
+    /** The create body with the RODO field removed, as a visitor who never ticked it. */
+    const withoutRodo = (body: Record<string, unknown>): Record<string, unknown> => {
+      const copy = {...body};
+      delete copy.rodoAcknowledgement;
+      return copy;
+    };
+
+    it('refuses an anonymous submission without the RODO acknowledgement with 422', async () => {
+      const response = await postAnonymously(withoutRodo(createBody([slot()])));
+
+      expect(response.status).toBe(422);
+      expect(await bookingModel.countDocuments({})).toBe(0);
+    });
+
+    it('accepts an anonymous submission that acknowledges RODO and stores it unapproved', async () => {
+      const response = await postAnonymously(createBody([slot()]));
+
+      expect(response.status).toBe(201);
+      const stored = await bookingModel.findOne({});
+      expect(stored).toMatchObject({accepted: false, archive: false, rodoAcknowledgement: true});
+    });
+
+    it('refuses a body that tries to set accepted, before the service runs', async () => {
+      const response = await postAnonymously({...createBody([slot()]), accepted: true});
+
+      expect(response.status).toBe(422);
+    });
+
+    it('does not require RODO for a staff submission', async () => {
+      const {token} = await signIn('office@example.com', 'OFFICE');
+
+      const response = await createBooking(withoutRodo(createBody([slot()])), token);
 
       expect(response.status).toBe(201);
     });

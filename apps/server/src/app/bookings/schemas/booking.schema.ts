@@ -89,9 +89,24 @@ export class Booking {
 
   @Prop({
     type: Boolean,
-    required: [true]
+    required: [true],
+    default: () => false
   })
   accepted!: boolean;
+
+  /**
+   * Whether the submitter acknowledged the RODO clause (FR-011). Recorded on the booking so
+   * the acknowledgement is provable after the fact, not merely required at the boundary: a
+   * consent the system did not keep is a consent it cannot show.
+   *
+   * Optional because staff may enter a booking on a tenant's behalf and the legacy staff path
+   * did not collect it; the service requires it for a public submission.
+   */
+  @Prop({
+    type: Boolean,
+    default: () => false
+  })
+  rodoAcknowledgement?: boolean;
 
   @Prop({
     type: String

@@ -29,16 +29,36 @@ export class BookingService {
    * someone else. `createdAt`/`modifiedAt` default to now on the schema, so they are not
    * set here.
    *
+   * `accepted` and `archive` are forced to `false`, never taken from the body (FR-014,
+   * FR-017): a booking is created as an unapproved request, and the flags are administrator
+   * decisions taken on the approve/archive routes, where the conflict check runs. The DTO no
+   * longer declares them, so `whitelist` would already strip them, but the service forces the
+   * values as the positive half of the rule — the field is written by this method, and a
+   * caller must not be able to influence it through any path.
+   *
+   * `isPublic` decides the RODO rule (FR-011). The legacy form refused to submit without the
+   * acknowledgement; the controller passes `true` only when the request carried no credential
+   * (`request.isPublic`). Staff entering a booking on a tenant's behalf are exempt, matching
+   * the legacy staff path, which did not collect it. The value is recorded on the booking, so
+   * the consent is provable rather than merely required.
+   *
    * `extraOptions` is *derived* from `selectedOptions` (data-model.md): it is a stored
    * boolean rather than a virtual because the legacy reporting reads it directly. Computing
    * it here, from the same body the add-ons come from, is what keeps the two from disagreeing
    * — a caller-supplied `extraOptions` would be a second source of truth for the same fact.
    */
-  async createBooking(booking: BookingDto, createdBy: string | undefined) {
+  async createBooking(booking: BookingDto, createdBy: string | undefined, isPublic: boolean) {
+    if (isPublic && booking.rodoAcknowledgement !== true) {
+      this.logger.warn('booking.create.rejected', {actorId: currentActorId(), reason: 'rodo_missing'});
+      throw new UnprocessableEntityException('The RODO acknowledgement is required');
+    }
+
     try {
       const created = await this.bookingModel.create({
         ...booking,
         createdBy,
+        accepted: false,
+        archive: false,
         extraOptions: (booking.selectedOptions?.length ?? 0) > 0,
       });
       this.logger.log('booking.created', {bookingId: created._id, actorId: currentActorId()});
@@ -90,6 +110,12 @@ export class BookingService {
         this.logger.log('booking.updated', {bookingId: _id, actorId: currentActorId(), action: 'none'});
         return {acknowledged: true, matchedCount: 1, modifiedCount: 0};
       }
+
+      // The audit stamp is added only when there is a real change, and after the empty
+      // check above: stamping first would make every request look like a change and turn
+      // the no-op back into a write (FR-016).
+      updates.modifiedBy = currentActorId();
+      updates.modifiedAt = new Date();
 
       const result = await this.bookingModel.updateOne({_id}, updates);
       // The field names are logged, not their values, so a booking's content is not

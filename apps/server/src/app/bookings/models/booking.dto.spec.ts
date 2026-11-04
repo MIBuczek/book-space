@@ -35,8 +35,6 @@ describe('BookingDto payment method', () => {
         comments: 'ok',
       },
     ],
-    accepted: false,
-    archive: false,
     comments: 'ok',
   };
 
@@ -73,8 +71,6 @@ describe('BookingDto new fields', () => {
     personPhone: '123456789',
     month: 3,
     bookedTimes: [{day: new Date('2026-04-01'), startHours: new Date('2026-04-01T10:00:00Z'), endHours: new Date('2026-04-01T12:00:00Z'), status: 'INITIAL'}],
-    accepted: false,
-    archive: false,
     paymentMethod: 'CASH',
   };
 
@@ -126,5 +122,20 @@ describe('BookingDto new fields', () => {
 
   it('rejects a body that tries to set createdBy', async () => {
     expect(await errorsFor({createdBy: 'someone-else'})).toContain('createdBy');
+  });
+
+  it('rejects a body that tries to set accepted or archive', async () => {
+    // T023: the flags are administrator decisions taken on the approve/archive routes, so
+    // they are no longer part of the request body and `forbidNonWhitelisted` refuses them.
+    expect(await errorsFor({accepted: true})).toContain('accepted');
+    expect(await errorsFor({archive: true})).toContain('archive');
+  });
+
+  it('accepts the RODO acknowledgement', async () => {
+    expect(await errorsFor({rodoAcknowledgement: true})).not.toContain('rodoAcknowledgement');
+  });
+
+  it('rejects a non-boolean RODO acknowledgement', async () => {
+    expect(await errorsFor({rodoAcknowledgement: 'yes'})).toContain('rodoAcknowledgement');
   });
 });

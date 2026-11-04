@@ -12,7 +12,7 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 |------------|---|---|---|---|---------------|
 | Read accepted, non-archived bookings, personal fields removed | ✅ | ✅ | ✅ | ✅ | `getBookingDataForUser`, `GET /api/bookings` (T016) |
 | Read all bookings (incl. unaccepted/archived) | ❌ | ✅ | ✅ | ✅ | `getBookingsData`, `hasRightsToSeeContent` |
-| Create a booking request | ✅ | ✅ | ✅ | ✅ | `Main.tsx`, `BookingForm` |
+| Create a booking request | ✅ | ✅ | ✅ | ✅ | `Main.tsx`, `BookingForm` (public route, `OptionalJwtAuthGuard`; RODO required for P, T023) |
 | Approve / unapprove a booking | ❌ | ❌ | ❌ | ✅ | `adminCredentials` |
 | Archive a booking | ❌ | ❌ | ❌ | ✅ | `BookingForm` archive checkbox |
 | Edit/delete a booking they created | ❌ | ✅ | ✅ | ✅ | `checkRecordActionPermission` |

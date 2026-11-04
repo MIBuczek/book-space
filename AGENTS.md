@@ -528,6 +528,24 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.
+- **`POST /bookings` is public, and the RODO rule lives in the service, not the DTO (T023).**
+  The route runs `OptionalJwtAuthGuard`, so an anonymous visitor can submit; the controller
+  passes `request.isPublic !== false` to the service and the service requires
+  `rodoAcknowledgement: true` only for a public caller. The DTO declares the field *optional*
+  because `whitelist` would otherwise strip it before the service could read it — a `@IsBoolean`
+  that is not declared is not validated, it is removed. Staff entering a booking on a tenant's
+  behalf are exempt, matching the legacy staff path. The acknowledgement is stored on the
+  booking, so the consent is provable rather than merely required.
+- **`accepted` and `archive` are no longer in `BookingDto`, and the create path forces them
+  (T023).** They are administrator decisions taken on the approve/archive routes, so leaving
+  them in the create body let a public submission set `accepted: true` and skip the conflict
+  check. The service writes `accepted: false, archive: false` regardless of the body; the
+  contract keeps the two on the `Booking` *response* shape only. The existing create specs that
+  still sent the flags now get a `422` from `forbidNonWhitelisted`, which is the intended signal.
+- **`updateBooking` stamps `modifiedBy`/`modifiedAt` after the empty-body check (T023).** The
+  stamp must come *after* the "strip left nothing" early return, or a no-op request becomes a
+  write that only records who asked for nothing. Stamping is what makes the generic update
+  attributable like an approval (FR-016).
 - **All instant↔civil-calendar conversion goes through `utility/facility-time.ts` (T019, R4).**
   It uses `Intl.DateTimeFormat('Europe/Warsaw', {hourCycle: 'h23'})`; the `h23` is load-bearing —
   the default cycle reports local midnight as hour `24`, which shifts every day boundary. Do not
