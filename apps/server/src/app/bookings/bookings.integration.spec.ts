@@ -111,7 +111,7 @@ describe('public booking read path', () => {
   });
 
   it('does not put the tenant personal data in the anonymous body at all', async () => {
-    await bookingModel.create(booking());
+    await bookingModel.create(booking({clientId: '507f1f77bcf86cd799439011'}));
 
     const text = await (await getBookings()).text();
 
@@ -121,6 +121,10 @@ describe('public booking read path', () => {
     expect(text).not.toContain('jan@example.com');
     expect(text).not.toContain('500100200');
     expect(text).not.toContain('Proszę o kontakt');
+    // The client reference is a foreign key into the client records; leaving it in
+    // would let an anonymous caller enumerate clients (issue #20).
+    expect(text).not.toContain('clientId');
+    expect(text).not.toContain('507f1f77bcf86cd799439011');
   });
 
   it('keeps the fields the calendar renders', async () => {

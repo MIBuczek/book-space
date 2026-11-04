@@ -301,7 +301,8 @@ paths:
       description: >
         Returns the `{items, total, page, limit}` envelope; `total` is the count before
         pagination. A public caller receives only accepted, non-archived bookings with
-        personal fields removed, and must supply both `from` and `to` (a missing bound is
+        `personName`, `personEmail`, `personPhone`, `comments` and `clientId` removed, and
+        must supply both `from` and `to` (a missing bound is
         `422`). Staff receive the full record; a staff request with no period defaults to
         the current academic year (1 August - 31 August), and `all=true` (administrator
         only) loads every record. The period filters `createdAt`.

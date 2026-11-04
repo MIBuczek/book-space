@@ -62,10 +62,17 @@ describe('serializePublicBooking', () => {
   });
 
   it('does not remove personCompany', () => {
-    // Note 6 names four fields; the company is not one of them.
+    // Note 6 names four personal fields plus `clientId` (issue #20); the company is
+    // not one of them.
     const result = serializePublicBooking(fullBooking());
 
     expect(result.personCompany).toBe('SISK');
+  });
+
+  it('removes the clientId so an anonymous caller cannot correlate bookings to a client', () => {
+    const result = serializePublicBooking(fullBooking());
+
+    expect(result).not.toHaveProperty('clientId');
   });
 
   it('removes the fields even when the booking has no personal data', () => {
