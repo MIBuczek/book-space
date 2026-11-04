@@ -546,6 +546,25 @@ Three things that are easy to get wrong:
   succeeds, so the test proves nothing about the rule. Read the ruleset config via
   `GET /repos/{owner}/{repo}/rulesets/{id}` instead of pushing to `main`.
 
+## Issue closure
+
+- **A `Closes #N` line is not evidence the work landed.** PR #131 was titled "Add roles to
+  the users schema and restrict the users endpoints to administrators (T007, T015)" and
+  carried "Closes #11 and closes #15" — the second was copied in without the task. Issue #15
+  (T011) read `closed / completed` for two days while `booked-time.schemta.ts` was still
+  misspelled and unvalidated on `main`. When resuming from a closed issue, open the closing
+  PR's diff and confirm it touched the files the issue names; do not trust the issue state.
+  `git log --oneline -- <path>` is the check that cannot be fooled by a stale issue.
+- **Batch the closes-line to the tasks the PR implements, not to the slice it sits in.**
+  #131 covered T007/T015 and named #15 as well; #98 (`#78–#81`) and #99 (`#87,#88`) batched
+  correctly and their tasks were all genuinely done. A PR that closes four issues is fine;
+  a PR that closes an issue it does not implement is the defect.
+- **Closing by hand is the other way a task state drifts.** #74, #90 and #91 have no
+  referencing PR at all — an administrator closed them after verifying the work by hand.
+  All three were genuinely done, but there is no automated evidence: verify against the tree
+  (`project.json` executor, `.nvmrc`/`engines`/Dockerfiles, `env.validation.ts`) rather than
+  the issue's state.
+
 ## Logging
 
 `LoggingModule` is registered once in `AppModule` and applies to every route, so a new
