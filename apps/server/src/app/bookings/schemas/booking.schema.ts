@@ -1,7 +1,9 @@
 import {HydratedDocument} from 'mongoose';
 import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
-import {TBookedTime} from '../schemas/booked-time.schemta';
+import {TBookedTime, BookedTimeSchema} from '../schemas/booked-time.schemta';
+import {SelectedExtraOptionSchema} from '../schemas/selected-extra-option.schema';
 import {TClientType, TPayment, IPlace} from '@models/booking.model';
+import {ISelectedExtraOption} from '@models/selected-extra-option.model';
 import validator from 'validator';
 
 export type TBooking = HydratedDocument<Booking>;
@@ -32,6 +34,21 @@ export class Booking {
     type: String
   })
   clientId!: string;
+
+  /**
+   * The calendar label shown instead of the tenant's name (FR-011, data-model.md `nick`).
+   *
+   * Required: the legacy booking always carried one, and the public calendar shows this
+   * field in place of the personal details the serialiser removes. A booking without it
+   * would be unlabelled to an anonymous caller.
+   */
+  @Prop({
+    type: String,
+    required: [true, 'Please add the booking nick'],
+    minlength: [3, 'Booking nick need to be at least 3 characters'],
+    maxlength: [100, 'Booking nick can have maximal 100 characters']
+  })
+  nick!: string;
 
   @Prop({
     type: String,
@@ -65,7 +82,7 @@ export class Booking {
   month!: number;
 
   @Prop({
-    type: Array,
+    type: [BookedTimeSchema],
     required: [true, 'Please add at least one booked time']
   })
   bookedTimes!: Array<TBookedTime>;
@@ -86,6 +103,37 @@ export class Booking {
     required: [true, 'Please select payment method']
   })
   paymentMethod!: TPayment;
+
+  /**
+   * A percentage discount such as `10%` (data-model.md `discount`). Optional, and validated
+   * against `^[0-9]{1,3}%$`; the range 0–100 is enforced by the DTO so the stored value and
+   * the contract agree.
+   */
+  @Prop({
+    type: String,
+    validate: {
+      validator: (value: string) => /^[0-9]{1,3}%$/.test(value),
+      message: 'Discount must be a percentage such as 10%'
+    }
+  })
+  discount?: string;
+
+  /**
+   * Derived: true when `selectedOptions` is non-empty (data-model.md). Kept as a stored
+   * boolean rather than a virtual because the legacy reporting reads it directly, and a
+   * virtual would be absent from an aggregation or a projection.
+   */
+  @Prop({
+    type: Boolean,
+    default: () => false
+  })
+  extraOptions!: boolean;
+
+  @Prop({
+    type: [SelectedExtraOptionSchema],
+    default: () => []
+  })
+  selectedOptions!: ISelectedExtraOption[];
 
   @Prop({
     type: Boolean,
@@ -154,3 +202,20 @@ export const BookingSchema = SchemaFactory.createForClass(Booking);
  * makes it a stable cursor rather than a partial order.
  */
 BookingSchema.index({createdAt: -1, _id: -1});
+
+/**
+ * The facility-month filter the conflict rules run (FR-015, FR-043, data-model.md).
+ *
+ * The key order matches the query the conflict service and the list build — city, then
+ * facility, then month — and `accepted`/`archive` trail it because the list filters on them
+ * after the scope is fixed. A query that leads with the scope is what lets the index be
+ * used as a prefix rather than scanned.
+ */
+BookingSchema.index({'place.city': 1, 'place.place': 1, month: 1, accepted: 1, archive: 1});
+
+/**
+ * The per-client reporting read (FR-043, data-model.md): every booking for one client,
+ * narrowed by whether it was accepted. `clientId` leads because it is the most selective
+ * field the report has.
+ */
+BookingSchema.index({clientId: 1, accepted: 1});

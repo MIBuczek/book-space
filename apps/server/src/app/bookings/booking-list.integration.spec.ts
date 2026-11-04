@@ -28,6 +28,7 @@ describe('booking list filters and pagination over HTTP', () => {
     type: 'INDIVIDUAL',
     place: {place: 'Hala', city: CITY},
     size: 'X/X',
+    nick: 'Rezerwacja Kowalscy',
     personName: 'Jan Kowalski',
     personEmail: 'jan@example.com',
     personPhone: '500100200',

@@ -878,6 +878,9 @@ components:
         - type: object
           properties:
             _id: {type: string}
+            extraOptions:
+              type: boolean
+              description: Derived; true when selectedOptions is non-empty
             createdBy: {type: string}
             createdAt: {type: string, format: date-time}
             modifiedBy: {type: string}

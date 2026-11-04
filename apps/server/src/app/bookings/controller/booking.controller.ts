@@ -120,7 +120,7 @@ export class BookingController {
   @Post()
   @UseGuards(AuthGuard('jwt'))
   createBooking(@Body() newBooking: BookingDto, @CurrentUser() user: IActingUser) {
-    return this.bookingService.createBooking({...newBooking, createdBy: actingUserId(user)});
+    return this.bookingService.createBooking(newBooking, actingUserId(user));
   }
 
   /**

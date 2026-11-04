@@ -3,6 +3,7 @@ import {StructuredLogger} from '../../logging/structured-logger';
 import {getModelToken} from '@nestjs/mongoose';
 import {JwtService} from '@nestjs/jwt';
 import {BookingService} from './booking.service';
+import * as bookingList from '../list/booking-list';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -37,6 +38,43 @@ describe('BookingService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('createBooking', () => {
+    beforeEach(() => {
+      modelMock.create.mockReset();
+      modelMock.create.mockResolvedValue({_id: 'b1'});
+    });
+
+    it('stamps the creator from the caller, not the body', async () => {
+      await service.createBooking({nick: 'Rezerwacja'} as never, 'u2');
+
+      expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({createdBy: 'u2'}));
+    });
+
+    it('derives extraOptions from selectedOptions', async () => {
+      // The flag is stored rather than virtual (data-model.md), so it has to be computed
+      // somewhere; computing it from the same body the add-ons come from is what keeps the
+      // two from disagreeing.
+      await service.createBooking(
+        {selectedOptions: [{options: [{lights: true}], fromHour: new Date(), toHour: new Date()}]} as never,
+        'u2'
+      );
+
+      expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({extraOptions: true}));
+    });
+
+    it('defaults extraOptions to false when there are no add-ons', async () => {
+      await service.createBooking({selectedOptions: []} as never, 'u2');
+
+      expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({extraOptions: false}));
+    });
+
+    it('maps a driver error onto an HTTP exception', async () => {
+      modelMock.create.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.createBooking({} as never, 'u2')).rejects.toMatchObject({status: 500});
+    });
   });
 
   describe('findAllBooking', () => {
@@ -380,6 +418,14 @@ describe('BookingService', () => {
       await expect(service.updateBookedTimes('missing', [slot()])).rejects.toMatchObject({status: 404});
       expect(modelMock.updateOne).not.toHaveBeenCalled();
     });
+
+    it('treats a booking with no stored slots as having none to preserve', async () => {
+      // A legacy or partially-migrated record can carry no `bookedTimes`; the check then has
+      // nothing to compare against rather than throwing on `undefined`.
+      modelMock.findOne.mockResolvedValue({});
+
+      await expect(service.updateBookedTimes('b1', [slot()])).resolves.toBeDefined();
+    });
   });
 
   describe('updateBooking strips the fields owned by other routes', () => {
@@ -396,6 +442,91 @@ describe('BookingService', () => {
       const [, update] = modelMock.updateOne.mock.calls[0];
       expect(update).not.toHaveProperty('bookedTimes');
       expect(update).toMatchObject({comments: 'x'});
+    });
+
+    it('treats an update that strips down to nothing as a success', async () => {
+      // After `createdBy`/`accepted`/`archive`/`bookedTimes` are removed the document can be
+      // empty; MongoDB rejects an empty update, so the no-op is answered here instead.
+      await service.updateBooking('b1', {accepted: true, archive: true} as never);
+
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('maps a driver error onto an HTTP exception', async () => {
+      modelMock.updateOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.updateBooking('b1', {comments: 'x'} as never)).rejects.toMatchObject({status: 500});
+    });
+
+    it('ignores a body-supplied extraOptions flag and derives it from selectedOptions', async () => {
+      // The flag is derived, so a body that sets it must not be trusted; it is recomputed
+      // from the add-ons the same request carries.
+      await service.updateBooking('b1', {extraOptions: false, selectedOptions: [{options: [{lights: true}]}]} as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).toMatchObject({extraOptions: true});
+    });
+
+    it('derives extraOptions as false when the add-ons are cleared', async () => {
+      await service.updateBooking('b1', {selectedOptions: []} as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).toMatchObject({extraOptions: false});
+    });
+
+    it('leaves extraOptions untouched when the body does not change the add-ons', async () => {
+      await service.updateBooking('b1', {comments: 'x'} as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).not.toHaveProperty('extraOptions');
+    });
+  });
+
+  describe('error paths', () => {
+    it('maps a driver error in deleteBooking onto an HTTP exception', async () => {
+      modelMock.deleteOne.mockReset();
+      modelMock.deleteOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.deleteBooking('b1')).rejects.toMatchObject({status: 500});
+    });
+
+    it('maps a non-HTTP error in updateBookedTimes onto an HTTP exception', async () => {
+      modelMock.findOne.mockReset();
+      modelMock.findOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.updateBookedTimes('b1', [])).rejects.toMatchObject({status: 500});
+    });
+
+    it('maps a driver error in setApproval onto an HTTP exception', async () => {
+      modelMock.findOne.mockReset();
+      modelMock.findOne.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.setApproval('b1', false, false)).rejects.toMatchObject({status: 500});
+    });
+
+    it('maps a driver error in setArchive onto an HTTP exception', async () => {
+      modelMock.findOneAndUpdate.mockReset();
+      modelMock.findOneAndUpdate.mockRejectedValue(new Error('connection lost'));
+
+      await expect(service.setArchive('b1', true)).rejects.toMatchObject({status: 500});
+    });
+
+    it('answers 422 when an anonymous list request names no period', async () => {
+      // `resolveBookingListRequest` throws the domain error; the service is what maps it to
+      // the contract's 422 rather than letting it surface as a 500.
+      await expect(service.findAllBooking({}, false)).rejects.toMatchObject({status: 422});
+    });
+
+    it('re-throws a resolver failure that is not the range error', async () => {
+      // The `BookingRangeRequiredError` branch maps to 422; anything else must not be
+      // swallowed into a `500`, or a programming error in the resolver would look like a
+      // database failure.
+      const spy = jest.spyOn(bookingList, 'resolveBookingListRequest').mockImplementation(() => {
+        throw new Error('resolver exploded');
+      });
+
+      await expect(service.findAllBooking({}, true)).rejects.toThrow('resolver exploded');
+      spy.mockRestore();
     });
   });
 });
