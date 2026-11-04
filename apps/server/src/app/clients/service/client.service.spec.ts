@@ -1,38 +1,205 @@
 import {Test, TestingModule} from '@nestjs/testing';
 import {getModelToken} from '@nestjs/mongoose';
 import {JwtService} from '@nestjs/jwt';
+import {HttpException, NotFoundException} from '@nestjs/common';
 import {ClientService} from './client.service';
+
+/**
+ * A stored document is what `updateClient` merges against, so the mock `findOne`
+ * returns an object with `toObject()`. Returning a bare record would make the service
+ * throw a TypeError and the merge would never be exercised.
+ */
+const storedCompany = (overrides: Record<string, unknown> = {}) => ({
+  _id: 'abc',
+  type: 'COMPANY',
+  name: 'Firma',
+  contactPerson: 'Jan',
+  phone: '609996064',
+  email: 'firma@example.com',
+  street: 'ul. Sportowa 1',
+  city: 'siechnice',
+  zipCode: '55-010',
+  nip: '8991234567',
+  toObject() {
+    return {...this, toObject: undefined};
+  },
+  ...overrides,
+});
 
 describe('ClientService', () => {
   let service: ClientService;
-
-  // The service depends on a Mongoose model. The generated spec provided neither the
-  // model token nor a JwtService, so Nest could not resolve the provider and every
-  // assertion failed. Stub both so the unit under test can be constructed.
-  const modelMock = {
-    create: jest.fn(),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    findById: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    updateOne: jest.fn(),
-    deleteOne: jest.fn(),
-    deleteMany: jest.fn()
+  let modelMock: {
+    create: jest.Mock;
+    find: jest.Mock;
+    findOne: jest.Mock;
+    updateOne: jest.Mock;
+    deleteOne: jest.Mock;
   };
 
   beforeEach(async () => {
+    modelMock = {
+      create: jest.fn(),
+      find: jest.fn(),
+      findOne: jest.fn(),
+      updateOne: jest.fn().mockResolvedValue({matchedCount: 1}),
+      deleteOne: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientService,
         {provide: getModelToken('Client'), useValue: modelMock},
-        {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
-      ]
+        {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}},
+      ],
     }).compile();
 
     service = module.get<ClientService>(ClientService);
   });
 
-  it('should be defined', () => {
+  it('is defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('creates a client through the model', async () => {
+    const payload = {type: 'INDIVIDUAL', name: 'Jan'};
+    modelMock.create.mockResolvedValue(payload);
+
+    await expect(service.createClient(payload as never)).resolves.toEqual(payload);
+    expect(modelMock.create).toHaveBeenCalledWith(payload);
+  });
+
+  it('lists clients', async () => {
+    modelMock.find.mockResolvedValue([]);
+
+    await expect(service.findAllClients()).resolves.toEqual([]);
+  });
+
+  it('reads one client', async () => {
+    modelMock.findOne.mockResolvedValue(null);
+
+    await expect(service.findClient('abc')).resolves.toBeNull();
+    expect(modelMock.findOne).toHaveBeenCalledWith({_id: 'abc'});
+  });
+
+  it('deletes one client', async () => {
+    modelMock.deleteOne.mockResolvedValue({deletedCount: 1});
+
+    await expect(service.deleteClient('abc')).resolves.toEqual({deletedCount: 1});
+  });
+
+  describe('updateClient', () => {
+    it('answers 404 for an id that is not stored', async () => {
+      modelMock.findOne.mockResolvedValue(null);
+
+      await expect(service.updateClient('abc', {})).rejects.toBeInstanceOf(NotFoundException);
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('refuses a company left without a NIP', async () => {
+      // The rule is enforced on the merged record: a partial body may carry `type`
+      // without `nip`, and `updateOne` does not run the schema validator.
+      modelMock.findOne.mockResolvedValue(storedCompany({nip: undefined}));
+
+      await expect(service.updateClient('abc', {name: 'Nowa nazwa'})).rejects.toMatchObject({
+        status: 422,
+      });
+      expect(modelMock.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('refuses an update that turns an individual into a company with no NIP', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany({type: 'INDIVIDUAL', nip: undefined}));
+
+      await expect(service.updateClient('abc', {type: 'COMPANY'})).rejects.toMatchObject({
+        status: 422,
+      });
+    });
+
+    it('refuses a NIP added to an individual', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany({type: 'INDIVIDUAL', nip: undefined}));
+
+      await expect(service.updateClient('abc', {nip: '8991234567'})).rejects.toMatchObject({
+        status: 422,
+      });
+    });
+
+    it('accepts an individual updated without a NIP', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany({type: 'INDIVIDUAL', nip: undefined}));
+
+      await expect(service.updateClient('abc', {name: 'Nowa nazwa'})).resolves.toEqual({
+        matchedCount: 1,
+      });
+    });
+
+    it('accepts a company updated without touching its NIP', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany());
+
+      await expect(service.updateClient('abc', {name: 'Nowa nazwa'})).resolves.toEqual({
+        matchedCount: 1,
+      });
+    });
+
+    it('writes only the fields the caller supplied', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany());
+
+      await service.updateClient('abc', {name: 'Nowa nazwa', nick: 'Firma'});
+
+      expect(modelMock.updateOne).toHaveBeenCalledWith(
+        {_id: 'abc'},
+        {name: 'Nowa nazwa', nick: 'Firma'},
+      );
+    });
+
+    it('never writes the audit timestamps', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany());
+
+      await service.updateClient('abc', {
+        name: 'Nowa nazwa',
+        createdAt: new Date(0),
+      } as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0] as [unknown, Record<string, unknown>];
+      expect(update).not.toHaveProperty('createdAt');
+      expect(update).not.toHaveProperty('updatedAt');
+    });
+
+    it('wraps a driver failure as a 500 with the driver message', async () => {
+      modelMock.findOne.mockResolvedValue(storedCompany());
+      modelMock.updateOne.mockRejectedValue(new Error('cast error'));
+
+      const error = await service.updateClient('abc', {name: 'Nowa nazwa'}).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
+    });
+
+    it('wraps a failure to load the stored record as a 500', async () => {
+      modelMock.findOne.mockRejectedValue(new Error('cast error'));
+
+      const error = await service.updateClient('abc', {}).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
+    });
+  });
+
+  describe('error mapping', () => {
+    // Every read and write wraps a driver failure rather than letting the raw error
+    // escape, which is what stops a 5xx carrying the driver's message to the client.
+    const cases: Array<[string, () => Promise<unknown>, keyof typeof modelMock]> = [
+      ['createClient', () => service.createClient({} as never), 'create'],
+      ['findClient', () => service.findClient('abc'), 'findOne'],
+      ['findAllClients', () => service.findAllClients(), 'find'],
+      ['deleteClient', () => service.deleteClient('abc'), 'deleteOne'],
+    ];
+
+    it.each(cases)('wraps a driver failure in %s as a 500', async (_name, call, method) => {
+      modelMock[method].mockRejectedValue(new Error('driver exploded'));
+
+      const error = await call().catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
+      expect((error as HttpException).message).toBe('driver exploded');
+    });
   });
 });

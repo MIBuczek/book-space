@@ -2,10 +2,11 @@ import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
 import {HydratedDocument} from 'mongoose';
 import validator from 'validator';
 import {TClientType} from '@models/booking.model';
+import {isNipRequired, isNipValid, NIP_MAX_LENGTH, NIP_MIN_LENGTH} from '../models/client-nip.validator';
 
 export type TClient = HydratedDocument<Client>;
 
-@Schema()
+@Schema({timestamps: true})
 export class Client {
   @Prop({
     type: String,
@@ -19,6 +20,11 @@ export class Client {
     required: [true, 'Please add company name']
   })
   name!: string;
+
+  @Prop({
+    type: String
+  })
+  nick?: string;
 
   @Prop({
     type: String,
@@ -55,14 +61,52 @@ export class Client {
   @Prop({
     type: String,
     required: [true, 'Please add client zip code'],
-    validate: [(val: string) => validator.matches(val, /^[\d./-]+$/)]
+    minlength: [6, 'Zip code needs to be exactly 6 characters'],
+    maxlength: [6, 'Zip code needs to be exactly 6 characters'],
+    validate: [(val: string) => validator.matches(val, /^[\d./-]+$/), 'Please add a valid zip code']
   })
   zipCode!: string;
 
+  /**
+   * Required for a company, refused for an individual (`isNipValid`, legacy
+   * `ClientForm`). The validator is what stops a direct write from storing a company
+   * with no tax id; the DTO is what answers `422` at the boundary.
+   *
+   * Two halves, because Mongoose does not run a custom validator on an absent value:
+   * `required` is the only validator it runs when `nip` is missing, so it carries the
+   * "a company must supply one" case; the custom validator runs only when a value is
+   * present, which is where the format and the "not for an individual" rules live.
+   *
+   * A regular function, not an arrow: Mongoose calls a custom validator with `this`
+   * bound to the document, and an arrow function would capture the module's `this`
+   * instead, so `this.type` would be `undefined` and every individual would be refused.
+   */
   @Prop({
-    type: String
+    type: String,
+    required: [
+      function (this: Client) {
+        return isNipRequired(this.type);
+      },
+      `NIP is required for a company (${NIP_MIN_LENGTH}–${NIP_MAX_LENGTH} characters, digits, dots, slashes and dashes).`
+    ],
+    validate: {
+      validator: function (this: Client, val: string) {
+        return isNipValid(this.type, val);
+      },
+      message: 'NIP does not apply to an individual client, and must be 10–15 digits, dots, slashes and dashes.'
+    }
   })
   nip?: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const ClientSchema = SchemaFactory.createForClass(Client);
+
+/**
+ * Supports the Clients tab search by `name` (legacy `searchSelectedContent(clients,
+ * 'name', …)`). The legacy list filtered in the browser; a server-side filter needs an
+ * index or it is a collection scan once the client count grows.
+ */
+ClientSchema.index({name: 1});

@@ -58,17 +58,29 @@ Current schema: `apps/server/src/app/clients/schemas/client.schema.ts`
 | `street` | string | required, 3–125 |
 | `city` | string | required, 3–125 |
 | `zipCode` | string | required, 6 characters, `^[\d./-]+$` |
-| `nip` | string | optional; required when `type = COMPANY` (enforced in the DTO, not the schema) |
-| `createdAt` / `updatedAt` | Date | **[new]** audit fields |
+| `nip` | string | optional; required when `type = COMPANY`, refused for `INDIVIDUAL`; 10–15 chars, `^[\d./-]+$` (enforced in the DTO **and** the schema) |
+| `createdAt` / `updatedAt` | Date | **[new]** audit fields (`@Schema({timestamps: true})`) |
 
-**Changes needed**:
-- Add `nick`, audit timestamps, and a unique index on `name`+`city` or on `nip` for companies
-  (decide during clarification — open question 4 relates to audit only, not uniqueness).
-- `zipCode` validation currently requires exactly 6 characters; Polish postal codes are
-  `NN-NNN` (6 characters) so this is correct, but the DTO must mirror it.
-- The delete route in `client.controller.ts` is `@Delete('_id')` — it is missing the colon and
-  therefore never matches a real id. **Defect to fix.**
-- `BuildingDto` has the same `@Delete('_id')` defect in `building.controller.ts`.
+**Resolved (T008)**:
+- `nick`, `createdAt` and `updatedAt` are present. Timestamps come from
+  `@Schema({timestamps: true})`, which Mongoose owns, so no `@Prop` is declared for them.
+- The NIP rule is enforced in both layers, from one shared helper
+  (`clients/models/client-nip.validator.ts`). The DTO answers a field-level `422`; the schema is
+  the backstop for a write that never passes through the DTO. Two halves are needed because
+  Mongoose does not run a custom validator on an absent value: `required` carries "a company
+  must supply one", and the custom validator carries the format and the "not for an individual"
+  rules. A value on an individual is refused rather than ignored, so a user cannot believe a tax
+  id was stored when it was not.
+- `updateClient` re-checks the rule on the *merged* record, because a partial body may carry
+  `nip` without `type` or the reverse, and `updateOne` does not run the schema validator.
+- `zipCode` requires exactly 6 characters and `^[\d./-]+$` in the schema and the DTO.
+- The delete route is `@Delete(':_id')` — the missing colon was already fixed.
+- An index on `name` supports the Clients tab search (`searchSelectedContent(clients, 'name', …)`).
+
+**Open question, still undecided**: uniqueness. `data-model.md` proposed a unique index on
+`name`+`city` or on `nip` for companies. Neither is implemented — no decision was recorded, and
+a unique index is a data rule that would reject legitimate duplicates (two "Jan Kowalski" in one
+city; a shared NIP across two facilities). It needs a decision before it lands.
 
 ---
 
