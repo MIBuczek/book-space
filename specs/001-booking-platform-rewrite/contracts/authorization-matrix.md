@@ -42,7 +42,10 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
    request body, or a caller could mint a token for a role they do not hold.
    `users.integration.spec.ts` proves the `401`/`403`/`200` split over real HTTP against a
    real signed token; removing the decorators turns its employee cases from `403` back to
-   `200`.
+   `200`. The last active administrator cannot be deleted, deactivated or demoted:
+   `UserService.removesLastAdministrator` reads the target's stored role (not the request's)
+   and answers `409` when no other active administrator remains, so the rule cannot be skipped
+   by a body that claims the target is not an administrator.
 2. ~~**The public read path is currently too broad.** `getBookingDataForUser` filters on
    `accepted` and `archive`, but the Firestore rules allow any authenticated principal to read
    the entire `bookings` collection. The API must be the enforcement point.~~ **Resolved

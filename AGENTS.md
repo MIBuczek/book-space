@@ -318,6 +318,17 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   any inherits it. `UsersController` relies on this (T015): every route is administrator-only,
   and the integration spec fails with `200` where it expects `403` if the decorators are
   removed.
+- **The last active administrator is protected in `UserService`, and the role comes from the
+  database (T015).** `removesLastAdministrator` reads the target's *stored* role — a
+  request-supplied role would let the rule be skipped by a body that claims the target is not
+  an administrator — and answers `409` when the change would deactivate it or move it off
+  `ADMIN` and no other active administrator remains. It fires only on a demotion or a
+  deactivation (`changes.role !== 'ADMIN'` / `changes.active === false`), so a rename of the
+  sole administrator is allowed. The `countDocuments` excludes the target, so "another one
+  remains" is one query rather than a read-then-count. `DELETE` is still a hard delete; the
+  contract recommends deactivation (`PUT ... {active: false}`) so booking audit references
+  survive, but the hard delete is refused for the last administrator rather than silently
+  becoming a deactivation.
 - **`RolesGuard` returns `403`; `AuthGuard('jwt')` returns `401`.** A guard that returns
   `false` makes Nest answer `403`, so an authentication stand-in must *throw*
   `UnauthorizedException` to reproduce the real `401`. A double that returns `false` lets a

@@ -33,7 +33,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 - [ ] T013 [US2] Complete the auth module: `/auth/sign-in` returns the user without the password hash, `/auth/me` returns the current user with resolved role and assignments, `/auth/sign-out` is documented as stateless, and failures never reveal whether the e-mail exists. (FR-001, FR-002, contracts/authorization-matrix.md)
 - [ ] T014 [US2] Add a `RolesGuard` and a `@Roles(...)` decorator, plus a `@CurrentUser()` decorator, implementing the capability matrix. (FR-003, FR-004, FR-005)
-- [ ] T015 [US2] Restrict every `users` endpoint to administrators and add integration tests proving an employee receives `403`. (authorization matrix note 1, FR-004)
+- [x] T015 [US2] Restrict every `users` endpoint to administrators and add integration tests proving an employee receives `403`. (authorization matrix note 1, FR-004) — the class carries `@UseGuards(AuthGuard('jwt'), RolesGuard)` and `@Roles('ADMIN')`, so a route added later is restricted by default. The last-active-administrator rule is enforced in `UserService`: a delete, a deactivation or a demotion that would remove the final administrator answers `409` (`UserService.removesLastAdministrator`), and the write never reaches the driver.
 - [ ] T016 [US1] Restrict the public booking read path so an anonymous caller receives only accepted, non-archived bookings with `personName`, `personEmail`, `personPhone` and `comments` removed. (FR-005, authorization matrix note 6)
 - [x] T017 [US3] Enforce booking ownership: an exact identity comparison replaces the e-mail-substring check, so a non-admin staff member can only edit or delete bookings they created. (FR-023, authorization matrix note 4)
 

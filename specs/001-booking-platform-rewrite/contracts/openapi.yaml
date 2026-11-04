@@ -144,6 +144,9 @@ paths:
       tags: [users]
       x-status: to-build
       summary: Update a staff user (administrator only)
+      description: >
+        A change that would remove the last active administrator — a demotion or a
+        deactivation — is refused with `409`.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -154,15 +157,22 @@ paths:
         '200': {description: Updated}
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          description: The change would remove the last active administrator.
     delete:
       tags: [users]
       x-status: to-build
       summary: Deactivate or delete a staff user (administrator only)
+      description: >
+        Deleting the last active administrator is refused with `409`; prefer
+        deactivation so booking audit references remain valid.
       security: [{bearerAuth: []}]
       responses:
         '200': {description: Deleted}
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          description: The target is the last active administrator.
 
   /clients:
     get:

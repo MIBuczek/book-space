@@ -13,7 +13,11 @@ import {createMongoTestContext, MongoTestContext} from '../../testing/mongo-test
  */
 describe('users routes are administrator-only', () => {
   let ctx: MongoTestContext;
-  let userModel: {create: (doc: Record<string, unknown>) => Promise<unknown>};
+  let userModel: {
+    create: (doc: Record<string, unknown>) => Promise<unknown>;
+    findOne: (filter: Record<string, unknown>) => Promise<unknown>;
+    countDocuments: (filter?: Record<string, unknown>) => Promise<number>;
+  };
 
   const PASSWORD = 'correct horse battery';
 
@@ -105,6 +109,26 @@ describe('users routes are administrator-only', () => {
     expect(response.status).toBe(403);
   });
 
+  it('answers 403 to an employee on all five routes (T015)', async () => {
+    // The class-level `@Roles('ADMIN')` is the whole control, so it has to be proved on
+    // every route rather than the two the earlier cases happened to use: a route that
+    // overrode the class decorator would pass a GET-only check and leak a write.
+    await seedUser('employee@example.com', 'EMPLOYEE');
+    const token = await signIn('employee@example.com');
+    const auth = {authorization: `Bearer ${token}`};
+    const id = '507f1f77bcf86cd799439011';
+
+    const responses = await Promise.all([
+      fetch(`${ctx.baseUrl}/users`, {headers: auth}),
+      fetch(`${ctx.baseUrl}/users/${id}`, {headers: auth}),
+      fetch(`${ctx.baseUrl}/users`, {method: 'POST', headers: {...auth, 'content-type': 'application/json'}, body: JSON.stringify({})}),
+      fetch(`${ctx.baseUrl}/users/${id}`, {method: 'PUT', headers: {...auth, 'content-type': 'application/json'}, body: JSON.stringify({firstName: 'Grace'})}),
+      fetch(`${ctx.baseUrl}/users/${id}`, {method: 'DELETE', headers: auth}),
+    ]);
+
+    expect(responses.map((r) => r.status)).toEqual([403, 403, 403, 403, 403]);
+  });
+
   it('never returns a password hash to an administrator', async () => {
     await seedUser('admin@example.com', 'ADMIN');
     const token = await signIn('admin@example.com');
@@ -130,5 +154,84 @@ describe('users routes are administrator-only', () => {
     const body = (await response.json()) as {user: Record<string, unknown>};
 
     expect(body.user).not.toHaveProperty('password');
+  });
+
+  /**
+   * The last-administrator rule (T015, acceptance criterion 3).
+   *
+   * It has to be proved over HTTP rather than in the service alone: the rule is a
+   * `409`, and the error filter is what turns the exception into that status. A
+   * service-level test cannot see whether the filter narrows the body or whether the
+   * route answers `200` because the write reached the driver.
+   */
+  const deleteUser = (id: string, token: string) =>
+    fetch(`${ctx.baseUrl}/users/${id}`, {method: 'DELETE', headers: {authorization: `Bearer ${token}`}});
+
+  const patchUser = (id: string, body: Record<string, unknown>, token: string) =>
+    fetch(`${ctx.baseUrl}/users/${id}`, {
+      method: 'PUT',
+      headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+
+  const idOf = async (email: string) => {
+    const user = await userModel.findOne({email});
+    return String((user as {_id: unknown})._id);
+  };
+
+  it('refuses to delete the only administrator with 409', async () => {
+    await seedUser('admin@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+    const adminId = await idOf('admin@example.com');
+
+    const response = await deleteUser(adminId, token);
+
+    expect(response.status).toBe(409);
+    expect(await userModel.countDocuments({email: 'admin@example.com'})).toBe(1);
+  });
+
+  it('deletes an administrator when a second active one remains', async () => {
+    await seedUser('admin@example.com', 'ADMIN');
+    await seedUser('second@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+    const secondId = await idOf('second@example.com');
+
+    const response = await deleteUser(secondId, token);
+
+    expect(response.status).toBe(200);
+    expect(await userModel.countDocuments({email: 'second@example.com'})).toBe(0);
+  });
+
+  it('refuses to deactivate the only administrator with 409', async () => {
+    await seedUser('admin@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+    const adminId = await idOf('admin@example.com');
+
+    const response = await patchUser(adminId, {active: false}, token);
+
+    expect(response.status).toBe(409);
+    expect((await userModel.findOne({email: 'admin@example.com'}) as {active: boolean}).active).toBe(true);
+  });
+
+  it('refuses to demote the only administrator with 409', async () => {
+    await seedUser('admin@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+    const adminId = await idOf('admin@example.com');
+
+    const response = await patchUser(adminId, {role: 'EMPLOYEE'}, token);
+
+    expect(response.status).toBe(409);
+    expect((await userModel.findOne({email: 'admin@example.com'}) as {role: string}).role).toBe('ADMIN');
+  });
+
+  it('allows an ordinary edit to the only administrator', async () => {
+    await seedUser('admin@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+    const adminId = await idOf('admin@example.com');
+
+    const response = await patchUser(adminId, {firstName: 'Grace'}, token);
+
+    expect(response.status).toBe(200);
+    expect((await userModel.findOne({email: 'admin@example.com'}) as {firstName: string}).firstName).toBe('Grace');
   });
 });
