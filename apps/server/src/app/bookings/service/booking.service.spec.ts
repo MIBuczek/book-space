@@ -47,9 +47,41 @@ describe('BookingService', () => {
     });
 
     it('stamps the creator from the caller, not the body', async () => {
-      await service.createBooking({nick: 'Rezerwacja'} as never, 'u2');
+      await service.createBooking({nick: 'Rezerwacja'} as never, 'u2', false);
 
       expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({createdBy: 'u2'}));
+    });
+
+    it('forces accepted and archive to false regardless of the body', async () => {
+      // A booking is created as an unapproved request; the flags are administrator
+      // decisions taken on the approve/archive routes, where the conflict check runs. The
+      // DTO no longer declares them, so this is the positive half of the rule.
+      await service.createBooking({accepted: true, archive: true} as never, 'u2', false);
+
+      expect(modelMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({accepted: false, archive: false})
+      );
+    });
+
+    it('refuses a public submission without the RODO acknowledgement', async () => {
+      await expect(service.createBooking({nick: 'Rezerwacja'} as never, undefined, true)).rejects.toMatchObject({
+        status: 422,
+      });
+      expect(modelMock.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a public submission that acknowledges RODO and records it', async () => {
+      await service.createBooking({nick: 'Rezerwacja', rodoAcknowledgement: true} as never, undefined, true);
+
+      expect(modelMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({rodoAcknowledgement: true, accepted: false})
+      );
+    });
+
+    it('does not require RODO for a staff submission', async () => {
+      await service.createBooking({nick: 'Rezerwacja'} as never, 'u2', false);
+
+      expect(modelMock.create).toHaveBeenCalled();
     });
 
     it('derives extraOptions from selectedOptions', async () => {
@@ -58,14 +90,15 @@ describe('BookingService', () => {
       // two from disagreeing.
       await service.createBooking(
         {selectedOptions: [{options: [{lights: true}], fromHour: new Date(), toHour: new Date()}]} as never,
-        'u2'
+        'u2',
+        false
       );
 
       expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({extraOptions: true}));
     });
 
     it('defaults extraOptions to false when there are no add-ons', async () => {
-      await service.createBooking({selectedOptions: []} as never, 'u2');
+      await service.createBooking({selectedOptions: []} as never, 'u2', false);
 
       expect(modelMock.create).toHaveBeenCalledWith(expect.objectContaining({extraOptions: false}));
     });
@@ -73,7 +106,7 @@ describe('BookingService', () => {
     it('maps a driver error onto an HTTP exception', async () => {
       modelMock.create.mockRejectedValue(new Error('connection lost'));
 
-      await expect(service.createBooking({} as never, 'u2')).rejects.toMatchObject({status: 500});
+      await expect(service.createBooking({} as never, 'u2', false)).rejects.toMatchObject({status: 500});
     });
   });
 
@@ -479,6 +512,17 @@ describe('BookingService', () => {
 
       const [, update] = modelMock.updateOne.mock.calls[0];
       expect(update).not.toHaveProperty('extraOptions');
+    });
+
+    it('stamps modifiedBy and modifiedAt on a real change', async () => {
+      // FR-016: the generic update is a write path too, so a comment change is attributable
+      // like an approval. The stamp is added after the empty-body check, so a no-op is still
+      // a no-op rather than an unattributed write.
+      await service.updateBooking('b1', {comments: 'x'} as never);
+
+      const [, update] = modelMock.updateOne.mock.calls[0];
+      expect(update).toHaveProperty('modifiedBy');
+      expect(update).toHaveProperty('modifiedAt');
     });
   });
 

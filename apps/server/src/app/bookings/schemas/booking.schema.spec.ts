@@ -75,6 +75,20 @@ describe('BookingSchema validation', () => {
     expect(doc.archive).toBe(false);
   });
 
+  it('defaults accepted to false when it is omitted (T023)', () => {
+    // The create path forces `accepted: false`, but the default is what protects a direct
+    // write — a migration or a script — from leaving a booking unset, which the conflict
+    // rules read as falsy anyway but a projection would report as missing.
+    const doc = new BookingModel(booking({accepted: undefined}));
+
+    expect(doc.accepted).toBe(false);
+  });
+
+  it('defaults rodoAcknowledgement to false and stores it when given (T023)', () => {
+    expect(new BookingModel(booking({rodoAcknowledgement: undefined})).rodoAcknowledgement).toBe(false);
+    expect(new BookingModel(booking({rodoAcknowledgement: true})).rodoAcknowledgement).toBe(true);
+  });
+
   it('stores the add-ons it is given', () => {
     const selectedOptions = [
       {options: [{lights: true}], fromHour: new Date('2026-03-04T10:00:00Z'), toHour: new Date('2026-03-04T11:00:00Z')},

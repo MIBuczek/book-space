@@ -108,7 +108,15 @@ export class BookingController {
   }
 
   /**
-   * Creates a booking and stamps its creator.
+   * Creates a booking and stamps its creator (FR-011, FR-016).
+   *
+   * Public: the matrix gives "Create a booking request" to every role *and* to the visitor,
+   * so the route runs `OptionalJwtAuthGuard` rather than requiring a credential. A request
+   * with no credential is the public case and must carry the RODO acknowledgement; staff
+   * entering a booking on a tenant's behalf are exempt. `request.isPublic` is the signal —
+   * the same fail-closed flag the calendar reads — rather than the absence of a user, so an
+   * authenticated request that lost its user is treated as public and asked for the
+   * acknowledgement rather than silently exempted.
    *
    * The ownership reference is taken from the authenticated user, never from the
    * body: a caller-supplied `createdBy` would let a staff member attribute a booking
@@ -118,9 +126,13 @@ export class BookingController {
    * tries to set it; stamping here is the positive half of that.
    */
   @Post()
-  @UseGuards(AuthGuard('jwt'))
-  createBooking(@Body() newBooking: BookingDto, @CurrentUser() user: IActingUser) {
-    return this.bookingService.createBooking(newBooking, actingUserId(user));
+  @UseGuards(OptionalJwtAuthGuard)
+  createBooking(
+    @Req() request: Request,
+    @Body() newBooking: BookingDto,
+    @CurrentUser() user: IActingUser | undefined
+  ) {
+    return this.bookingService.createBooking(newBooking, actingUserId(user), request.isPublic !== false);
   }
 
   /**

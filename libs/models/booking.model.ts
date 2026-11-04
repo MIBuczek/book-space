@@ -35,6 +35,8 @@ interface IBooking {
   bookedTimes: IBookedTime[];
   accepted: boolean;
   archive: boolean;
+  /** Whether the submitter acknowledged the RODO clause (FR-011). Required for a public submission. */
+  rodoAcknowledgement?: boolean;
   comments?: string;
   paymentMethod: TPayment;
   /** Percentage string such as `10%`. */

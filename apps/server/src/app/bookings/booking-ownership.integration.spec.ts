@@ -116,8 +116,6 @@ describe('booking ownership over HTTP', () => {
         status: 'INITIAL',
       },
     ],
-    accepted: false,
-    archive: false,
     comments: '',
     paymentMethod: 'CASH',
   });

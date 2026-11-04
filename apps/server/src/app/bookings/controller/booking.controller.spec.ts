@@ -194,17 +194,26 @@ describe('BookingController', () => {
 
   describe('createBooking', () => {
     it('stamps the creator from the authenticated user, not the body', async () => {
-      await controller.createBooking({} as never, EMPLOYEE);
+      await controller.createBooking({isPublic: false} as never, {} as never, EMPLOYEE);
 
-      expect(createBooking).toHaveBeenCalledWith({}, 'u2');
+      expect(createBooking).toHaveBeenCalledWith({}, 'u2', false);
     });
 
     it('does not let a body-supplied createdBy win over the authenticated user', async () => {
       // The DTO does not declare `createdBy`, so the global pipe rejects it — but the
       // controller is what decides the value, so it is asserted here too.
-      await controller.createBooking({createdBy: 'someone-else'} as never, EMPLOYEE);
+      await controller.createBooking({isPublic: false} as never, {createdBy: 'someone-else'} as never, EMPLOYEE);
 
-      expect(createBooking).toHaveBeenCalledWith({createdBy: 'someone-else'}, 'u2');
+      expect(createBooking).toHaveBeenCalledWith({createdBy: 'someone-else'}, 'u2', false);
+    });
+
+    it('marks an anonymous submission public so the service requires RODO', async () => {
+      // The public case is `request.isPublic === true`; the flag, not the absence of a
+      // user, is what the service reads, so an authenticated request that lost its user is
+      // treated as public rather than silently exempted.
+      await controller.createBooking({isPublic: true} as never, {} as never, undefined);
+
+      expect(createBooking).toHaveBeenCalledWith({}, undefined, true);
     });
   });
 
