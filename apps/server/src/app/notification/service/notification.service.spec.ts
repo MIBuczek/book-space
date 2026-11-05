@@ -142,6 +142,56 @@ describe('NotificationService', () => {
         expect.objectContaining({bookingId: 'b1', provider: 'mail'})
       );
     });
+
+    it('maps a driver error while loading the booking to the driver status', async () => {
+      // A malformed id makes Mongoose throw; the service must not leak the driver message as a
+      // 200 or a bare 500. It is mapped through `errorStatus`, which reads the driver's own
+      // status when it carries one and falls back to 500.
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.reject(new Error('Cast to ObjectId failed'))});
+      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+
+      await expect(service.notifyBooking({bookingId: 'nonsense', audience: 'STAFF'})).rejects.toThrow(
+        'Cast to ObjectId failed'
+      );
+    });
+
+    it('omits the facility contact line for the staff audience', async () => {
+      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
+
+      await service.notifyBooking({bookingId: 'b1', audience: 'STAFF'});
+
+      expect(sent[0].text).not.toContain('E-mail obiektu');
+    });
+
+    it('renders the facility contact line for the facility audience', async () => {
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
+      buildingModel.findOne.mockResolvedValue({email: 'facility@example.com'});
+
+      await service.notifyBooking({bookingId: 'b1', audience: 'FACILITY'});
+
+      expect(sent[0].text).toContain('E-mail obiektu: facility@example.com');
+    });
+
+    it('builds the facility filter from the booking city when it is present, and omits it when not', async () => {
+      // The `city` key is only added when the booking carries one, so the lookup never widens
+      // to "any city" for a booking that has none. A cityless booking is a data defect (the
+      // contract requires it), and the render then refuses the send rather than mailing a
+      // half-filled notification — which is the fail-closed behaviour this asserts.
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
+      buildingModel.findOne.mockResolvedValue({email: 'facility@example.com'});
+      await service.notifyBooking({bookingId: 'b1', audience: 'FACILITY'});
+      expect(buildingModel.findOne).toHaveBeenCalledWith(
+        {property: 'hala-sportowa', city: 'siechnice'},
+        expect.anything()
+      );
+
+      const cityless = {...booking, place: {place: 'hala-sportowa'}};
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(cityless)});
+      buildingModel.findOne.mockClear();
+      await expect(service.notifyBooking({bookingId: 'b1', audience: 'FACILITY'})).rejects.toThrow();
+      expect(buildingModel.findOne).toHaveBeenCalledWith({property: 'hala-sportowa'}, expect.anything());
+    });
   });
 
   describe('sendMessage', () => {

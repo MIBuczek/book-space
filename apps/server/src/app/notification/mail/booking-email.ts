@@ -1,5 +1,7 @@
 import {IBookedTime} from '@models/booked-time.model';
-import {formatDate, formatTime} from '../../reporting/csv/display';
+import {displayValue, formatDate, formatTime} from '../../reporting/csv/display';
+import {renderTemplate, TTemplateVariables} from '../templates/render';
+import {NOTIFICATION_TEMPLATES, TTemplateId} from '../templates/templates';
 
 /**
  * The booking fields a notification e-mail reads. Structural, so the formatter is testable
@@ -18,44 +20,60 @@ interface INotifiableBooking {
 }
 
 /**
- * The slot lines, one per booked time, in the legacy `flatBookingTime` shape (day, start, end).
- * The legacy code joined these with `replace(',', '\n')`, which replaced only the first comma
- * and left the rest on one line; joining with a newline outright is the intent.
+ * One slot, in the legacy `flatBookingTime` shape (day, start, end), on one line.
+ *
+ * The legacy builder emitted a multi-line template literal per slot and then joined the array
+ * with `replace(',', '\n')` — which replaced only the first comma and left the rest of the
+ * array on one line. Producing one line per slot and joining explicitly is the intent the
+ * legacy code was reaching for, and it makes the join separator the only difference between
+ * the two variants.
  */
-const slotLines = (bookedTimes: IBookedTime[]): string =>
-  bookedTimes
-    .map(
-      (slot) =>
-        `Rezerwacja na dzień : ${formatDate(slot.day)}, ` +
-        `Godzina rozpoczęcia : ${formatTime(slot.startHours)}, ` +
-        `Godzina zakończenia : ${formatTime(slot.endHours)}`
-    )
-    .join('\n');
-
-/** The subject line, naming the facility and city so an inbox can triage by subject alone. */
-const bookingSubject = (booking: INotifiableBooking, isFacility: boolean): string =>
-  isFacility
-    ? `Nowa rezerwacja: ${booking.place.place} (${booking.place.city})`
-    : `Nowa prośba o rezerwację: ${booking.place.place} (${booking.place.city})`;
+const flatBookingTime = (slot: IBookedTime): string =>
+  `Rezerwacja na dzień : ${formatDate(slot.day)}, ` +
+  `Godzina rozpoczęcia : ${formatTime(slot.startHours)}, ` +
+  `Godzina zakończenia : ${formatTime(slot.endHours)}`;
 
 /**
- * The e-mail body. Both audiences get the same facts — the difference is who receives it, not
- * what it says — so there is one formatter rather than the legacy's two near-identical
- * `emailAdminBodyBooking`/`emailUserBodyBooking`.
+ * The slot lines joined the way each variant joins them (legacy `emailAdminBodyBooking` used a
+ * newline, `emailUserBodyBooking` used `" / "`).
  */
-const bookingEmailBody = (booking: INotifiableBooking): string =>
-  [
-    `Obiekt: ${booking.place.place} (${booking.place.city})`,
-    `Osoba: ${booking.personName}`,
-    booking.personCompany ? `Firma: ${booking.personCompany}` : undefined,
-    `Email: ${booking.personEmail}`,
-    `Telefon: ${booking.personPhone}`,
-    `Płatność: ${booking.paymentMethod}`,
-    slotLines(booking.bookedTimes),
-    booking.comments ? `Wiadomość: ${booking.comments}` : undefined,
-  ]
-    .filter((line): line is string => line !== undefined)
-    .join('\n');
+const joinSlots = (bookedTimes: IBookedTime[], separator: string): string =>
+  bookedTimes.map(flatBookingTime).join(separator);
 
-export {slotLines, bookingSubject, bookingEmailBody};
+/**
+ * The template variables for a booking, in the legacy field set (`emailAdminBodyBooking` /
+ * `emailUserBodyBooking`). `buildingEmail` is supplied only for the facility variant; the
+ * renderer treats an absent value as an optional block, and the facility template is the only
+ * one that declares it.
+ *
+ * An empty optional field is normalised to `undefined` so the renderer drops its block rather
+ * than rendering a labelled blank line.
+ */
+const bookingVariables = (
+  booking: INotifiableBooking,
+  buildingEmail?: string
+): TTemplateVariables => ({
+  building: displayValue(booking.place.place),
+  city: displayValue(booking.place.city),
+  payment: displayValue(booking.paymentMethod),
+  person: booking.personName,
+  club: booking.personCompany || undefined,
+  email: booking.personEmail,
+  phone: booking.personPhone,
+  // The legacy split: the facility variant joins slots with a newline, the staff variant with
+  // `" / "` (contracts/notification-templates.md).
+  parsedBookingTime: joinSlots(booking.bookedTimes, buildingEmail !== undefined ? '\n' : ' / '),
+  message: booking.comments || undefined,
+  buildingEmail,
+});
+
+/** The subject and body of a booking notification, rendered from its template. */
+const bookingEmail = (
+  booking: INotifiableBooking,
+  templateId: TTemplateId,
+  buildingEmail?: string
+): {subject: string; text: string} =>
+  renderTemplate(NOTIFICATION_TEMPLATES[templateId], bookingVariables(booking, buildingEmail));
+
+export {flatBookingTime, joinSlots, bookingVariables, bookingEmail};
 export type {INotifiableBooking};

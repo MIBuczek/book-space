@@ -789,3 +789,16 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
 - **`POST /notifications/*` answers `202`, and Nest's `POST` default is `201`.** Both routes
   need `@HttpCode(HttpStatus.ACCEPTED)`. Without it the integration spec's `202` assertion
   fails for a reason unrelated to the behaviour (same trap as the approve/archive routes).
+- **The notification templates are versioned assets, and the renderer fails on an unfilled
+  placeholder (T058).** `notification/templates/templates.ts` holds the four templates
+  (`booking-facility`, `booking-staff`, `contact-message`, `employee-message`) with the legacy
+  EmailJS ids; `contracts/notification-templates.md` documents each one's recipient, subject
+  and variable set. `render` throws when a required `{{name}}` is absent **or empty**, so a
+  template that names a variable its caller does not supply fails the send (a `502`) instead of
+  shipping `{{club}}` to an inbox. `{{#name}}…{{/name}}` is an optional block whose newline
+  must sit *inside* the tags, or a dropped block leaves a blank line. The two booking variants
+  are deliberately not merged: the facility variant carries `buildingEmail` and newline-joined
+  slots, the staff variant does not and joins with `" / "` — collapsing them changes what one
+  audience receives, which is what the task exists to prevent. Do not rename a placeholder in a
+  template without the builder; `templates.spec.ts` asserts every declared variable is
+  populated for a complete booking.
