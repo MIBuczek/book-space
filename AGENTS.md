@@ -695,6 +695,17 @@ Three things that are easy to get wrong:
   All three were genuinely done, but there is no automated evidence: verify against the tree
   (`project.json` executor, `.nvmrc`/`engines`/Dockerfiles, `env.validation.ts`) rather than
   the issue's state.
+- **A `Refs #N` line with no close is the third drift, and the honest one.** PR #130
+  (`2f8063e`) landed `RolesGuard`, `@Roles` and `@CurrentUser` and wrote "Refs #49, #18, #21.
+  Does not close them: see Scope below" — it built the *primitives* and deferred the wiring to
+  T007/T015/T016/T025. That was correct at the time, so #18 (T014) stayed open and `tasks.md`
+  kept T014 unchecked, while `AGENTS.md` and the matrix notes describe the guard as landed.
+  The two are not in conflict: the primitive exists, the task is the primitive *plus* its
+  application, and only the former was on `main`. When a task is described as landed in one
+  artefact and open in another, read the PR's Scope section — the answer is usually "landed
+  in slices", and the check is whether the *later* slices exist in the tree. Here they do
+  (T007 `role`, T015 users, T016 public read, T017 ownership, T025 client/facility writes),
+  so the task is genuinely complete and only its bookkeeping lagged.
 
 ## Logging
 
