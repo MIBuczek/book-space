@@ -272,6 +272,11 @@ server failure; confirm the correct content and that the cookie notice is rememb
 - A booking with several time slots where only some are resolved (`DONE`/`QUIT`):
   resolved slots must survive re-generation of the slot list, unresolved ones are
   replaced.
+- A booking whose own slots overlap (e.g. same day, 13:00–15:00 and 14:00–16:00): the
+  legacy form warned ("Niektóre godziny rezerwacji konfliktują ze sobą") and accepted
+  the request, so the rewrite accepts it and records the overlap as a warning rather
+  than refusing. Slots that merely touch (`end == next start`) are not an overlap and
+  raise no warning.
 - Time-zone handling: the legacy code manually offsets hours to CET/CEST
   (`formatDisplayTime`, `overwriteDate`). The rewrite must use a single, documented
   time-zone strategy (Europe/Warsaw).
@@ -326,7 +331,10 @@ server failure; confirm the correct content and that the cookie notice is rememb
   calendar), tenant name, club (optional), e-mail, phone, payment method, discount,
   one or more time slots, an optional message, and a RODO acknowledgement.
 - **FR-012**: The system MUST support one or more time slots per booking, each with
-  day, start hour, end hour, status, participant count and comments.
+  day, start hour, end hour, status, participant count and comments. Two slots of the
+  same booking MUST NOT overlap; an overlap is accepted but flagged as a warning
+  (matching the legacy form, which warned rather than refused), and slots that merely
+  touch (`end == next start`) are not an overlap.
 - **FR-013**: The system MUST support a cyclical booking option that expands a weekly
   repeat between two dates into individual time slots.
 - **FR-014**: The system MUST persist bookings with a lifecycle: unapproved request →

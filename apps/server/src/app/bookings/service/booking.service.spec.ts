@@ -26,6 +26,7 @@ describe('BookingService', () => {
   // The size rule (T052) reads the facility on write. A stub that resolves no facility
   // leaves the rule inert, which is what every case here except the size cases wants.
   const buildingModelMock = {findOne: jest.fn()};
+  const loggerMock = {log: jest.fn(), warn: jest.fn(), error: jest.fn()};
 
   beforeEach(async () => {
     buildingModelMock.findOne.mockReset();
@@ -34,7 +35,7 @@ describe('BookingService', () => {
         BookingService,
         {provide: getModelToken('Booking'), useValue: modelMock},
         {provide: getModelToken('Building'), useValue: buildingModelMock},
-        {provide: StructuredLogger, useValue: {log: jest.fn(), warn: jest.fn(), error: jest.fn()}},
+        {provide: StructuredLogger, useValue: loggerMock},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}}
       ]
     }).compile();
@@ -50,6 +51,7 @@ describe('BookingService', () => {
     beforeEach(() => {
       modelMock.create.mockReset();
       modelMock.create.mockResolvedValue({_id: 'b1'});
+      loggerMock.warn.mockReset();
     });
 
     it('stamps the creator from the caller, not the body', async () => {
@@ -148,6 +150,36 @@ describe('BookingService', () => {
       modelMock.create.mockRejectedValue(new Error('connection lost'));
 
       await expect(service.createBooking({} as never, 'u2', false)).rejects.toMatchObject({status: 500});
+    });
+
+    it('warns but stores a booking whose own slots overlap', async () => {
+      // T053: the legacy form warned and let the request through. The booking must still be
+      // created, and the warning must name the colliding day.
+      const day = new Date('2026-03-04T00:00:00.000Z');
+      const overlapping = [
+        {day, startHours: new Date('2026-03-04T13:00:00.000Z'), endHours: new Date('2026-03-04T15:00:00.000Z')},
+        {day, startHours: new Date('2026-03-04T14:00:00.000Z'), endHours: new Date('2026-03-04T16:00:00.000Z')},
+      ];
+
+      await expect(service.createBooking({bookedTimes: overlapping} as never, 'u2', false)).resolves.toBeDefined();
+
+      expect(modelMock.create).toHaveBeenCalled();
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        'booking.create.intra_overlap',
+        expect.objectContaining({day})
+      );
+    });
+
+    it('does not warn when the booking slots only touch', async () => {
+      const day = new Date('2026-03-04T00:00:00.000Z');
+      const adjacent = [
+        {day, startHours: new Date('2026-03-04T08:00:00.000Z'), endHours: new Date('2026-03-04T10:00:00.000Z')},
+        {day, startHours: new Date('2026-03-04T10:00:00.000Z'), endHours: new Date('2026-03-04T12:00:00.000Z')},
+      ];
+
+      await service.createBooking({bookedTimes: adjacent} as never, 'u2', false);
+
+      expect(loggerMock.warn).not.toHaveBeenCalledWith('booking.create.intra_overlap', expect.anything());
     });
   });
 
@@ -477,6 +509,7 @@ describe('BookingService', () => {
       modelMock.findOne.mockReset();
       modelMock.updateOne.mockReset();
       modelMock.updateOne.mockResolvedValue({matchedCount: 1, modifiedCount: 1});
+      loggerMock.warn.mockReset();
     });
 
     it('replaces the slots when every resolved slot is preserved', async () => {
@@ -530,6 +563,36 @@ describe('BookingService', () => {
       modelMock.findOne.mockResolvedValue({});
 
       await expect(service.updateBookedTimes('b1', [slot()])).resolves.toBeDefined();
+    });
+
+    it('warns but stores a replacement whose own slots overlap', async () => {
+      // T053: the replacement route is the other way a booking's slots are written, so the
+      // intra-booking warning has to be attached here too.
+      modelMock.findOne.mockResolvedValue({bookedTimes: []});
+      const incoming = [
+        slot({startHours: new Date('2026-03-04T13:00:00.000Z'), endHours: new Date('2026-03-04T15:00:00.000Z')}),
+        slot({startHours: new Date('2026-03-04T14:00:00.000Z'), endHours: new Date('2026-03-04T16:00:00.000Z')}),
+      ];
+
+      await expect(service.updateBookedTimes('b1', incoming)).resolves.toBeDefined();
+
+      expect(modelMock.updateOne).toHaveBeenCalled();
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        'booking.booked_times.intra_overlap',
+        expect.objectContaining({bookingId: 'b1', day: DAY})
+      );
+    });
+
+    it('does not warn when a replacement only touches', async () => {
+      modelMock.findOne.mockResolvedValue({bookedTimes: []});
+      const incoming = [
+        slot({startHours: new Date('2026-03-04T08:00:00.000Z'), endHours: new Date('2026-03-04T10:00:00.000Z')}),
+        slot({startHours: new Date('2026-03-04T10:00:00.000Z'), endHours: new Date('2026-03-04T12:00:00.000Z')}),
+      ];
+
+      await service.updateBookedTimes('b1', incoming);
+
+      expect(loggerMock.warn).not.toHaveBeenCalledWith('booking.booked_times.intra_overlap', expect.anything());
     });
   });
 

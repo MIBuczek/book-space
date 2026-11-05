@@ -201,6 +201,13 @@ Current schema: `apps/server/src/app/bookings/schemas/booked-time.schema.ts`
 - The legacy status value `QUIT` maps to `CANCELED` during migration.
 - `participants` is a string in the legacy UI and a number in the schema; the migration must
   coerce, and the API must reject non-numeric input.
+- Slots **within one booking** must not overlap (T053). The legacy form checked this in the
+  browser (`checkNewAddedBookingTimeConflicts`) and warned rather than refused
+  ("Niektóre godziny rezerwacji konfliktują ze sobą"), so the server accepts the booking and
+  records the overlap as a warning on create and on the booked-times replacement. The overlap
+  predicate is the same one booking-versus-booking conflict detection uses, so a touching
+  interval (`end == next start`) is not an overlap. There is no cross-field validator for this
+  because the rule spans array elements, not one slot's fields.
 
 **Landed in T011**: the schema file was renamed, `endHours > startHours` is enforced in the DTO
 (cross-field, `422`) and defensively in the schema, and `participants` is bounded 0–50 with the

@@ -13,6 +13,7 @@ import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
 import {findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
+import {findIntraBookingOverlap} from '../slots/intra-booking-overlap';
 import {StructuredHttpException} from '../../config/structured-http-exception';
 import {isSizeOffered, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
 
@@ -85,6 +86,15 @@ export class BookingService {
 
     try {
       await this.assertSizeOffered(booking.size, booking.place);
+      // An overlap between two slots *of this booking* is a warning, not an error (T053):
+      // the legacy form warned ("Niektóre godziny rezerwacji konfliktują ze sobą") and let
+      // the request through, and it is a data-quality problem for the office, not a double
+      // booking against another tenant. It is recorded so the case is visible; the booking
+      // is stored unchanged.
+      const overlapDay = findIntraBookingOverlap(booking.bookedTimes ?? []);
+      if (overlapDay) {
+        this.logger.warn('booking.create.intra_overlap', {day: overlapDay, actorId: currentActorId()});
+      }
       const created = await this.bookingModel.create({
         ...booking,
         createdBy,
@@ -208,6 +218,18 @@ export class BookingService {
           reason: violation.kind,
         });
         throw new ConflictException(resolvedSlotMessage(violation.kind));
+      }
+
+      // The same intra-booking warning as on create (T053): a replacement is the other way
+      // a booking's slots are written, and a set that overlaps itself must be flagged here
+      // too or the rule would be attached to one route and absent on the other.
+      const overlapDay = findIntraBookingOverlap(bookedTimes);
+      if (overlapDay) {
+        this.logger.warn('booking.booked_times.intra_overlap', {
+          bookingId: _id,
+          day: overlapDay,
+          actorId: currentActorId(),
+        });
       }
 
       const result = await this.bookingModel.updateOne(
