@@ -153,14 +153,17 @@ describe('BookingController', () => {
   });
 
   describe('getConflicts', () => {
-    it('passes the facility and month to the service', async () => {
-      await controller.getConflicts({city: 'siechnice', building: 'hala', month: 3});
+    const from = new Date('2026-03-01T00:00:00Z');
+    const to = new Date('2026-03-31T23:59:59Z');
 
-      expect(findConflictingBookingIds).toHaveBeenCalledWith('siechnice', 'hala', 3);
+    it('passes the facility and the period to the service', async () => {
+      await controller.getConflicts({city: 'siechnice', building: 'hala', from, to});
+
+      expect(findConflictingBookingIds).toHaveBeenCalledWith('siechnice', 'hala', from, to);
     });
 
     it('returns the ids the service produced', async () => {
-      await expect(controller.getConflicts({city: 'siechnice', building: 'hala', month: 3})).resolves.toEqual(['b2', 'b3']);
+      await expect(controller.getConflicts({city: 'siechnice', building: 'hala', from, to})).resolves.toEqual(['b2', 'b3']);
     });
   });
 

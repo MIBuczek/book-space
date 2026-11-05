@@ -561,6 +561,27 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **A `conflicts/**` coverage group was added with T018 (SC-008).** Like `authorization`, it takes
   its files out of the `global` pool, so the global figure is measured without it — re-derive it
   from the per-file rows, not the report's `total`.
+- **Conflict detection keys on the slot day, not the stored `month` (T054, #121).** The legacy
+  rule gated the comparison on `currentBooking.month === b.month`, and `month` is derived from the
+  booking's **first** slot. A booking whose slots straddle a month boundary (30 Sep + 2 Oct) thus
+  carried one scalar and its cross-boundary slot was never compared against bookings in the month
+  it crossed into — a *missed* conflict, which is the defect #58 recorded. `bookingsConflict` now
+  compares only the slots, which is sound because two slots can only overlap when they share a
+  day; the day test subsumes the month gate everywhere the gate was correct. Both conflict queries
+  scope by `bookedTimes.day`: the counter (`GET /bookings/conflicts`) takes a `from`/`to` **date
+  range** rather than a 0-based `month`, and the approval check uses the target's own day set
+  (`$in`). The stored `month` is now a documented denormalised hint nothing reads; it is kept only
+  because the migration tool (T041) and the UI form (T035) still carry it. The
+  facility-month index is replaced by `{place.city, place.place, bookedTimes.day}`.
+- **The SC-002 oracle keeps the legacy month gate, and the generator must stay inside the domain
+  it got right.** `conflicts.spec.ts` transcribes the legacy algorithm *including*
+  `current.month === other.month`, so its `booking` inputs carry no month and `asLegacy` stamps
+  each with the first-slot-derived month at comparison time. The generated sets are all
+  single-slot, so a generated booking's legacy month always matches its day and the two agree; a
+  *crossing* booking would disagree with the oracle by design, so those cases are named tests that
+  assert the legacy transcription misses what the corrected rule finds (month and year boundary)
+  rather than generated. Do not "simplify" by removing the month gate from the transcription or
+  by generating crossing bookings — either removes the contrast that pins the correction.
 - **`POST /bookings` is public, and the RODO rule lives in the service, not the DTO (T023).**
   The route runs `OptionalJwtAuthGuard`, so an anonymous visitor can submit; the controller
   passes `request.isPublic !== false` to the service and the service requires

@@ -82,7 +82,7 @@ export class BookingController {
   }
 
   /**
-   * The conflicting unaccepted bookings for one facility-month (FR-015).
+   * The conflicting unaccepted bookings for one facility over a period (FR-015).
    *
    * Administrator-only: the matrix gives the conflict counter to administrators, and
    * the answer names bookings a non-administrator is not entitled to see. `@Roles`
@@ -98,7 +98,7 @@ export class BookingController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   getConflicts(@Query() query: ConflictsQueryDto) {
-    return this.bookingService.findConflictingBookingIds(query.city, query.building, query.month);
+    return this.bookingService.findConflictingBookingIds(query.city, query.building, query.from, query.to);
   }
 
   @Get(':_id')

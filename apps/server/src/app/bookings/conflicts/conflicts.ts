@@ -9,10 +9,19 @@
  *   overlap.
  * - Overlap is any of: one range's start or end falls *strictly* inside the other,
  *   or one range fully contains the other.
- * - A booking participates only when it is **not** accepted, and only against a
- *   booking in the same `month`.
+ * - A booking participates only when it is **not** accepted.
  * - `findConflictingBookingIds` returns the distinct ids of the unaccepted bookings
  *   that conflict with at least one other.
+ *
+ * The rule is stated over the slots' days, not over the booking's stored `month`
+ * (T054). The legacy implementation gated the comparison on `currentBooking.month ===
+ * b.month`, where `month` is derived from the **first** slot — so a booking whose slots
+ * straddle a month boundary (30 Sep and 2 Oct) carried a single scalar and its October
+ * slot was never compared against October bookings. Reproducing that gate would
+ * reproduce the blind spot; the day comparison is what the rule actually means, and two
+ * slots can only overlap when they share a day. The stored `month` is therefore a
+ * denormalised hint the rule does not read (see `data-model.md`), and the query scope
+ * uses the slot days rather than the scalar.
  *
  * This module is deliberately free of Nest and Mongoose, so `conflicts.spec.ts` can
  * drive it directly and compare it against a transcription of the legacy algorithm
@@ -29,7 +38,6 @@ interface IConflictSlot {
 /** A booking, as conflict detection reads it. */
 interface IConflictBooking {
   _id: string;
-  month: number;
   accepted: boolean;
   bookedTimes: IConflictSlot[];
 }
@@ -80,17 +88,38 @@ const slotsConflict = (slot: IConflictSlot, other: IConflictSlot): boolean => {
 };
 
 /**
- * Whether two bookings conflict: different records, same month, and at least one
- * conflicting slot pair.
+ * Whether two bookings conflict: different records and at least one conflicting slot
+ * pair.
  *
- * The month is compared as the legacy did — exact equality of the 0–11 index — which
- * is why a conflict query is scoped to one month and a booking in March is never
- * compared against one in April even when the days overlap.
+ * There is deliberately no month comparison (T054). The legacy gate
+ * (`current.month === other.month`) keyed on a scalar derived from the first slot, so a
+ * booking crossing a month boundary was invisible to the month it crossed into. Two
+ * slots only conflict when `slotsConflict` says they share a day, so the day comparison
+ * subsumes the month gate everywhere the gate was correct and removes it where it was
+ * wrong.
  */
 const bookingsConflict = (current: IConflictBooking, other: IConflictBooking): boolean =>
   current._id !== other._id &&
-  current.month === other.month &&
   other.bookedTimes.some((otherSlot) => current.bookedTimes.some((slot) => slotsConflict(slot, otherSlot)));
+
+/**
+ * The distinct calendar-day instants a booking's slots fall on, in first-appearance
+ * order.
+ *
+ * Used to scope a conflict query by the days the booking actually occupies rather than
+ * by its stored `month`: a booking whose slots straddle a month boundary contributes a
+ * day to each month, so both months' bookings are loaded and compared. The instants are
+ * the stored `day` values, which are the calendar day with a zero time, so they are
+ * usable directly as an `$in` filter.
+ */
+const bookedDays = (booking: IConflictBooking): Date[] => {
+  const days = new Map<number, Date>();
+  for (const slot of booking.bookedTimes) {
+    const instant = new Date(slot.day);
+    days.set(instant.getTime(), instant);
+  }
+  return [...days.values()];
+};
 
 /**
  * The distinct ids of the unaccepted bookings that conflict with at least one other
@@ -143,5 +172,5 @@ const findConflictsWith = (target: IConflictBooking, others: IConflictBooking[])
   return [...conflicted];
 };
 
-export {findConflictingBookingIds, findConflictsWith, slotsConflict, bookingsConflict};
+export {findConflictingBookingIds, findConflictsWith, slotsConflict, bookingsConflict, bookedDays};
 export type {IConflictBooking, IConflictSlot};

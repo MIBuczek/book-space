@@ -99,7 +99,7 @@ describe('booking approval and archive over HTTP', () => {
       body: JSON.stringify(body),
     });
 
-  /** A second booking that overlaps the first on the same day, facility and month. */
+  /** A second booking that overlaps the first on the same day and facility. */
   const conflicting = (overrides: Record<string, unknown> = {}) =>
     booking({bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')], ...overrides});
 
@@ -148,14 +148,74 @@ describe('booking approval and archive over HTTP', () => {
     expect(response.status).toBe(409);
   });
 
-  it('does not report a booking in a different month as a conflict', async () => {
+  it('does not report a booking on a different day as a conflict', async () => {
     const {token} = await signIn('admin@example.com', 'ADMIN');
     const stored = await bookingModel.create(booking());
-    await bookingModel.create(conflicting({month: 4}));
+    // Same facility, a month later: the day differs, so there is nothing to compare. The
+    // stored `month` is not the scope (T054) — the day is.
+    await bookingModel.create(
+      booking({
+        month: 4,
+        bookedTimes: [
+          {
+            day: new Date('2026-04-04T00:00:00Z'),
+            startHours: new Date('2026-04-04T09:00:00Z'),
+            endHours: new Date('2026-04-04T11:00:00Z'),
+            status: 'INITIAL',
+          },
+        ],
+      })
+    );
 
     const response = await approve(String(stored._id), {accepted: true}, token);
 
     expect(response.status).toBe(200);
+  });
+
+  it('reports a conflict across a month boundary, scoping by the slot days', async () => {
+    // T054. The target's slots straddle the boundary (its scalar `month` is September,
+    // from the first slot). The candidate query is scoped to the target's own slot days,
+    // so the October booking on 2 Oct is loaded and reported — a scope keyed on the
+    // scalar would miss it.
+    const {token} = await signIn('admin@example.com', 'ADMIN');
+    const stored = await bookingModel.create(
+      booking({
+        month: 8,
+        bookedTimes: [
+          {
+            day: new Date('2026-09-30T00:00:00Z'),
+            startHours: new Date('2026-09-30T08:00:00Z'),
+            endHours: new Date('2026-09-30T09:00:00Z'),
+            status: 'INITIAL',
+          },
+          {
+            day: new Date('2026-10-02T00:00:00Z'),
+            startHours: new Date('2026-10-02T08:00:00Z'),
+            endHours: new Date('2026-10-02T09:00:00Z'),
+            status: 'INITIAL',
+          },
+        ],
+      })
+    );
+    const other = await bookingModel.create(
+      booking({
+        month: 9,
+        bookedTimes: [
+          {
+            day: new Date('2026-10-02T00:00:00Z'),
+            startHours: new Date('2026-10-02T08:30:00Z'),
+            endHours: new Date('2026-10-02T09:30:00Z'),
+            status: 'INITIAL',
+          },
+        ],
+      })
+    );
+
+    const response = await approve(String(stored._id), {accepted: true}, token);
+
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as {conflicts: string[]};
+    expect(body.conflicts).toEqual([String(other._id)]);
   });
 
   it('approves despite a conflict when force is set, and still reports it', async () => {
