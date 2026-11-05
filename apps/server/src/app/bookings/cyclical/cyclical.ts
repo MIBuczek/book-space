@@ -1,5 +1,5 @@
 import {IBookedTime} from '@models/booked-time.model';
-import {addFacilityDays, atFacilityTime, facilityDayNumber, startOfFacilityDay} from '../../utility/facility-time';
+import {addFacilityDays, atFacilityTime, facilityDayNumber, startOfFacilityDay} from '@booking/date-time';
 
 /**
  * Cyclical booking expansion (FR-013, research.md R4).

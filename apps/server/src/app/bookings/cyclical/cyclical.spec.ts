@@ -1,4 +1,4 @@
-import {facilityDayNumber, facilityWallClock, startOfFacilityDay} from '../../utility/facility-time';
+import {facilityDayNumber, facilityWallClock, startOfFacilityDay} from '@booking/date-time';
 import {expandBookingTimes} from './cyclical';
 
 /**

@@ -1,10 +1,15 @@
 import {
   addFacilityDays,
   atFacilityTime,
+  endOfFacilityMonth,
   facilityDayNumber,
   facilityWallClock,
+  formatFacilityDate,
+  formatFacilityTime,
+  instantFromLegacyLocal,
   isSameFacilityDay,
   startOfFacilityDay,
+  startOfFacilityMonth,
 } from './facility-time';
 
 /**
@@ -120,6 +125,88 @@ describe('facility-time', () => {
       const day = atFacilityTime(new Date('2026-07-15T00:00:00Z'), 8);
 
       expect(facilityDayNumber(day)).toBe(facilityDayNumber(startOfFacilityDay(day)));
+    });
+  });
+
+  describe('formatFacilityDate / formatFacilityTime', () => {
+    it('formats in the facility calendar, not UTC', () => {
+      // 22:30Z in summer is 00:30 the next local day, so the date must roll over.
+      expect(formatFacilityDate(new Date('2026-07-10T22:30:00Z'))).toBe('2026-07-11');
+      expect(formatFacilityTime(new Date('2026-07-10T06:05:00Z'))).toBe('08:05');
+      // Local midnight is 00:00, not 24:00 (`hourCycle: 'h23'`).
+      expect(formatFacilityTime(new Date('2026-07-10T22:00:00Z'))).toBe('00:00');
+    });
+
+    it('zero-pads both fields', () => {
+      expect(formatFacilityDate(new Date('2026-01-05T12:00:00Z'))).toBe('2026-01-05');
+      expect(formatFacilityTime(new Date('2026-01-05T07:00:00Z'))).toBe('08:00');
+    });
+  });
+
+  describe('instantFromLegacyLocal (T055 migration reinterpretation)', () => {
+    it('reads a legacy local-time string as a facility wall clock, not UTC', () => {
+      // The legacy value "2026-07-15T08:00" is 08:00 local, which is 06:00Z in summer.
+      expect(instantFromLegacyLocal('2026-07-15T08:00').toISOString()).toBe('2026-07-15T06:00:00.000Z');
+      // The same wall clock in winter is 07:00Z — a fixed-offset parse would be wrong on one side.
+      expect(instantFromLegacyLocal('2026-01-15T08:00').toISOString()).toBe('2026-01-15T07:00:00.000Z');
+    });
+
+    it('accepts a space separator and an optional seconds field', () => {
+      expect(instantFromLegacyLocal('2026-07-15 08:30:15').toISOString()).toBe('2026-07-15T06:30:15.000Z');
+      expect(instantFromLegacyLocal('2026-07-15T08:30').toISOString()).toBe('2026-07-15T06:30:00.000Z');
+    });
+
+    it('ignores a trailing zone designator, because the legacy strings are local', () => {
+      // `overwriteDate` concatenated a local date and time and parsed it in the browser zone;
+      // a stray `Z` is an artifact, not an offset, so the reading must be identical.
+      expect(instantFromLegacyLocal('2026-07-15T08:00:00.000Z').toISOString()).toBe(
+        instantFromLegacyLocal('2026-07-15T08:00').toISOString()
+      );
+    });
+
+    it('maps a legacy value on a DST-transition day to the correct UTC instant', () => {
+      // Spring-forward day: 08:00 local on 2026-03-29 is 06:00Z (offset already +2).
+      expect(instantFromLegacyLocal('2026-03-29T08:00').toISOString()).toBe('2026-03-29T06:00:00.000Z');
+      // Autumn fall-back day: 08:00 local on 2026-10-25 is 07:00Z, because the transition
+      // happens at 03:00 local and the offset is +1 by the time 08:00 arrives.
+      expect(instantFromLegacyLocal('2026-10-25T08:00').toISOString()).toBe('2026-10-25T07:00:00.000Z');
+    });
+
+    it('maps a legacy value inside the spring gap forward, and the autumn repeat to the later reading', () => {
+      // 02:30 does not exist on the spring-forward day; it maps forward to 03:30 local (01:30Z).
+      const gap = instantFromLegacyLocal('2026-03-29T02:30');
+      expect(gap.toISOString()).toBe('2026-03-29T01:30:00.000Z');
+      expect(facilityWallClock(gap)).toMatchObject({hour: 3, minute: 30});
+      // 02:30 occurs twice on the fall-back day (00:30Z at +2, 01:30Z at +1); the later
+      // occurrence — the post-transition offset — is chosen, which is what `instantFromWallClock`
+      // documents and what `atFacilityTime` does for the same wall clock.
+      expect(instantFromLegacyLocal('2026-10-25T02:30').toISOString()).toBe('2026-10-25T01:30:00.000Z');
+      expect(instantFromLegacyLocal('2026-10-25T02:30').toISOString()).toBe(
+        atFacilityTime(new Date('2026-10-25T00:00:00Z'), 2, 30).toISOString()
+      );
+    });
+
+    it('throws for a value that is not a legacy local-time string', () => {
+      expect(() => instantFromLegacyLocal('not-a-date')).toThrow(RangeError);
+    });
+  });
+
+  describe('startOfFacilityMonth / endOfFacilityMonth', () => {
+    it('brackets the facility-local month, not the UTC month', () => {
+      // 22:30Z on the last day of June is 00:30 on 1 July locally, so the month is July.
+      const start = startOfFacilityMonth(new Date('2026-06-30T22:30:00Z'));
+      expect(start.toISOString()).toBe('2026-06-30T22:00:00.000Z');
+      expect(formatFacilityDate(start)).toBe('2026-07-01');
+
+      const end = endOfFacilityMonth(new Date('2026-06-30T22:30:00Z'));
+      expect(formatFacilityDate(end)).toBe('2026-07-31');
+      expect(facilityWallClock(end)).toMatchObject({hour: 23, minute: 59, second: 59});
+    });
+
+    it('handles month length and February without a table', () => {
+      expect(formatFacilityDate(endOfFacilityMonth(new Date('2026-02-10T12:00:00Z')))).toBe('2026-02-28');
+      expect(formatFacilityDate(endOfFacilityMonth(new Date('2028-02-10T12:00:00Z')))).toBe('2028-02-29');
+      expect(formatFacilityDate(endOfFacilityMonth(new Date('2026-04-10T12:00:00Z')))).toBe('2026-04-30');
     });
   });
 });

@@ -2,10 +2,11 @@ import {Component, inject, OnInit} from '@angular/core';
 import {RouterModule} from '@angular/router';
 import {HttpClient} from '@angular/common/http';
 import {map, take} from 'rxjs';
+import {FacilityDatePipe} from './shared/facility-date.pipe';
 
 @Component({
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, FacilityDatePipe],
   selector: 'book-space-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -13,6 +14,8 @@ import {map, take} from 'rxjs';
 export class AppComponent implements OnInit {
   title = 'frontend';
   ocean = '';
+  /** Rendered through `FacilityDatePipe` so the shell exercises the shared date-time module. */
+  today = new Date();
 
   private readonly http = inject(HttpClient);
 

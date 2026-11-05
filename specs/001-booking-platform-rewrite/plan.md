@@ -25,6 +25,8 @@ end-to-end tests plus CI.
 - API: NestJS 9, Mongoose 7, `@nestjs/jwt` 10, `passport-jwt`, `bcrypt`, `class-validator`,
   `class-transformer`, `cookie-parser`
 - UI: Angular 16 (standalone components), RxJS 7.8
+- Shared: `libs/date-time` (`@booking/date-time`) — date/time handling on native
+  `Intl.DateTimeFormat` (`Europe/Warsaw`, `hourCycle: 'h23'`), with no date dependency (R4, T055)
 - Calendar: FullCalendar (legacy used `@fullcalendar/react` 6.x) or an Angular equivalent
 - Reports: CSV generation on the client or server; PDF via a print view or a PDF library
 

@@ -1,4 +1,4 @@
-import {facilityWallClock, startOfFacilityDay} from '../../utility/facility-time';
+import {facilityWallClock, startOfFacilityDay} from '@booking/date-time';
 
 /**
  * Academic-year periods for the booking list (FR-020, research.md R9).

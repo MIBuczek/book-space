@@ -65,7 +65,10 @@ ids in `firebase-const.ts` and `email-service-data.ts`.
 ## R4 — Time-zone handling
 
 **Decision**: store and compare instants in UTC; render in `Europe/Warsaw`; derive "day" from
-the facility-local date.
+the facility-local date. **The day rule**: a slot's calendar day is its `Europe/Warsaw` date,
+so a slot whose instant falls on a different UTC date still belongs to the Warsaw day the
+facility sees; "same day" (conflict detection, T018) and a day's bounds (`startOfFacilityDay`)
+are both computed from that date, never from the UTC date.
 
 **Context**: the legacy code manually adds one or two hours depending on daylight saving
 (`checkIfWinterTimeZone`, `formatDisplayTime`) and builds day/hour strings by concatenation
@@ -75,19 +78,36 @@ the facility-local date.
 **Alternatives rejected**:
 - *Port the manual offset logic* — it is the source of the bugs being fixed.
 - *Store local time strings* — breaks range queries and sorting.
+- *Add a date library (`luxon`, `date-fns-tz`, `moment-timezone`)* — the conversion is three
+  `Intl` calls, Node 24 ships full ICU, and the UI needs the same code. A dependency would
+  have to be shared by two applications and would still be pinned to the same zone database.
 
-**Consequence**: all date handling goes through one shared utility with unit tests covering
+**Consequence**: all date handling goes through one shared module with unit tests covering
 both DST transitions.
 
-**Landed (T019).** `apps/server/src/app/utility/facility-time.ts` is that utility. It uses
+**Landed (T019, moved and completed by T055).** The module is
+`libs/date-time/src/lib/facility-time.ts`, published as `@booking/date-time`, so the API and
+the UI import the same code rather than each deriving an offset — the drift R4 exists to
+prevent is otherwise unobservable until the two disagree on a DST day. It uses
 `Intl.DateTimeFormat` with `timeZone: 'Europe/Warsaw'` and `hourCycle: 'h23'` rather than a
-date dependency (Node 24 ships full ICU) or the legacy hand-rolled offset. `hourCycle: 'h23'`
-matters: the default cycle reports local midnight as hour `24`, which shifts every day
-boundary. `facility-time.spec.ts` pins both transitions — local midnight is `23:00Z` the day
-before spring-forward and `22:00Z` the day before fall-back — and `addFacilityDays` is
-asserted to preserve the wall-clock hour across both, so a "constant UTC offset" rewrite
-fails. The cyclical expansion (`bookings/cyclical/cyclical.ts`) is built on it, so a weekly
-series keeps a constant local start hour through the change.
+date dependency. `hourCycle: 'h23'` matters: the default cycle reports local midnight as hour
+`24`, which shifts every day boundary. `facility-time.spec.ts` pins both transitions — local
+midnight is `23:00Z` the day before spring-forward and `22:00Z` the day before fall-back — and
+`addFacilityDays` is asserted to preserve the wall-clock hour across both, so a "constant UTC
+offset" rewrite fails. The cyclical expansion (`bookings/cyclical/cyclical.ts`), the reporting
+ranges (`reporting/summary/range.ts`), the academic-year periods
+(`bookings/list/academic-year.ts`) and the CSV/notification formatters
+(`reporting/csv/display.ts`) are all built on it.
+
+**Migration reinterpretation (T055).** The legacy application stored slot times as local
+wall-clock values — `overwriteDate` concatenated a local date and time and parsed the result
+in the viewer's browser zone — while `day` was anchored at `T00:01:00.000Z`. Neither is a true
+instant. `instantFromLegacyLocal` reinterprets a legacy value as a Europe/Warsaw wall clock, so
+the migration (T041/T042) must use it rather than `new Date(value)`: parsing the same string as
+UTC would move every slot by one or two hours, by a different amount either side of a DST
+transition. A value inside the spring-forward gap maps forward; a value in the autumn repeated
+hour resolves to the later occurrence, which is what `atFacilityTime` does for the same wall
+clock.
 
 ---
 
@@ -303,6 +323,9 @@ writes MongoDB documents, applying documented transformations.
   use underscores while other keys use hyphens).
 - Missing `createdBy`/`createdAt`/`modifiedBy`/`modifiedAt`/`nick`/`discount`/`participants`
   get the defaults documented in the spec's edge cases.
+- Every legacy local-time value (`bookingTime[].day`/`startHour`/`endHour`, and any other date
+  field) is a Europe/Warsaw wall clock, not a UTC instant; the transform reinterprets it through
+  `instantFromLegacyLocal` (`@booking/date-time`) rather than `new Date(value)` (R4, T055).
 - `clients` and `buildings` map field-for-field, with `buildings.size` becoming `sizes`.
 - `users` are recreated with hashed passwords; `isAdmin`/`isEmployee`/`isOffice`/`city`/
   `building` map onto the target role and assignment model.
