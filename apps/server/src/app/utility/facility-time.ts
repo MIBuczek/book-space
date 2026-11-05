@@ -130,12 +130,43 @@ const atFacilityTime = (day: Date, hour: number, minute = 0, second = 0): Date =
   return instantFromWallClock({...wall, hour, minute, second});
 };
 
+/**
+ * The start of the facility-local calendar month containing `instant` (local midnight on the
+ * 1st).
+ *
+ * Reporting ranges are months in the facility's calendar, not UTC, so a booking whose slot is
+ * late on the last local day of a month belongs to that month even though its instant may be
+ * in the next UTC month. The conversion is done through `instantFromWallClock` rather than
+ * `Date.UTC` for the same reason the rest of this module exists.
+ */
+const startOfFacilityMonth = (instant: Date): Date => {
+  const wall = facilityWallClock(instant);
+  return instantFromWallClock({...wall, day: 1, hour: 0, minute: 0, second: 0});
+};
+
+/**
+ * The last instant of the facility-local calendar month containing `instant` (23:59:59 on the
+ * final local day). The legacy range was inclusive on both ends
+ * (`changeDayInDateStart(1)` … `changeDayInDateEnd(numberOfMonthDays)`), so an inclusive upper
+ * bound is what reproduces it; the second is `59` rather than `999`, matching the legacy
+ * `setHours(23, 59, 59, 0)`.
+ */
+const endOfFacilityMonth = (instant: Date): Date => {
+  const wall = facilityWallClock(instant);
+  // Day 0 of the next month is the last day of this one, which handles month lengths and
+  // February without a table.
+  const lastDay = new Date(Date.UTC(wall.year, wall.month, 0)).getUTCDate();
+  return instantFromWallClock({...wall, day: lastDay, hour: 23, minute: 59, second: 59});
+};
+
 export {
   FACILITY_TIME_ZONE,
   facilityWallClock,
   facilityDayNumber,
   isSameFacilityDay,
   startOfFacilityDay,
+  startOfFacilityMonth,
+  endOfFacilityMonth,
   addFacilityDays,
   atFacilityTime,
 };

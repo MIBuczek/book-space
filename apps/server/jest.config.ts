@@ -147,11 +147,29 @@ export default {
       functions: 80,
       lines: 80,
     },
+    // The reports module is the third SC-008 module, added with T026–T029. It is the summary
+    // aggregation, the CSV column contract and the deny-list; like the two groups above it takes
+    // its files out of `global`, so the global figure is measured *without* them — every file
+    // here measures at least 97%, so the exclusion lowers the global number, and the global
+    // floor below was re-derived from the per-file rows rather than read from the report's
+    // `total`.
+    '**/src/app/reporting/**/*.ts': {
+      statements: 80,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+    },
+    // Raised with the reporting workstream (T026–T029). The three per-file groups above take
+    // their files out of this pool, so the figure here is the aggregate of everything *except*
+    // `authorization/`, `bookings/conflicts/` and `reporting/` — 99.59/94.61/100/99.56 on this
+    // branch. The floor is set just below the measured value rather than at it, because the
+    // pool includes boot coverage from the integration specs, which can shift by a statement
+    // when a test is added or reordered; the point is that it cannot fall back.
     global: {
-      statements: 85,
-      branches: 87,
-      functions: 70,
-      lines: 85,
+      statements: 99,
+      branches: 94,
+      functions: 99,
+      lines: 99,
     },
   },
 };
