@@ -8,19 +8,12 @@ import {
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { throwError } from 'rxjs';
-import { IUser } from '@models/user.model';
 import { errorInterceptor } from './error.interceptor';
 import { ErrorStore } from './error.store';
 import { SessionStore } from './session.store';
+import { adminUser } from '../../testing/fixtures';
 
-const user: IUser = {
-  _id: 'u1',
-  email: 'admin@sisk.pl',
-  firstName: 'Ada',
-  lastName: 'Admin',
-  role: 'ADMIN',
-  active: true,
-};
+const user = adminUser();
 
 // Passes every request through except `/boom`, where it throws a plain Error.
 // The interceptor must leave a non-HTTP failure untouched, and there is no way

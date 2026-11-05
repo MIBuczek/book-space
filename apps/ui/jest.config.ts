@@ -29,6 +29,9 @@ export default {
     // Provider wiring, the Angular equivalent of a NestJS module: it declares
     // which providers exist and has no behaviour of its own.
     '/app\\.config\\.ts$',
+    // Shared spec fixtures, not application code. Counting them would inflate the
+    // denominator with objects no production path imports.
+    '/src/testing/',
   ],
 
   // Measured at introduction and never lowered. This is high because the UI is

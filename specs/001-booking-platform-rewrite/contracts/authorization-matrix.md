@@ -6,7 +6,42 @@ component-level guards in `Main.tsx`, `Admin.tsx`, `SideNav.tsx`, `Bookings.tsx`
 
 Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public (anonymous).
 
-## Roles
+## The capability object the client reads (FR-004)
+
+The client does not re-derive these rules from the role. The API resolves them per request and
+returns them as `capabilities` on the sign-in body and on `GET /auth/me` (T033), so a rule that
+lives in server configuration — the Summary deny-list (FR-006) — reaches the UI without being
+duplicated there, and a capability the server changes cannot leave the menu advertising a tab
+the API will refuse. `apps/server/src/app/authorization/capabilities.ts` is the single
+derivation; `libs/models/user.model.ts` declares the shape; `contracts/openapi.yaml`
+(`UserCapabilities`) is the contract.
+
+| Capability | E | O | A | Legacy source |
+|------------|---|---|---|---------------|
+| `staff` | ✅ | ✅ | ✅ | `siskEmployeeCredentials` — the Calendar and Bookings tabs |
+| `canSeeClientsTab` | ❌ | ✅ | ✅ | `adminSeeContentCredentials` |
+| `canSeeFacilitiesTab` | ❌ | ✅ | ✅ | `adminSeeContentCredentials` |
+| `canSeeSummaryTab` | ❌ | ✅ | ✅ | `summaryUserRestriction`, minus the deny-list |
+| `canApproveBookings` | ❌ | ❌ | ✅ | `adminCredentials` |
+| `canArchiveBookings` | ❌ | ❌ | ✅ | `adminCredentials` |
+| `canFilterUnapproved` | ❌ | ❌ | ✅ | `Bookings.tsx` (`user?.isAdmin`) |
+| `canSeeConflicts` | ❌ | ❌ | ✅ | `Bookings.tsx` |
+| `canManageUsers` | ❌ | ❌ | ✅ | `UsersController` |
+| `canWriteClients` | ❌ | ❌ | ✅ | `Clients.tsx` (`adminCredentials`) |
+| `canWriteFacilities` | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab |
+| `canSendFacilityMessages` | ✅ | ✅ | ✅ | `Building.tsx` |
+
+Two capability flags are deliberately narrower than the endpoint they gate. `canSeeFacilitiesTab`
+is office/administrator even though `GET /buildings` admits an employee (the booking form needs
+the facility list); `canSendFacilityMessages` is every staff member even though the facility
+*write* routes are administrator-only. The tab and the action are the stricter gate in each
+case, and the endpoint stays as wide as the flow needs.
+
+`capabilitiesFor` is a pure function of `(role, summaryDenied)`. The deny-list is read from
+`SUMMARY_DENY_LIST` (default `mkulakowski@umsiechnice.pl`) so the hardcoded account in note 5
+is now configuration.
+
+## Role table
 
 | Capability | P | E | O | A | Legacy source |
 |------------|---|---|---|---|---------------|
@@ -69,8 +104,13 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
    `booking-ownership.integration.spec.ts` proves the owner/non-owner/administrator split over
    real HTTP against real signed tokens; it also covers the `ObjectId` id the acting user
    actually carries, which a string-only unit test would not.
-5. **`summaryUserRestriction` is a hardcoded account.** It should become configuration
-   (see open question 3).
+5. ~~**`summaryUserRestriction` is a hardcoded account.**~~ **Resolved (T033).** It is now the
+   `SUMMARY_DENY_LIST` environment variable, read per request by
+   `capabilitiesFor(role, summaryDenied)`; the default remains
+   `mkulakowski@umsiechnice.pl` so behaviour is unchanged until an operator sets it. The
+   denial applies before the role check — a listed administrator loses `canSeeSummaryTab`
+   too — matching the legacy helper, which returned `false` for the account regardless of
+   role.
 6. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to
    "Rezerwacja", while staff see `person`. The API MUST NOT return `personName`,
    `personEmail`, `personPhone`, `comments` or `clientId` to a public caller — the legacy
@@ -110,6 +150,7 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 | Sign-out | Client discards the token; `GET /api/auth/sign-out` is retained but stateless |
 | Failed auth | `401` with one generic message for every rejection; no user enumeration |
 | `/auth/me` | The authenticated user, resolved from the database on each request (T013) |
+| Auto-logout | Not required (removed in legacy issue #70) |
 
 **Sign-out is not revocation.** The endpoint clears the `jwt` cookie and returns
 `{message: 'Signed out'}`; it destroys no server-side state, so a token captured before
@@ -128,4 +169,11 @@ logged (`auth.sign_in.rejected` with `reason`), so an operator can tell the case
 account, so `role`, `city` and `buildings` reflect the stored values. A response built from
 the token's claims would report the values as they were when the token was minted, so an
 administrator's change to an account would not appear until the token expired.
-| Auto-logout | Not required (removed in legacy issue #70) |
+
+**The client revalidates on start, and the capabilities come with it (T033).** `AuthService.restore()`
+calls `/auth/me` from an app initializer before the first route resolves, so a token the server
+no longer accepts is discarded at start-up rather than on the first click, and a role or
+deny-list change is reflected in the navigation without a re-sign-in. `/auth/me` returns no
+token, so the restore replaces the stored user and keeps the token; a restore that cleared it
+would sign the caller out by refreshing them. The initializer completes rather than errors when
+the token is rejected, because a throwing initializer aborts bootstrap and blanks the page.

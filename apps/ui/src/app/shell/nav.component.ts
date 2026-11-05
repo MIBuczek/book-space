@@ -7,10 +7,10 @@ import { ButtonComponent } from '../shared/ui';
 /**
  * The top navigation, shared by the public and admin areas.
  *
- * Role-based links: the admin area is offered only to an administrator, and
- * sign-in only to a caller without a session. This is presentation, not
- * enforcement — the server decides what a request may do (constitution:
- * server-side enforcement), so a hidden link is a courtesy, not a control.
+ * The admin link is offered when the account has the `staff` capability — the API's answer,
+ * not a role re-derived here — so a role or deny-list change reaches the menu without a
+ * redeploy. This is presentation, not enforcement: the server decides what a request may do
+ * (constitution: server-side enforcement), so a hidden link is a courtesy, not a control.
  */
 @Component({
   selector: 'book-space-nav',
@@ -25,7 +25,7 @@ import { ButtonComponent } from '../shared/ui';
           </a>
         </li>
         <li><a routerLink="/contact" routerLinkActive="active">Contact</a></li>
-        @if (session.role() === 'ADMIN') {
+        @if (session.capabilities()?.staff) {
           <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
         }
       </ul>

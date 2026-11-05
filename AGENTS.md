@@ -723,6 +723,57 @@ Three things that are easy to get wrong:
   (T007 `role`, T015 users, T016 public read, T017 ownership, T025 client/facility writes),
   so the task is genuinely complete and only its bookkeeping lagged.
 
+## Angular UI conventions that are easy to break
+
+- **The navigation is driven by a `capabilities` object the API resolves, not by the role.**
+  `authorization/capabilities.ts` (`capabilitiesFor`) is the single derivation; `libs/models`
+  declares the shape; `openapi.yaml` (`UserCapabilities`) is the contract. It is returned on the
+  sign-in body and on `GET /auth/me`. The client renders tabs from it, so a rule that lives in
+  server configuration — the Summary deny-list (FR-006) — reaches the menu without being
+  duplicated there. Do not re-derive a capability from `session.role()` in a component: that is
+  what the legacy `credentials-function.ts` helpers did, in five files. A capability flag is
+  presentation only; every one is also enforced on the endpoint it names (FR-003).
+- **Two capability flags are deliberately narrower than the endpoint they gate.**
+  `canSeeFacilitiesTab` is office/administrator even though `GET /buildings` admits an employee
+  (the booking form needs the facility list), and `canSendFacilityMessages` is every staff member
+  even though the facility *write* routes are administrator-only. Do not "unify" a tab gate with
+  its endpoint's role list; the tab is the stricter gate on purpose.
+- **The admin area is staff, not administrator-only.** `app.routes.ts` admits `/admin` with
+  `authGuard` + `capabilityGuard('staff')`; each tab carries its own `capabilityGuard`. The
+  legacy panel gave an employee the Calendar and Bookings tabs, so an administrator-only guard
+  would lock them out of their own workspace.
+- **`capabilityGuard` is a factory, and its redirect depends on whether a session exists.** A
+  caller with no session goes to `/sign-in`; a signed-in caller who lacks the capability goes to
+  `/` (the calendar), because offering sign-in to someone who holds a valid session is wrong.
+  It is a `CanMatchFn`, so the chunk is not fetched for a caller who cannot use it. `admin.guard.ts`
+  was removed — `capabilityGuard('staff')` plus the per-tab guards replaced it.
+- **`guestGuard` keeps a signed-in caller off `/sign-in`** (redirects to `/admin`), matching the
+  legacy `Login.tsx` redirect. Without it, Back after signing in shows a form that would issue a
+  second token.
+- **The tab list and the tab routes come from one `ADMIN_TABS` entry.** `features/admin/admin.routes.ts`
+  generates a child route per tab from `shell/navigation.ts`, and `AdminShellComponent` renders the
+  same list. A tab hidden by a capability and the route behind it therefore cannot disagree; if you
+  add a tab, add it to `ADMIN_TABS` and it gets both.
+- **`AuthService.restore()` runs from an app initializer and must complete, not error.**
+  `app.config.ts` calls it through `provideAppInitializer` before the first route resolves, so a
+  token the server no longer accepts is discarded at start-up. It completes even when `/auth/me`
+  fails, because a throwing initializer aborts bootstrap and blanks the page. `/auth/me` returns
+  no token, so `SessionStore.setUser` replaces the user and keeps the token — a restore that
+  cleared the token would sign the caller out by refreshing them.
+- **`SessionStore` holds `IAuthenticatedUser`, not `IUser`.** The stored shape plus the
+  capabilities. `capabilities()` returns `null` with no user, and `visibleAdminTabs(null)` is `[]`,
+  so the navigation fails closed rather than flashing the full menu before the session loads.
+- **The sign-in form's bounds mirror the server's `LoginUserDto` (e-mail 3–125, password 6–30),
+  not the legacy form's 5–100.** The server is the authority; a client that accepts a value the
+  server rejects turns a specific problem into a generic "sign-in failed" after a round trip.
+  `SignInComponent` shows the API's single rejection message — it must not invent a distinction
+  (unknown address vs wrong password) the server refuses to make.
+- **Zoneless means signal state, not `[(ngModel)]`.** `setupZonelessTestEnv()` is in `test-setup.ts`;
+  a plain field read by a template would not update the view. `ui/jest.config.ts` excludes
+  `/src/testing/` from coverage — it holds shared spec fixtures, not application code, and counting
+  them would inflate the denominator. The UI is at 100 % on every file; the `global` threshold is a
+  ratchet that is never lowered.
+
 ## Logging
 
 `LoggingModule` is registered once in `AppModule` and applies to every route, so a new

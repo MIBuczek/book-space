@@ -798,6 +798,43 @@ components:
             _id: {type: string}
             createdAt: {type: string, format: date-time}
             lastLogin: {type: string, format: date-time}
+            capabilities: {$ref: '#/components/schemas/UserCapabilities'}
+
+    UserCapabilities:
+      description: >
+        What the signed-in account may do, resolved by the API from the stored role and
+        the Summary deny-list (FR-004, FR-006). It is a presentation aid — the client
+        derives its navigation from it, and every capability is also enforced on the
+        endpoint it names (FR-003). A client that ignores it gains nothing but a 403.
+      type: object
+      required:
+        - staff
+        - canSeeClientsTab
+        - canSeeFacilitiesTab
+        - canSeeSummaryTab
+        - canApproveBookings
+        - canArchiveBookings
+        - canFilterUnapproved
+        - canSeeConflicts
+        - canManageUsers
+        - canWriteClients
+        - canWriteFacilities
+        - canSendFacilityMessages
+      properties:
+        staff: {type: boolean, description: 'Any authenticated role; the Calendar and Bookings tabs.'}
+        canSeeClientsTab: {type: boolean, description: 'Office or administrator.'}
+        canSeeFacilitiesTab: {type: boolean, description: 'Office or administrator.'}
+        canSeeSummaryTab:
+          type: boolean
+          description: 'Office or administrator, minus any account on the Summary deny-list.'
+        canApproveBookings: {type: boolean}
+        canArchiveBookings: {type: boolean}
+        canFilterUnapproved: {type: boolean, description: 'The "awaiting approval" filter.'}
+        canSeeConflicts: {type: boolean}
+        canManageUsers: {type: boolean}
+        canWriteClients: {type: boolean}
+        canWriteFacilities: {type: boolean}
+        canSendFacilityMessages: {type: boolean}
 
     ClientDto:
       type: object

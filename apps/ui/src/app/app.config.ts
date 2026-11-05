@@ -1,11 +1,19 @@
-import { ApplicationConfig, ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  ErrorHandler,
+  inject,
+  provideAppInitializer,
+  provideZonelessChangeDetection,
+} from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   provideRouter,
   withComponentInputBinding,
   withEnabledBlockingInitialNavigation,
 } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { appRoutes } from './app.routes';
+import { AuthService } from './core/auth.service';
 import { authInterceptor } from './core/auth.interceptor';
 import { errorInterceptor } from './core/error.interceptor';
 import { GlobalErrorHandler } from './core/global-error.handler';
@@ -20,5 +28,11 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    // Revalidates a persisted session before the first route resolves: `/auth/me` refreshes
+    // the capabilities (a role or deny-list change reaches the navigation immediately) and
+    // discards a token the server no longer accepts. `restore()` completes rather than
+    // errors, so a rejected token leaves the app on the public route instead of aborting
+    // bootstrap and blanking the page.
+    provideAppInitializer(() => firstValueFrom(inject(AuthService).restore())),
   ],
 };

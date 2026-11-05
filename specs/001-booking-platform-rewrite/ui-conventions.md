@@ -188,7 +188,9 @@ export const appRoutes: Route[] = [
   { path: '', loadComponent: () => import('./features/public-calendar/public-calendar.component').then((m) => m.PublicCalendarComponent) },
   {
     path: 'admin',
-    canMatch: [adminGuard],                 // CanMatchFn — no chunk fetched when it fails
+    // authGuard first (session), then the staff capability. CanMatchFn — no chunk fetched
+    // when either fails.
+    canMatch: [authGuard, capabilityGuard('staff')],
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
 ];
@@ -202,13 +204,19 @@ Enable `withComponentInputBinding()` so a `:id` param arrives as a signal input 
 readonly id = input.required<string>();  // bound from the :id param
 ```
 
-Guard shape:
+**Guards read capabilities, not the role (T033).** `capabilityGuard` is a factory over a
+capability key; the redirect differs by whether a session exists (anonymous → `/sign-in`,
+signed-in but not permitted → `/`). The admin tab list and the tab routes both come from
+`ADMIN_TABS`, so a hidden tab and its route cannot disagree.
 
 ```ts
-export const adminGuard: CanActivateFn = () => {
-  const auth = inject(AuthService);
+export const capabilityGuard = (capability: keyof IUserCapabilities): CanMatchFn => () => {
+  const session = inject(SessionStore);
   const router = inject(Router);
-  return auth.role() === 'ADMIN' ? true : router.createUrlTree(['/sign-in']);
+  if (!session.isAuthenticated()) {
+    return router.createUrlTree(['/sign-in']);
+  }
+  return session.capabilities()?.[capability] === true ? true : router.createUrlTree(['/']);
 };
 ```
 
