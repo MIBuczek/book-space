@@ -209,4 +209,66 @@ describe('the auth module over HTTP', () => {
       expect(cookie).toContain('jwt=');
     });
   });
+
+  describe('capabilities over HTTP', () => {
+    it('returns the employee capability matrix on sign-in and on /auth/me', async () => {
+      // The matrix is what the client derives its navigation from, so it has to survive
+      // the response pipeline — serialisation, the exception filter — as one object. A
+      // unit test of the controller cannot see whether a field is dropped on the way out.
+      await seedUser({role: 'EMPLOYEE'});
+      const {token} = await signIn();
+
+      const signInBody = (await (
+        await postSignIn({email: EMAIL, password: PASSWORD})
+      ).json()) as {user: {capabilities: Record<string, boolean>}};
+      const meBody = (await (await getMe(token)).json()) as {
+        capabilities: Record<string, boolean>;
+      };
+
+      const expected = {
+        staff: true,
+        canSeeClientsTab: false,
+        canSeeFacilitiesTab: false,
+        canSeeSummaryTab: false,
+        canApproveBookings: false,
+        canArchiveBookings: false,
+        canFilterUnapproved: false,
+        canSeeConflicts: false,
+        canManageUsers: false,
+        canWriteClients: false,
+        canWriteFacilities: false,
+        canSendFacilityMessages: true,
+      };
+      expect(signInBody.user.capabilities).toEqual(expected);
+      expect(meBody.capabilities).toEqual(expected);
+    });
+
+    it('gives an administrator every capability', async () => {
+      await seedUser({role: 'ADMIN'});
+      const {token} = await signIn();
+
+      const body = (await (await getMe(token)).json()) as {capabilities: Record<string, boolean>};
+
+      expect(Object.values(body.capabilities).every(Boolean)).toBe(true);
+    });
+
+    it('denies the summary capability to a deny-listed account', async () => {
+      // The deny-list is configuration (`SUMMARY_DENY_LIST`), read per request. This is
+      // the case the UI cannot reproduce for itself without duplicating a server rule.
+      process.env.SUMMARY_DENY_LIST = EMAIL;
+      try {
+        await seedUser({role: 'OFFICE'});
+        const {token} = await signIn();
+
+        const body = (await (await getMe(token)).json()) as {
+          capabilities: {canSeeSummaryTab: boolean; canSeeClientsTab: boolean};
+        };
+
+        expect(body.capabilities.canSeeSummaryTab).toBe(false);
+        expect(body.capabilities.canSeeClientsTab).toBe(true);
+      } finally {
+        delete process.env.SUMMARY_DENY_LIST;
+      }
+    });
+  });
 });

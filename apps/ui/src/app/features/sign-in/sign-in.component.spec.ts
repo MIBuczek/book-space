@@ -2,18 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
-import { IUser } from '@models/user.model';
 import { SessionStore } from '../../core/session.store';
 import { SignInComponent } from './sign-in.component';
+import { adminUser } from '../../../testing/fixtures';
 
-const user: IUser = {
-  _id: 'u1',
-  email: 'admin@sisk.pl',
-  firstName: 'Ada',
-  lastName: 'Admin',
-  role: 'ADMIN',
-  active: true,
-};
+const user = adminUser();
 
 describe('SignInComponent', () => {
   let httpMock: HttpTestingController;
@@ -34,26 +27,37 @@ describe('SignInComponent', () => {
     localStorage.clear();
   });
 
-  const fill = (fixture: ReturnType<typeof TestBed.createComponent<SignInComponent>>) => {
+  const render = () => {
+    const fixture = TestBed.createComponent(SignInComponent);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  const fill = (
+    fixture: ReturnType<typeof TestBed.createComponent<SignInComponent>>,
+    email = 'admin@sisk.pl',
+    password = 'secret'
+  ) => {
     const inputs = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('input')
     ) as HTMLInputElement[];
-    inputs[0].value = 'admin@sisk.pl';
+    inputs[0].value = email;
     inputs[0].dispatchEvent(new Event('input'));
-    inputs[1].value = 'secret';
+    inputs[1].value = password;
     inputs[1].dispatchEvent(new Event('input'));
   };
 
-  it('submits the credentials and navigates to the admin area on success', () => {
-    const fixture = TestBed.createComponent(SignInComponent);
-    fixture.detectChanges();
-    fill(fixture);
-
+  const submit = (fixture: ReturnType<typeof TestBed.createComponent<SignInComponent>>) =>
     fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
 
+  it('submits the credentials and navigates to the admin area on success', () => {
+    const fixture = render();
+    fill(fixture);
+    submit(fixture);
+
     const request = httpMock.expectOne('/api/auth/sign-in');
-    expect(request.request.body).toEqual({email: 'admin@sisk.pl', password: 'secret'});
-    request.flush({user, token: 'token-1'});
+    expect(request.request.body).toEqual({ email: 'admin@sisk.pl', password: 'secret' });
+    request.flush({ user, token: 'token-1' });
     fixture.detectChanges();
 
     expect(navigate).toHaveBeenCalledWith(['/admin']);
@@ -61,14 +65,10 @@ describe('SignInComponent', () => {
   });
 
   it('shows the single sign-in failure message on 401', () => {
-    const fixture = TestBed.createComponent(SignInComponent);
-    fixture.detectChanges();
+    const fixture = render();
     fill(fixture);
-
-    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
-    httpMock
-      .expectOne('/api/auth/sign-in')
-      .flush({}, {status: 401, statusText: 'Unauthorized'});
+    submit(fixture);
+    httpMock.expectOne('/api/auth/sign-in').flush({}, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();
 
     const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
@@ -77,17 +77,96 @@ describe('SignInComponent', () => {
   });
 
   it('shows a generic message for a non-401 failure', () => {
-    const fixture = TestBed.createComponent(SignInComponent);
-    fixture.detectChanges();
+    const fixture = render();
     fill(fixture);
-
-    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    submit(fixture);
     httpMock
       .expectOne('/api/auth/sign-in')
-      .flush({}, {status: 500, statusText: 'Internal Server Error'});
+      .flush({}, { status: 500, statusText: 'Internal Server Error' });
     fixture.detectChanges();
 
     const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Sign-in failed');
+  });
+
+  it('rejects an address without @ before making a request', () => {
+    const fixture = render();
+    fill(fixture, 'not-an-address', 'secret');
+    submit(fixture);
+    fixture.detectChanges();
+
+    httpMock.expectNone('/api/auth/sign-in');
+    const errors = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(errors).toContain('E-mail must contain @');
+  });
+
+  it('rejects a too-short password before making a request', () => {
+    const fixture = render();
+    fill(fixture, 'admin@sisk.pl', 'abcde');
+    submit(fixture);
+    fixture.detectChanges();
+
+    httpMock.expectNone('/api/auth/sign-in');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Password must be 6–30 characters'
+    );
+  });
+
+  it('rejects an empty e-mail and an empty password', () => {
+    const fixture = render();
+    submit(fixture);
+    fixture.detectChanges();
+
+    httpMock.expectNone('/api/auth/sign-in');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('E-mail is required');
+    expect(text).toContain('Password is required');
+  });
+
+  it('rejects an over-long password', () => {
+    const fixture = render();
+    fill(fixture, 'admin@sisk.pl', 'a'.repeat(31));
+    submit(fixture);
+    fixture.detectChanges();
+
+    httpMock.expectNone('/api/auth/sign-in');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Password must be 6–30 characters'
+    );
+  });
+
+  it('rejects an over-long e-mail', () => {
+    const fixture = render();
+    fill(fixture, `${'a'.repeat(125)}@x.pl`, 'secret');
+    submit(fixture);
+    fixture.detectChanges();
+
+    httpMock.expectNone('/api/auth/sign-in');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'E-mail must be 3–125 characters'
+    );
+  });
+
+  it('does not show field errors before the first submit', () => {
+    const fixture = render();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('required');
+  });
+
+  it('clears a previous failure message when a new attempt is submitted', () => {
+    const fixture = render();
+    fill(fixture, 'admin@sisk.pl', 'secret');
+    submit(fixture);
+    httpMock.expectOne('/api/auth/sign-in').flush({}, { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Invalid');
+
+    submit(fixture);
+    fixture.detectChanges();
+
+    // The new attempt is in flight, so the stale message is gone and the form is disabled.
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Invalid');
+    httpMock.expectOne('/api/auth/sign-in').flush({ user, token: 'token-2' });
   });
 });

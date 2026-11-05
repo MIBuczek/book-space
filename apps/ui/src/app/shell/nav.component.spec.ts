@@ -2,18 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { IUser } from '@models/user.model';
 import { SessionStore } from '../core/session.store';
 import { NavComponent } from './nav.component';
-
-const admin: IUser = {
-  _id: 'u1',
-  email: 'admin@sisk.pl',
-  firstName: 'Ada',
-  lastName: 'Admin',
-  role: 'ADMIN',
-  active: true,
-};
+import { adminUser, employeeUser } from '../../testing/fixtures';
 
 describe('NavComponent', () => {
   let httpMock: HttpTestingController;
@@ -47,7 +38,7 @@ describe('NavComponent', () => {
   });
 
   it('offers the admin link and the user e-mail to an administrator', () => {
-    TestBed.inject(SessionStore).set('token-1', admin);
+    TestBed.inject(SessionStore).set('token-1', adminUser());
     const fixture = render();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
@@ -56,18 +47,20 @@ describe('NavComponent', () => {
     expect(text).toContain('Sign out');
   });
 
-  it('hides the admin link for a signed-in non-administrator', () => {
-    TestBed.inject(SessionStore).set('token-1', {...admin, role: 'EMPLOYEE'});
+  it('offers the admin link to a signed-in employee', () => {
+    // The admin area is staff, not administrator-only: an employee uses the Calendar and
+    // Bookings tabs. Hiding the link from them would lock them out of their own workspace.
+    TestBed.inject(SessionStore).set('token-1', employeeUser());
     const fixture = render();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
+    expect(text).toContain('Admin');
     expect(text).toContain('Sign out');
-    expect(text).not.toContain('Admin');
   });
 
   it('clears the session when sign-out is pressed', () => {
     const session = TestBed.inject(SessionStore);
-    session.set('token-1', admin);
+    session.set('token-1', adminUser());
     const fixture = render();
 
     const signOut = Array.from(
@@ -75,7 +68,7 @@ describe('NavComponent', () => {
     ).find((b) => b.textContent?.includes('Sign out')) as HTMLButtonElement;
     signOut.click();
 
-    httpMock.expectOne('/api/auth/sign-out').flush({message: 'Signed out'});
+    httpMock.expectOne('/api/auth/sign-out').flush({ message: 'Signed out' });
 
     expect(session.isAuthenticated()).toBe(false);
   });

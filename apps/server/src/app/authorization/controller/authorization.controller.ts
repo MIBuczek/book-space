@@ -1,5 +1,6 @@
 import {Body, Controller, Get, Post, Res, UseGuards} from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
+import {ConfigService} from '@nestjs/config';
 import {AuthorizationService} from '../service/authorization.service';
 import {LoginUserDto} from '../models/login-user-dto';
 import {Response} from 'express';
@@ -8,10 +9,31 @@ import {serializeUser} from '../../users/models/user.serializer';
 import {JwtPayload} from '@models/jwt-payload.model';
 import {CurrentUser} from '../decorators/current-user.decorator';
 import {IActingUser} from '../ownership';
+import {capabilitiesFor} from '../capabilities';
+import {isSummaryDenied, parseDenyList} from '../../reporting/deny-list';
+import {IUserCapabilities} from '@models/user.model';
 
 @Controller('auth')
 export class AuthorizationController {
-  constructor(private autService: AuthorizationService, private jwtService: JwtService) {}
+  constructor(
+    private autService: AuthorizationService,
+    private jwtService: JwtService,
+    private configService: ConfigService
+  ) {}
+
+  /**
+   * Resolves the capability matrix for a user (FR-004, FR-006).
+   *
+   * The Summary deny-list is read per request, not captured at construction, so an
+   * operator can change `SUMMARY_DENY_LIST` without a redeploy — the same reason the
+   * reporting controller reads it on each call. A role the matrix does not recognise
+   * cannot reach here: the schema enum rejects it, and `JwtStrategy` loads the stored
+   * document.
+   */
+  private capabilitiesOf(user: {role: string; email?: string}): IUserCapabilities {
+    const denyList = parseDenyList(this.configService.get<string>('SUMMARY_DENY_LIST'));
+    return capabilitiesFor(user.role as never, isSummaryDenied(user.email, denyList));
+  }
 
   /**
    * Sign in user controller method.
@@ -32,23 +54,35 @@ export class AuthorizationController {
     // `user` is the stored document, which carries the bcrypt hash. Serialising
     // here is what stops the hash reaching the client — the service needs it to
     // compare against, so it cannot be stripped any earlier.
-    return {user: serializeUser(user), token};
+    return {user: {...serializeUser(user), capabilities: this.capabilitiesOf(user)}, token};
   }
 
   /**
-   * Returns the authenticated user with the role and assignments resolved from the
-   * database.
+   * Returns the authenticated user with the role, assignments and capabilities resolved
+   * from the database.
    *
    * `JwtStrategy.validate` has already loaded the account, so the user on the request
    * is the stored document and not a re-issued token's claims. That matters for
    * `role`, `city` and `buildings`: a response built from the token would report the
    * values as they were when the token was minted, so an administrator's change to an
-   * account would not appear until the token expired.
+   * account would not appear until the token expired. The capabilities are computed from
+   * that same stored document, so a role or deny-list change takes effect on the next
+   * request too.
    */
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   getMe(@CurrentUser() user: IActingUser) {
-    return serializeUser(user);
+    // Cast to the nullable overload: the guard should have refused first, so a missing
+    // user is unreachable in production, but `serializeUser` is defined to answer `null`
+    // for one and a throw here would turn a guard misconfiguration into a 500.
+    const serialized = serializeUser(user as object | null | undefined);
+    if (!serialized) {
+      return null;
+    }
+    return {
+      ...serialized,
+      capabilities: this.capabilitiesOf(user as {role: string; email?: string}),
+    };
   }
 
   /**

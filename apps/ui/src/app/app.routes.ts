@@ -1,18 +1,23 @@
 import { Route } from '@angular/router';
-import { adminGuard } from './core/admin.guard';
 import { authGuard } from './core/auth.guard';
+import { capabilityGuard } from './core/capability.guard';
+import { guestGuard } from './core/guest.guard';
 
 /**
  * The application's routes.
  *
- * Public routes load eagerly; the admin area is a lazy `loadChildren` behind
- * `authGuard` and `adminGuard`, so its chunk is never fetched by a caller who
- * cannot use it. `withComponentInputBinding()` in `app.config.ts` is what lets a
- * future `:id` param arrive as a signal input with no `ActivatedRoute`
- * plumbing.
+ * Public routes load eagerly; the admin area is a lazy `loadChildren` behind `authGuard`
+ * and `capabilityGuard('staff')`, so its chunk is never fetched by a caller who cannot use
+ * it. The admin area is staff, not administrator-only: an office user has the Clients,
+ * Facilities and Summary tabs, so the guard that admits it is the staff capability, and each
+ * tab carries its own capability guard. `withComponentInputBinding()` in `app.config.ts` is
+ * what lets a future `:id` param arrive as a signal input with no `ActivatedRoute` plumbing.
  *
- * The `**` route is last: first-match ordering applies here too, and a wildcard
- * declared earlier would swallow every path.
+ * `/sign-in` carries `guestGuard`: a signed-in caller who reaches it is sent to the admin
+ * area rather than shown a form that would issue a second token.
+ *
+ * The `**` route is last: first-match ordering applies here too, and a wildcard declared
+ * earlier would swallow every path.
  */
 export const appRoutes: Route[] = [
   {
@@ -24,12 +29,13 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'sign-in',
+    canMatch: [guestGuard],
     loadComponent: () =>
       import('./features/sign-in/sign-in.component').then((m) => m.SignInComponent),
   },
   {
     path: 'admin',
-    canMatch: [authGuard, adminGuard],
+    canMatch: [authGuard, capabilityGuard('staff')],
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
   },
   {

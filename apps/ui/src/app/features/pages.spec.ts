@@ -1,19 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AdminDashboardComponent } from './admin/admin-dashboard.component';
 import { ContactComponent } from './informational/contact.component';
 import { NotFoundComponent } from './informational/not-found.component';
 import { ServerErrorComponent } from './informational/server-error.component';
 import { PublicCalendarComponent } from './public-calendar/public-calendar.component';
 import { ErrorStore } from '../core/error.store';
 
-// The T032 placeholders. Each asserts it renders its heading, which is the only
-// behaviour they have; T034–T040 replace the bodies and their own specs.
-describe('T032 placeholder pages', () => {
+// The T032/T033 placeholder pages. Each asserts it renders its heading, which is
+// the only behaviour they have; T034–T040 replace the bodies and their own specs.
+describe('placeholder pages', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        AdminDashboardComponent,
         ContactComponent,
         NotFoundComponent,
         ServerErrorComponent,
@@ -31,10 +29,6 @@ describe('T032 placeholder pages', () => {
 
   it('renders the public calendar heading', () => {
     expect(text(PublicCalendarComponent)).toContain('Reservation calendar');
-  });
-
-  it('renders the admin heading', () => {
-    expect(text(AdminDashboardComponent)).toContain('Administration');
   });
 
   it('renders the contact heading', () => {

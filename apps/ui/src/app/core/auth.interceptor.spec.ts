@@ -1,18 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { IUser } from '@models/user.model';
 import { authInterceptor } from './auth.interceptor';
 import { SessionStore } from './session.store';
+import { adminUser } from '../../testing/fixtures';
 
-const user: IUser = {
-  _id: 'u1',
-  email: 'admin@sisk.pl',
-  firstName: 'Ada',
-  lastName: 'Admin',
-  role: 'ADMIN',
-  active: true,
-};
+const user = adminUser();
 
 describe('authInterceptor', () => {
   let http: HttpClient;

@@ -1,17 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, UrlTree } from '@angular/router';
-import { IUser } from '@models/user.model';
 import { authGuard } from './auth.guard';
 import { SessionStore } from './session.store';
+import { adminUser } from '../../testing/fixtures';
 
-const user: IUser = {
-  _id: 'u1',
-  email: 'admin@sisk.pl',
-  firstName: 'Ada',
-  lastName: 'Admin',
-  role: 'ADMIN',
-  active: true,
-};
+const user = adminUser();
 
 describe('authGuard', () => {
   beforeEach(() => {

@@ -1,11 +1,13 @@
 import {Test, TestingModule} from '@nestjs/testing';
 import {JwtService} from '@nestjs/jwt';
+import {ConfigService} from '@nestjs/config';
 import {getModelToken} from '@nestjs/mongoose';
 import {AuthGuard} from '@nestjs/passport';
 import {Response} from 'express';
 import {AuthorizationController} from './authorization.controller';
 import {AuthorizationService} from '../service/authorization.service';
 import {serializeUser} from '../../users/models/user.serializer';
+import {capabilitiesFor} from '../capabilities';
 import {IUser} from '@models/user.model';
 import {IActingUser} from '../ownership';
 
@@ -19,6 +21,7 @@ describe('AuthorizationController', () => {
   let controller: AuthorizationController;
   let service: {signIn: jest.Mock};
   let jwt: {signAsync: jest.Mock};
+  let config: {get: jest.Mock};
 
   const user = {
     _id: 'user-1',
@@ -31,6 +34,9 @@ describe('AuthorizationController', () => {
   beforeEach(async () => {
     service = {signIn: jest.fn()};
     jwt = {signAsync: jest.fn().mockResolvedValue('signed.jwt.token')};
+    // Unset deny-list by default, so the capabilities are the role's own. The
+    // deny-list case is asserted on its own below.
+    config = {get: jest.fn().mockReturnValue(undefined)};
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthorizationController],
@@ -38,6 +44,7 @@ describe('AuthorizationController', () => {
         {provide: AuthorizationService, useValue: service},
         {provide: getModelToken('User'), useValue: {create: jest.fn(), find: jest.fn(), findOne: jest.fn()}},
         {provide: JwtService, useValue: jwt},
+        {provide: ConfigService, useValue: config},
       ],
     })
       .overrideGuard(AuthGuard('jwt'))
@@ -47,12 +54,44 @@ describe('AuthorizationController', () => {
     controller = module.get<AuthorizationController>(AuthorizationController);
   });
 
-  it('returns the user and a token on sign-in', async () => {
+  it('returns the user, its capabilities and a token on sign-in', async () => {
     service.signIn.mockResolvedValue(user);
 
     const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
 
-    expect(result).toEqual({user: serializeUser(user), token: 'signed.jwt.token'});
+    expect(result).toEqual({
+      user: {...serializeUser(user), capabilities: capabilitiesFor('ADMIN', false)},
+      token: 'signed.jwt.token',
+    });
+  });
+
+  it('resolves the capabilities from the stored role, not the request body', async () => {
+    // The body claims ADMIN; the stored user is an EMPLOYEE. If the capabilities came
+    // from the body, a caller could make the menu offer tabs the API will refuse.
+    service.signIn.mockResolvedValue({...user, role: 'EMPLOYEE' as const});
+
+    const result = await controller.signIn({
+      email: user.email,
+      password: 'correct horse battery',
+      role: 'ADMIN',
+    } as never);
+
+    expect(result.user.capabilities).toEqual(capabilitiesFor('EMPLOYEE', false));
+  });
+
+  it('denies the summary capability to a deny-listed account', async () => {
+    config.get.mockReturnValue('mkulakowski@umsiechnice.pl');
+    service.signIn.mockResolvedValue({...user, role: 'OFFICE' as const, email: 'mkulakowski@umsiechnice.pl'});
+
+    const result = await controller.signIn({
+      email: 'mkulakowski@umsiechnice.pl',
+      password: 'correct horse battery',
+    } as never);
+
+    expect(result.user.capabilities.canSeeSummaryTab).toBe(false);
+    // The deny-list is read from configuration, so the rest of the office capabilities
+    // must survive it.
+    expect(result.user.capabilities.canSeeClientsTab).toBe(true);
   });
 
   it('never returns the password hash', async () => {
@@ -78,7 +117,7 @@ describe('AuthorizationController', () => {
     // The stored user is an EMPLOYEE while the body claims ADMIN. If the controller
     // signed the body's role, anyone could mint an administrator token by asking for
     // one, because `RolesGuard` trusts whatever the token says.
-    service.signIn.mockResolvedValue({...user, role: 'EMPLOYEE'});
+    service.signIn.mockResolvedValue({...user, role: 'EMPLOYEE' as const});
 
     await controller.signIn({email: user.email, password: 'correct horse battery', role: 'ADMIN'} as never);
 
@@ -107,12 +146,25 @@ describe('AuthorizationController', () => {
   });
 
   describe('getMe', () => {
-    it('serialises the acting user', () => {
+    it('serialises the acting user and adds its capabilities', () => {
       const acting = {...user, password: '$2b$10$abcdefghijklmnopqrstuv'};
 
       const result = controller.getMe(acting);
 
-      expect(result).toEqual(serializeUser(acting));
+      expect(result).toEqual({
+        ...serializeUser(acting),
+        capabilities: capabilitiesFor('ADMIN', false),
+      });
+    });
+
+    it('resolves the capabilities from the loaded account on each request', () => {
+      // A role change between requests must reach `/auth/me` immediately; a response
+      // built once at sign-in would go stale for the life of the token.
+      const acting = {...user, role: 'OFFICE' as const};
+
+      const result = controller.getMe(acting) as {capabilities: {canSeeSummaryTab: boolean}};
+
+      expect(result.capabilities).toEqual(capabilitiesFor('OFFICE', false));
     });
 
     it('never returns the password hash', () => {

@@ -1,5 +1,7 @@
+import { Route } from '@angular/router';
 import { appRoutes } from './app.routes';
 import { adminRoutes } from './features/admin/admin.routes';
+import { ADMIN_TABS } from './shell/navigation';
 
 // The route table's behaviour is the loaders: a route that resolves to the
 // wrong component, or a missing admin chunk, is a broken navigation. Invoking
@@ -18,8 +20,11 @@ describe('appRoutes', () => {
     expect((component as { name: string }).name).toBe('PublicCalendarComponent');
   });
 
-  it('declares the sign-in route', async () => {
-    const component = await route('sign-in').loadComponent?.();
+  it('declares the sign-in route behind the guest guard', async () => {
+    const signIn = route('sign-in');
+    expect(signIn.canMatch).toHaveLength(1);
+
+    const component = await signIn.loadComponent?.();
     expect((component as { name: string }).name).toBe('SignInComponent');
   });
 
@@ -39,16 +44,48 @@ describe('appRoutes', () => {
     expect((component as { name: string }).name).toBe('NotFoundComponent');
   });
 
-  it('guards the admin area and loads it lazily', async () => {
+  it('guards the admin area by session and the staff capability and loads it lazily', async () => {
     const admin = route('admin');
     expect(admin.canMatch).toHaveLength(2);
 
     const children = await admin.loadChildren?.();
     expect(children).toBe(adminRoutes);
   });
+});
 
-  it('loads the admin dashboard from the admin chunk', async () => {
-    const component = await adminRoutes[0].loadComponent?.();
-    expect((component as { name: string }).name).toBe('AdminDashboardComponent');
+describe('adminRoutes', () => {
+  const shell = adminRoutes[0];
+  const child = (path: string) => {
+    const found = shell.children?.find((r: Route) => r.path === path);
+    if (!found) {
+      throw new Error(`No admin child route for path "${path}"`);
+    }
+    return found;
+  };
+
+  it('renders the shell as the parent route', () => {
+    expect((shell.component as { name: string }).name).toBe('AdminShellComponent');
+  });
+
+  it('redirects the bare path to the calendar tab', () => {
+    const empty = child('');
+    expect(empty.redirectTo).toBe('calendar');
+    expect(empty.pathMatch).toBe('full');
+  });
+
+  it('declares one guarded, lazily loaded route per tab', async () => {
+    for (const tab of ADMIN_TABS) {
+      const tabRoute = child(tab.path);
+      expect(tabRoute.canMatch).toHaveLength(1);
+      expect(tabRoute.data).toEqual({ title: tab.label });
+
+      const component = await tabRoute.loadComponent?.();
+      expect((component as { name: string }).name).toBe('AdminTabPlaceholderComponent');
+    }
+  });
+
+  it('catches an unknown tab path so it does not fall through to the app 404', () => {
+    const wildcard = shell.children?.find((r: Route) => r.path === '**');
+    expect(wildcard?.redirectTo).toBe('calendar');
   });
 });
