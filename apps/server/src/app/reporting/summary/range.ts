@@ -1,4 +1,4 @@
-import {endOfFacilityMonth, startOfFacilityMonth} from '../../utility/facility-time';
+import {endOfFacilityMonth, startOfFacilityMonth} from '@booking/date-time';
 import {ISummaryRange} from './summary';
 
 /**

@@ -67,7 +67,7 @@ so NestJS 11 takes `@nestjs/config@4.0.4`. See the constraint below.
 ```bash
 yarn install --frozen-lockfile
 yarn nx run-many --target=lint --all
-yarn nx run-many --target=test --projects=server,ui --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time --configuration=ci
 yarn nx run-many --target=build --projects=server,ui --configuration=production
 ```
 
@@ -607,8 +607,11 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   stamp must come *after* the "strip left nothing" early return, or a no-op request becomes a
   write that only records who asked for nothing. Stamping is what makes the generic update
   attributable like an approval (FR-016).
-- **All instant↔civil-calendar conversion goes through `utility/facility-time.ts` (T019, R4).**
-  It uses `Intl.DateTimeFormat('Europe/Warsaw', {hourCycle: 'h23'})`; the `h23` is load-bearing —
+- **All instant↔civil-calendar conversion goes through `@booking/date-time` (`libs/date-time`,
+  T019/T055, R4).** It moved out of `apps/server/src/app/utility/facility-time.ts` so the API
+  *and* the UI import one implementation; a copy in each app is the drift R4 exists to prevent
+  and it stays invisible until the two disagree on a DST day. It uses
+  `Intl.DateTimeFormat('Europe/Warsaw', {hourCycle: 'h23'})`; the `h23` is load-bearing —
   the default cycle reports local midnight as hour `24`, which shifts every day boundary. Do not
   replace it with a fixed `+1`/`+2` offset or a "same UTC calendar day" test: `startOfFacilityDay`
   returns `23:00Z` the day before spring-forward and `22:00Z` the day before fall-back, and the
@@ -771,9 +774,24 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   without it the file sits at 75% branches and the reporting coverage group's 80% floor hides
   a genuinely uncovered path.
 - **The reporting month range is facility-local, not UTC.** `startOfFacilityMonth` /
-  `endOfFacilityMonth` (`utility/facility-time.ts`) go through `instantFromWallClock`, so a
+  `endOfFacilityMonth` (`@booking/date-time`) go through `instantFromWallClock`, so a
   slot late on the last local day of a month belongs to that month even when its instant is in
   the next UTC month. A `Date.UTC` bound would move a booking between months at the edges.
+- **A legacy local-time value is a Europe/Warsaw wall clock, and the migration must say so
+  (T055, R4).** The legacy app built slot times by concatenating a local date and time and
+  parsing them in the *viewer's* browser zone (`overwriteDate`), while `day` was anchored at
+  `T00:01:00.000Z` — neither is an instant. `instantFromLegacyLocal` in `@booking/date-time` is
+  the reinterpretation (T041/T042 must use it, never `new Date(value)`): the same string parsed
+  as UTC moves every slot one or two hours, by a different amount either side of a transition.
+  A value in the spring gap maps forward; a value in the autumn repeated hour resolves to the
+  *later* occurrence — the same reading `atFacilityTime` gives, pinned by the spec. Do not
+  "simplify" this to `new Date(...)`, which is the exact defect the legacy issues #27/#58 are.
+- **A new shared library is a project, and its Jest coverage is separate from the apps'.**
+  `libs/date-time` declares `test`/`lint` targets in `project.json`; the workspace-wide
+  `run-many --all` picks it up, but `--projects=server,ui` does not, so a change to the library
+  must run `nx test date-time` (or `--all`) or its tests are silently skipped. Its
+  `coverageThreshold` is 100 % and `collectCoverageFrom: ['src/**/*.ts']` excludes the barrel
+  (`/src/index.ts$`) the way the server excludes its re-export-only files.
 - **The CSV column labels are the contract (FR-028), so the label set and order are asserted
   one name at a time.** The file is `\uFEFF`-prefixed, `\r\n`-terminated and `;`-separated, and
   the header is built from `CSV_COLUMNS.map((c) => c.label).join(';')`. A count assertion would

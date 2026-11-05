@@ -1,5 +1,5 @@
 import {ISelectedExtraOption} from '@models/selected-extra-option.model';
-import {facilityWallClock} from '../../utility/facility-time';
+import {formatFacilityDate, formatFacilityTime} from '@booking/date-time';
 
 /**
  * Display-value mapping for the report, transcribed from the legacy `transformValue` map and
@@ -69,19 +69,13 @@ const toPercentage = (size: string): string => {
 };
 
 /**
- * A date as `YYYY-MM-DD` in the facility's calendar. Deterministic, unlike the legacy
- * `toLocaleDateString()`, which depended on the viewer's browser locale.
+ * A date as `YYYY-MM-DD` in the facility's calendar. Delegates to the shared date-time module
+ * so the CSV export and the UI cannot format the same instant differently (R4, T055).
  */
-const formatDate = (date: Date): string => {
-  const wall = facilityWallClock(new Date(date));
-  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
-};
+const formatDate = (date: Date): string => formatFacilityDate(date);
 
-/** A time as `HH:MM` in the facility's calendar. */
-const formatTime = (date: Date): string => {
-  const wall = facilityWallClock(new Date(date));
-  return `${pad(wall.hour)}:${pad(wall.minute)}`;
-};
+/** A time as `HH:MM` in the facility's calendar. Delegates to the shared module. */
+const formatTime = (date: Date): string => formatFacilityTime(date);
 
 /** A boolean as the legacy `Tak`/`Nie` label (legacy `modelDisplayValue` on a boolean). */
 const displayBoolean = (value: boolean): string => (value ? 'Tak' : 'Nie');
@@ -108,7 +102,5 @@ const displaySelectedOptions = (selectedOptions: ISelectedExtraOption[]): string
     }, [])
     .join(',');
 };
-
-const pad = (value: number): string => String(value).padStart(2, '0');
 
 export {displayValue, toPercentage, formatDate, formatTime, displayBoolean, displaySelectedOptions};
