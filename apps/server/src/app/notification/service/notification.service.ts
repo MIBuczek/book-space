@@ -8,7 +8,9 @@ import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {IMailMessage, IMailTransport, MAIL_TRANSPORT} from '../mail/mail-transport';
-import {INotifiableBooking, bookingEmailBody, bookingSubject} from '../mail/booking-email';
+import {INotifiableBooking, bookingEmail} from '../mail/booking-email';
+import {renderTemplate} from '../templates/render';
+import {NOTIFICATION_TEMPLATES} from '../templates/templates';
 import {BookingNotificationDto, MessageDto} from '../models/notification.dto';
 
 /** The recipient address an audience resolves to. */
@@ -41,13 +43,20 @@ export class NotificationService {
     const recipient = await this.resolveRecipient(request.audience, booking);
 
     const isFacility = request.audience === FACILITY_AUDIENCE;
-    const message: IMailMessage = {
-      to: recipient,
-      subject: bookingSubject(booking, isFacility),
-      text: bookingEmailBody(booking),
-    };
+    // The facility variant carries `buildingEmail` and joins slots with a newline; the staff
+    // variant has neither, matching the legacy `emailAdminBodyBooking`/`emailUserBodyBooking`
+    // split (contracts/notification-templates.md).
+    const templateId = isFacility ? 'booking-facility' : 'booking-staff';
+    const {subject, text} = bookingEmail(
+      booking,
+      templateId,
+      isFacility ? recipient : undefined
+    );
 
-    await this.send(message, {bookingId: String(booking._id), audience: request.audience});
+    await this.send({to: recipient, subject, text}, {
+      bookingId: String(booking._id),
+      audience: request.audience,
+    });
     return {status: 'sent'};
   }
 
@@ -65,21 +74,20 @@ export class NotificationService {
       throw new BadGatewayException('The contact mailbox is not configured (set SISK_CONTACT_EMAIL)');
     }
 
-    const message: IMailMessage = {
-      to: recipient,
-      subject: `Wiadomość od ${request.person}`,
-      text: [
-        `Osoba: ${request.person}`,
-        `Email: ${request.email}`,
-        request.phone ? `Telefon: ${request.phone}` : undefined,
-        '',
-        request.message,
-      ]
-        .filter((line): line is string => line !== undefined)
-        .join('\n'),
-    };
+    // The employee variant is the Facilities-tab message (FR-041); the contact variant is the
+    // public form (FR-034). They differ only in the recipient and whether the sender's phone is
+    // carried, so the templates are separate but the variable set is shared.
+    const templateId = request.recipient ? 'employee-message' : 'contact-message';
+    const {subject, text} = renderTemplate(NOTIFICATION_TEMPLATES[templateId], {
+      person: request.person,
+      email: request.email,
+      phone: request.phone,
+      message: request.message,
+    });
 
-    await this.send(message, {audience: request.recipient ? 'EMPLOYEE' : 'CONTACT'});
+    await this.send({to: recipient, subject, text}, {
+      audience: request.recipient ? 'EMPLOYEE' : 'CONTACT',
+    });
     return {status: 'sent'};
   }
 
