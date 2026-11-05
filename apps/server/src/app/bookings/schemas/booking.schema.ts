@@ -75,6 +75,16 @@ export class Booking {
   })
   personPhone!: string;
 
+  /**
+   * The legacy month index, 0–11, derived from the **first** slot (T054).
+   *
+   * A denormalised hint only: it is kept because the migration tool (T041) and the UI
+   * form (T035) still carry it, but conflict detection no longer reads it and the
+   * conflict query no longer scopes on it. It is derived from the first slot, so it is
+   * wrong for a booking whose slots straddle a month boundary — a scalar cannot describe
+   * such a booking, which is why the rule uses `bookedTimes.day` instead. See
+   * `data-model.md` for the convention (0-based) and the places that do read it.
+   */
   @Prop({
     type: Number,
     required: [true, 'Please select month']
@@ -219,14 +229,17 @@ export const BookingSchema = SchemaFactory.createForClass(Booking);
 BookingSchema.index({createdAt: -1, _id: -1});
 
 /**
- * The facility-month filter the conflict rules run (FR-015, FR-043, data-model.md).
+ * The facility-slot-day filter the conflict rules run (FR-015, FR-043, data-model.md).
  *
- * The key order matches the query the conflict service and the list build — city, then
- * facility, then month — and `accepted`/`archive` trail it because the list filters on them
- * after the scope is fixed. A query that leads with the scope is what lets the index be
- * used as a prefix rather than scanned.
+ * The key order matches the query the conflict service builds — city, then facility, then
+ * the slot day — which is the scope the conflict queries actually use
+ * (T054). It replaces the former `{city, place, month, accepted, archive}` key: the scalar
+ * `month` is derived from the first slot, so an index led by it cannot serve a query that
+ * ranges over the slot days, and scoping on it was the month-boundary blind spot this task
+ * removes. A multikey index on `bookedTimes.day` lets the `$gte`/`$lte` range and the
+ * `$in` day set both use the facility prefix rather than scan the collection.
  */
-BookingSchema.index({'place.city': 1, 'place.place': 1, month: 1, accepted: 1, archive: 1});
+BookingSchema.index({'place.city': 1, 'place.place': 1, 'bookedTimes.day': 1});
 
 /**
  * The per-client reporting read (FR-043, data-model.md): every booking for one client,

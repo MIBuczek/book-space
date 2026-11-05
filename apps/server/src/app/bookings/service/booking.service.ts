@@ -12,7 +12,7 @@ import {findResolvedSlotViolation, resolvedSlotMessage} from '../slots/resolved-
 import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
-import {findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
+import {bookedDays, findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
 import {findIntraBookingOverlap} from '../slots/intra-booking-overlap';
 import {StructuredHttpException} from '../../config/structured-http-exception';
 import {isSizeOffered, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
@@ -267,25 +267,26 @@ export class BookingService {
   }
 
   /**
-   * The ids of the unaccepted bookings that conflict within one facility-month
+   * The ids of the unaccepted bookings that conflict within one facility and period
    * (FR-015, contracts/openapi.yaml `/bookings/conflicts`).
    *
-   * The facility and month are pushed into the query rather than filtered after the
+   * The facility and the period are pushed into the query rather than filtered after the
    * read, for the same reason the public calendar filter is: an unrelated booking is
-   * never loaded. Only `accepted: false` is required by the rules, but the query is
-   * scoped to the facility-month regardless, because that is the unit the legacy
-   * screen computed over and the only scope in which the answer is meaningful.
+   * never loaded. The period is expressed as a range over the slot days
+   * (`bookedTimes.day`), not over the stored `month` scalar (T054): the scalar is derived
+   * from the first slot, so scoping by it would miss a booking whose slots straddle a
+   * month boundary — the exact blind spot this task closes.
    *
    * The comparison itself lives in the pure `findConflictingBookingIds`, which is
    * where the rules and their SC-002 oracle are. This method only shapes the query
    * and adapts the documents to what that function reads.
    */
-  async findConflictingBookingIds(city: string, building: string, month: number): Promise<string[]> {
+  async findConflictingBookingIds(city: string, building: string, from: Date, to: Date): Promise<string[]> {
     try {
       const bookings = await this.bookingModel.find({
         'place.city': city,
         'place.place': building,
-        month,
+        'bookedTimes.day': {$gte: from, $lte: to},
       });
 
       // `_id` on a hydrated document is an `ObjectId`, not the `string` the pure
@@ -296,7 +297,6 @@ export class BookingService {
       return findConflictingBookingIds(
         bookings.map((booking) => ({
           _id: String(booking._id),
-          month: booking.month,
           accepted: booking.accepted,
           bookedTimes: booking.bookedTimes,
         }))
@@ -310,25 +310,27 @@ export class BookingService {
    * The ids of the bookings that conflict with one already-loaded booking
    * (FR-015, FR-017).
    *
-   * Scoped to the booking's own facility and month, because those are the only
-   * bookings the conflict rules compare against. `String(_id)` on the record and on
-   * every candidate keeps the comparison in the `string` domain the pure function
-   * declares; passing an `ObjectId` would make the identity test depend on reference
-   * equality.
+   * Scoped to the booking's own facility and to the exact days its slots fall on
+   * (`bookedTimes.day: {$in: ...}`), not to its stored `month` (T054). The day set is
+   * what the rule actually compares, and a booking whose slots straddle a month
+   * boundary contributes a day to each month, so both sides of the boundary are loaded.
+   * `String(_id)` on the record and on every candidate keeps the comparison in the
+   * `string` domain the pure function declares; passing an `ObjectId` would make the
+   * identity test depend on reference equality.
    *
    * The booking is passed in rather than looked up again, so an approval does not
    * read the same document twice.
    */
   private async conflictsFor(booking: TBooking): Promise<string[]> {
+    const days = bookedDays({_id: String(booking._id), accepted: booking.accepted, bookedTimes: booking.bookedTimes});
     const candidates = await this.bookingModel.find({
       'place.city': booking.place.city,
       'place.place': booking.place.place,
-      month: booking.month,
+      'bookedTimes.day': {$in: days},
     });
 
-    const asConflict = (record: {_id: unknown; month: number; accepted: boolean; bookedTimes: BookedTime[]}) => ({
+    const asConflict = (record: {_id: unknown; accepted: boolean; bookedTimes: BookedTime[]}) => ({
       _id: String(record._id),
-      month: record.month,
       accepted: record.accepted,
       bookedTimes: record.bookedTimes,
     });

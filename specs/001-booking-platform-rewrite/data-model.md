@@ -139,7 +139,7 @@ Current schema: `apps/server/src/app/bookings/schemas/booking.schema.ts`
 | `personCompany` | string | optional, ≤125 (legacy `club`) |
 | `personEmail` | string | required, valid e-mail |
 | `personPhone` | string | required, 9–15 |
-| `month` | number | required, 0–11 (legacy month index) |
+| `month` | number | required, 0–11 (legacy month index); denormalised hint, not used by conflict detection (T054) |
 | `bookedTimes` | `BookedTime[]` | required, at least 1 |
 | `accepted` | boolean | required, default `false` |
 | `archive` | boolean | required, default `false` |
@@ -167,8 +167,20 @@ because it was never offered. The runtime list and the type are one declaration 
 `libs/models/booking.model.ts`, so a DTO that validates with `IsEnum(PAYMENTS)` cannot drift
 from `TPayment` again.
 
+**Note on `month`** (T054, #121): `month` is the legacy 0-based index, derived from the
+booking's **first** slot. It is a denormalised hint only. Conflict detection no longer reads
+it and the conflict query no longer scopes on it: a scalar cannot describe a booking whose
+slots straddle a month boundary (30 Sep + 2 Oct), and scoping on the scalar meant the
+cross-boundary slot was never compared against bookings in the month it crossed into. The
+conflict rule keys on `bookedTimes.day`, and both conflict queries (`GET /bookings/conflicts`
+and the approval check) scope by the slot days. `month` is retained because the migration
+tool (T041) and the UI form (T035) still carry it; nothing that decides a conflict reads it.
+
 **Indexes** (needed for FR-043 and conflict queries):
-- `{ 'place.city': 1, 'place.place': 1, month: 1, accepted: 1, archive: 1 }`
+- `{ 'place.city': 1, 'place.place': 1, 'bookedTimes.day': 1 }` — the facility scope plus the
+  slot day, which is what the conflict queries filter on (T054). Replaces the former
+  `{city, place, month, accepted, archive}` key: an index led by the scalar `month` cannot
+  serve a query that ranges over the slot days.
 - `{ clientId: 1, accepted: 1 }`
 - `{ createdAt: -1, _id: -1 }` — `createdAt` alone is not a total order, so two bookings
   created in the same millisecond could swap between pages and a record could be skipped or
@@ -177,6 +189,8 @@ from `TPayment` again.
 **Changes needed**:
 - Add the fields marked **[new]**.
 - Add the indexes above; the current schema has none.
+- Stop scoping conflict detection on the scalar `month` (T054): the rule and both conflict
+  queries use `bookedTimes.day`.
 - Expose the read model with city/facility names resolved, and the write model with
   `place`/`size` as in the DTO.
 

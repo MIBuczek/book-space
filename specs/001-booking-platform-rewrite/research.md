@@ -120,6 +120,19 @@ met by `conflicts.spec.ts`, which carries an independent transcription of the le
 and asserts agreement over 200 generated sets (~900 booking pairs), not by calling the new code
 from both sides. Approval-with-`force` (T020) is where the result is enforced before a write.
 
+**Corrected (T054, #121).** The legacy gate `currentBooking.month === b.month` was reproduced
+faithfully by T018 and is now removed. `month` is derived from the booking's **first** slot, so
+a booking whose slots straddle a month boundary carried one scalar and its cross-boundary slot
+was never compared against bookings in the month it crossed into — a missed conflict, not a
+spurious one. The rule keys on `bookedTimes.day` (two slots only conflict when they share a
+day, which subsumes the month gate everywhere it was correct), and the stored `month` is a
+denormalised hint nothing reads. The counter (`GET /bookings/conflicts`) and the approval check
+scope by the slot days: a day range and the target's own `$in` day set respectively. SC-002
+still holds over the domain the legacy gate got right — the oracle is fed the same
+first-slot-derived month — and the boundary cases the gate got wrong are pinned by named unit
+and HTTP tests that assert the legacy transcription misses them. The facility-month index is
+replaced by `{city, place, bookedTimes.day}`.
+
 **Landed (T020).** `POST /bookings/{_id}/approve` enforces the rule at approval time. The
 question it asks is narrower than the facility-month counter: only the bookings that overlap
 *this* one matter, and an already-accepted booking is a conflict rather than an excluded

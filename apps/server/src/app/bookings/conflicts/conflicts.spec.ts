@@ -1,4 +1,4 @@
-import {findConflictingBookingIds, findConflictsWith, IConflictBooking, IConflictSlot, slotsConflict} from './conflicts';
+import {bookedDays, findConflictingBookingIds, findConflictsWith, IConflictBooking, IConflictSlot, slotsConflict} from './conflicts';
 
 /**
  * SC-002 requires the rewrite to produce identical results to the legacy
@@ -15,12 +15,29 @@ const slot = (day: string, start: string, end: string): IConflictSlot => ({
   endHours: new Date(end),
 });
 
-const booking = (
-  _id: string,
-  month: number,
-  accepted: boolean,
-  bookedTimes: IConflictSlot[]
-): IConflictBooking => ({_id, month, accepted, bookedTimes});
+const booking = (_id: string, accepted: boolean, bookedTimes: IConflictSlot[]): IConflictBooking => ({
+  _id,
+  accepted,
+  bookedTimes,
+});
+
+/**
+ * The legacy month index for a slot day, 0-based (`day.getMonth()`). The legacy algorithm
+ * derived the booking's `month` from its first slot, so the SC-002 oracle below is fed the
+ * same derivation. The corrected rule does not read `month` at all (T054); the oracle keeps
+ * its gate only to stay a faithful transcription, and the generator supplies a month that
+ * matches the slot day so the two agree everywhere the legacy gate was *correct* — the
+ * boundary cases where it was wrong are pinned by named tests instead.
+ */
+const legacyMonthOf = (slot: IConflictSlot): number => new Date(slot.day).getMonth();
+
+/**
+ * Re-reads the corrected bookings the way the legacy algorithm did: it stamps each with
+ * the `month` derived from its **first** slot. Used only by the boundary cases, to show
+ * the legacy gate misses what the corrected rule finds.
+ */
+const asLegacy = (bookings: IConflictBooking[]): ILegacyBooking[] =>
+  bookings.map((entry) => ({...entry, month: legacyMonthOf(entry.bookedTimes[0])}));
 
 // --- Legacy algorithm, transcribed verbatim (behaviour, not style) ---------------
 
@@ -44,7 +61,10 @@ const legacyCheckSingleBookingTime = (bt: IConflictSlot, cbt: IConflictSlot): bo
   return sameDay && (checkStartHour || checkEndHour || isOverlap);
 };
 
-const legacyCheckConflicts = (currentBooking: IConflictBooking, all: IConflictBooking[]): boolean => {
+/** A booking as the legacy algorithm read it: the scalar `month` included. */
+type ILegacyBooking = IConflictBooking & {month: number};
+
+const legacyCheckConflicts = (currentBooking: ILegacyBooking, all: ILegacyBooking[]): boolean => {
   if (currentBooking.accepted) {
     return false;
   }
@@ -61,7 +81,7 @@ const legacyCheckConflicts = (currentBooking: IConflictBooking, all: IConflictBo
   return isConflict;
 };
 
-const legacyFindConflictingBookingIds = (all: IConflictBooking[]): string[] => {
+const legacyFindConflictingBookingIds = (all: ILegacyBooking[]): string[] => {
   if (all.length <= 1) {
     return [];
   }
@@ -129,13 +149,13 @@ describe('findConflictingBookingIds', () => {
   const DAY = '2026-03-04T00:00:00.000Z';
 
   it('returns nothing for a single booking', () => {
-    expect(findConflictingBookingIds([booking('a', 3, false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T09:00:00Z')])])).toEqual([]);
+    expect(findConflictingBookingIds([booking('a', false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T09:00:00Z')])])).toEqual([]);
   });
 
   it('excludes an accepted booking from the result', () => {
     const bookings = [
-      booking('accepted', 3, true, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
-      booking('pending', 3, false, [slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('accepted', true, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
+      booking('pending', false, [slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
     ];
 
     // The accepted booking is skipped as a candidate; the pending one still conflicts
@@ -144,20 +164,51 @@ describe('findConflictingBookingIds', () => {
     expect(findConflictingBookingIds(bookings)).toEqual(['pending']);
   });
 
-  it('does not compare bookings in different months', () => {
+  it('does not compare bookings on different days', () => {
     const bookings = [
-      booking('march', 3, false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
-      booking('april', 4, false, [slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('fourth', false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
+      booking('fifth', false, [slot('2026-03-05T00:00:00.000Z', '2026-03-05T09:00:00Z', '2026-03-05T11:00:00Z')]),
     ];
 
     expect(findConflictingBookingIds(bookings)).toEqual([]);
   });
 
+  it('conflicts across a month boundary when the slots share a day', () => {
+    // T054. The stored `month` is derived from the *first* slot, so this booking's scalar
+    // is September and the legacy gate never compares its 2 Oct slot against an October
+    // booking — the blind spot the issue names. The rule keys on the day, so the October
+    // pair is found. The legacy transcription is asserted alongside to make the contrast
+    // explicit, the way `cyclical.spec.ts` contrasts the off-by-one count.
+    const bookings = [
+      booking('crossing', false, [
+        slot('2026-09-30T00:00:00.000Z', '2026-09-30T08:00:00Z', '2026-09-30T09:00:00Z'),
+        slot('2026-10-02T00:00:00.000Z', '2026-10-02T08:00:00Z', '2026-10-02T09:00:00Z'),
+      ]),
+      booking('october', false, [slot('2026-10-02T00:00:00.000Z', '2026-10-02T08:30:00Z', '2026-10-02T09:30:00Z')]),
+    ];
+
+    expect(legacyFindConflictingBookingIds(asLegacy(bookings))).toEqual([]);
+    expect(findConflictingBookingIds(bookings).sort()).toEqual(['crossing', 'october']);
+  });
+
+  it('conflicts across a year boundary when the slots share a day', () => {
+    const bookings = [
+      booking('crossing', false, [
+        slot('2026-12-31T00:00:00.000Z', '2026-12-31T08:00:00Z', '2026-12-31T09:00:00Z'),
+        slot('2027-01-02T00:00:00.000Z', '2027-01-02T08:00:00Z', '2027-01-02T09:00:00Z'),
+      ]),
+      booking('january', false, [slot('2027-01-02T00:00:00.000Z', '2027-01-02T08:30:00Z', '2027-01-02T09:30:00Z')]),
+    ];
+
+    expect(legacyFindConflictingBookingIds(asLegacy(bookings))).toEqual([]);
+    expect(findConflictingBookingIds(bookings).sort()).toEqual(['crossing', 'january']);
+  });
+
   it('reports every booking in a three-way overlap, once each', () => {
     const bookings = [
-      booking('a', 3, false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
-      booking('b', 3, false, [slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
-      booking('c', 3, false, [slot(DAY, '2026-03-04T09:30:00Z', '2026-03-04T12:00:00Z')]),
+      booking('a', false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
+      booking('b', false, [slot(DAY, '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('c', false, [slot(DAY, '2026-03-04T09:30:00Z', '2026-03-04T12:00:00Z')]),
     ];
 
     expect(findConflictingBookingIds(bookings).sort()).toEqual(['a', 'b', 'c']);
@@ -165,8 +216,8 @@ describe('findConflictingBookingIds', () => {
 
   it('ignores a booking that overlaps nothing', () => {
     const bookings = [
-      booking('a', 3, false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T09:00:00Z')]),
-      booking('b', 3, false, [slot(DAY, '2026-03-04T10:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('a', false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T09:00:00Z')]),
+      booking('b', false, [slot(DAY, '2026-03-04T10:00:00Z', '2026-03-04T11:00:00Z')]),
     ];
 
     expect(findConflictingBookingIds(bookings)).toEqual([]);
@@ -180,8 +231,8 @@ describe('findConflictsWith', () => {
   const apart = slot(DAY, '2026-03-04T10:00:00Z', '2026-03-04T11:00:00Z');
 
   it('returns the ids of the bookings that overlap the target', () => {
-    const target = booking('target', 3, false, [slotA]);
-    const others = [target, booking('over', 3, false, [overlapping]), booking('far', 3, false, [apart])];
+    const target = booking('target', false, [slotA]);
+    const others = [target, booking('over', false, [overlapping]), booking('far', false, [apart])];
 
     expect(findConflictsWith(target, others)).toEqual(['over']);
   });
@@ -190,8 +241,8 @@ describe('findConflictsWith', () => {
     // The approval decision is exactly where an already-approved booking matters: it is
     // the one that cannot be double-booked. `findConflictingBookingIds` excludes it as a
     // candidate, which is right for the counter and wrong here.
-    const target = booking('target', 3, false, [slotA]);
-    const others = [target, booking('approved', 3, true, [overlapping])];
+    const target = booking('target', false, [slotA]);
+    const others = [target, booking('approved', true, [overlapping])];
 
     expect(findConflictsWith(target, others)).toEqual(['approved']);
   });
@@ -199,23 +250,24 @@ describe('findConflictsWith', () => {
   it('compares the target even when it is already marked accepted', () => {
     // Approving a booking that is already accepted still has to report the conflict,
     // because the flag holds its previous value while the decision is made.
-    const target = booking('target', 3, true, [slotA]);
-    const others = [target, booking('over', 3, false, [overlapping])];
+    const target = booking('target', true, [slotA]);
+    const others = [target, booking('over', false, [overlapping])];
 
     expect(findConflictsWith(target, others)).toEqual(['over']);
   });
 
   it('never reports the target itself', () => {
-    const target = booking('target', 3, false, [slotA]);
+    const target = booking('target', false, [slotA]);
 
     expect(findConflictsWith(target, [target])).toEqual([]);
   });
 
-  it('does not compare bookings in different months or facilities are already excluded', () => {
-    // The caller scopes the candidate query to the facility-month; the month rule is the
-    // pure function's own, and a different month is not a conflict.
-    const target = booking('target', 3, false, [slotA]);
-    const others = [target, booking('april', 4, false, [overlapping])];
+  it('does not compare bookings that share no day', () => {
+    // The caller scopes the candidate query to the facility and the target's own slot
+    // days; the pure function's own rule is the day comparison, so a booking on another
+    // day is not a conflict.
+    const target = booking('target', false, [slotA]);
+    const others = [target, booking('fifth', false, [slot('2026-03-05T00:00:00.000Z', '2026-03-05T09:00:00Z', '2026-03-05T11:00:00Z')])];
 
     expect(findConflictsWith(target, others)).toEqual([]);
   });
@@ -233,9 +285,14 @@ const makeRandom = (seed: number): (() => number) => {
 };
 
 /**
- * Builds a booking list from a seed. The generator varies exactly the inputs the
- * rules care about: day, start/end hour, month and accepted — including deliberately
- * equal edges so the touching-interval and shared-boundary cases are exercised.
+ * Builds a booking list from a seed. The generator varies exactly the inputs the rules
+ * care about: day, start/end hour and accepted — including deliberately equal edges so
+ * the touching-interval and shared-boundary cases are exercised. Every booking is a
+ * single slot, so its legacy `month` (derived from the first slot) always matches its
+ * day; that is the domain on which the legacy gate and the corrected rule agree, and the
+ * generator is deliberately confined to it. The month- and year-boundary cases where the
+ * gate was wrong are pinned by the named tests above rather than generated, because a
+ * generated crossing booking would disagree with the oracle by design.
  */
 const generateBookings = (random: () => number): IConflictBooking[] => {
   const count = 2 + Math.floor(random() * 6);
@@ -246,7 +303,7 @@ const generateBookings = (random: () => number): IConflictBooking[] => {
     const duration = Math.floor(random() * 4);
     const start = `2026-03-0${4 + dayIndex}T${String(startHour).padStart(2, '0')}:00:00Z`;
     const end = `2026-03-0${4 + dayIndex}T${String(startHour + duration).padStart(2, '0')}:00:00Z`;
-    return booking(`b${index}`, 3 + Math.floor(random() * 2), random() < 0.25, [slot(day, start, end)]);
+    return booking(`b${index}`, random() < 0.25, [slot(day, start, end)]);
   });
 };
 
@@ -258,7 +315,7 @@ describe('SC-002 — the rewrite matches the legacy implementation', () => {
       const random = makeRandom(seed);
       const bookings = generateBookings(random);
 
-      expect(findConflictingBookingIds(bookings)).toEqual(legacyFindConflictingBookingIds(bookings));
+      expect(findConflictingBookingIds(bookings)).toEqual(legacyFindConflictingBookingIds(asLegacy(bookings)));
       compared += bookings.length;
     }
 
@@ -268,14 +325,39 @@ describe('SC-002 — the rewrite matches the legacy implementation', () => {
 
   it('agrees on a hand-built set that mixes every rule', () => {
     const bookings = [
-      booking('a', 3, false, [slot('2026-03-04T00:00:00Z', '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
-      booking('b', 3, false, [slot('2026-03-04T00:00:00Z', '2026-03-04T10:00:00Z', '2026-03-04T12:00:00Z')]),
-      booking('c', 3, true, [slot('2026-03-04T00:00:00Z', '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
-      booking('d', 4, false, [slot('2026-03-04T00:00:00Z', '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
-      booking('e', 3, false, [slot('2026-03-05T00:00:00Z', '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('a', false, [slot('2026-03-04T00:00:00Z', '2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]),
+      booking('b', false, [slot('2026-03-04T00:00:00Z', '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('c', true, [slot('2026-03-04T00:00:00Z', '2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]),
+      booking('d', false, [slot('2026-03-05T00:00:00Z', '2026-03-05T09:00:00Z', '2026-03-05T11:00:00Z')]),
     ];
 
-    expect(findConflictingBookingIds(bookings)).toEqual(legacyFindConflictingBookingIds(bookings));
+    expect(findConflictingBookingIds(bookings)).toEqual(legacyFindConflictingBookingIds(asLegacy(bookings)));
+    // a and b overlap each other; c is accepted so it is not reported but still counts as
+    // a comparison target; d is on another day and conflicts with nothing.
     expect(findConflictingBookingIds(bookings)).toEqual(['a', 'b']);
+  });
+});
+
+describe('bookedDays', () => {
+  const DAY = '2026-03-04T00:00:00.000Z';
+
+  it('returns one instant per distinct slot day, in first-appearance order', () => {
+    const days = bookedDays(
+      booking('a', false, [
+        slot('2026-09-30T00:00:00.000Z', '2026-09-30T08:00:00Z', '2026-09-30T09:00:00Z'),
+        slot('2026-10-02T00:00:00.000Z', '2026-10-02T08:00:00Z', '2026-10-02T09:00:00Z'),
+        slot('2026-09-30T00:00:00.000Z', '2026-09-30T10:00:00Z', '2026-09-30T11:00:00Z'),
+      ])
+    );
+
+    // The September day appears once though two slots fall on it; the set is what scopes
+    // the query, so duplicates would only make the `$in` larger.
+    expect(days.map((day) => day.toISOString())).toEqual(['2026-09-30T00:00:00.000Z', '2026-10-02T00:00:00.000Z']);
+  });
+
+  it('returns a single day for a single-slot booking', () => {
+    expect(bookedDays(booking('a', false, [slot(DAY, '2026-03-04T08:00:00Z', '2026-03-04T09:00:00Z')]))).toEqual([
+      new Date(DAY),
+    ]);
   });
 });

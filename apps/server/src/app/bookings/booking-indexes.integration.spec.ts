@@ -67,9 +67,9 @@ describe('booking indexes over a real database', () => {
     return indexes.map((index) => JSON.stringify((index as {key: Record<string, unknown>}).key));
   };
 
-  it('builds the facility-month index', async () => {
+  it('builds the facility-slot-day index', async () => {
     expect(await indexKeys()).toContain(
-      JSON.stringify({'place.city': 1, 'place.place': 1, month: 1, accepted: 1, archive: 1}),
+      JSON.stringify({'place.city': 1, 'place.place': 1, 'bookedTimes.day': 1}),
     );
   });
 
@@ -81,11 +81,11 @@ describe('booking indexes over a real database', () => {
     expect(await indexKeys()).toContain(JSON.stringify({createdAt: -1, _id: -1}));
   });
 
-  it('uses an index for the facility-month list query rather than a collection scan', async () => {
+  it('uses an index for the conflict query rather than a collection scan', async () => {
     await bookingModel.create(booking());
 
     const explained = (await bookingModel
-      .find({'place.city': 'siechnice', 'place.place': 'hala-sportowa', month: 3, accepted: true, archive: false})
+      .find({'place.city': 'siechnice', 'place.place': 'hala-sportowa', 'bookedTimes.day': {$gte: new Date('2026-03-01T00:00:00Z'), $lte: new Date('2026-03-31T23:59:59Z')}})
       .explain('queryPlanner')) as {
       queryPlanner: {winningPlan: {stage: string; inputStage?: {stage: string}}};
     };

@@ -539,12 +539,15 @@ paths:
   /bookings/conflicts:
     get:
       tags: [bookings]
-      summary: Return conflicting unaccepted bookings for a facility and month
+      summary: Return conflicting unaccepted bookings for a facility over a period
       description: >
         The ids of the unaccepted bookings that conflict with at least one other booking
-        in the same facility and month. Administrator-only: the matrix gives the conflict
-        counter to administrators. Declared before `/bookings/{_id}` so the literal
-        segment is not read as an identifier.
+        in the same facility whose slots fall inside the period. Administrator-only: the
+        matrix gives the conflict counter to administrators. Declared before
+        `/bookings/{_id}` so the literal segment is not read as an identifier. The period
+        is expressed as two dates rather than a 0-based month index: the booking's stored
+        `month` is derived from its first slot, so it cannot describe a booking whose
+        slots straddle a month boundary, and the conflict scope must be the slot days.
       security: [{bearerAuth: []}]
       parameters:
         - name: city
@@ -555,10 +558,16 @@ paths:
           in: query
           required: true
           schema: {type: string}
-        - name: month
+        - name: from
           in: query
           required: true
-          schema: {type: integer, minimum: 0, maximum: 11}
+          description: Inclusive lower bound of the period, matched against the slot day.
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          required: true
+          description: Inclusive upper bound of the period, matched against the slot day.
+          schema: {type: string, format: date}
       responses:
         '200':
           description: Booking identifiers in conflict

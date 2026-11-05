@@ -287,38 +287,43 @@ describe('BookingService', () => {
       modelMock.find.mockResolvedValue([]);
     });
 
-    it('scopes the query to the facility and month', async () => {
-      await service.findConflictingBookingIds('siechnice', 'hala', 3);
+    const from = new Date('2026-03-01T00:00:00Z');
+    const to = new Date('2026-03-31T23:59:59Z');
 
+    it('scopes the query to the facility and the slot-day range, not the month scalar', async () => {
+      await service.findConflictingBookingIds('siechnice', 'hala', from, to);
+
+      // T054: the scope is the slot days, because the stored `month` is derived from the
+      // first slot and would miss a booking whose slots cross a month boundary.
       expect(modelMock.find).toHaveBeenCalledWith({
         'place.city': 'siechnice',
         'place.place': 'hala',
-        month: 3,
+        'bookedTimes.day': {$gte: from, $lte: to},
       });
     });
 
     it('returns the ids of the conflicting unaccepted bookings', async () => {
       modelMock.find.mockResolvedValue([
-        {_id: 'a', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
-        {_id: 'b', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
+        {_id: 'a', accepted: false, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
+        {_id: 'b', accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
       ]);
 
-      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).resolves.toEqual(['a', 'b']);
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', from, to)).resolves.toEqual(['a', 'b']);
     });
 
     it('excludes an accepted booking from the reported ids', async () => {
       modelMock.find.mockResolvedValue([
-        {_id: 'accepted', month: 3, accepted: true, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
-        {_id: 'pending', month: 3, accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
+        {_id: 'accepted', accepted: true, bookedTimes: [slot('2026-03-04T08:00:00Z', '2026-03-04T10:00:00Z')]},
+        {_id: 'pending', accepted: false, bookedTimes: [slot('2026-03-04T09:00:00Z', '2026-03-04T11:00:00Z')]},
       ]);
 
-      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).resolves.toEqual(['pending']);
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', from, to)).resolves.toEqual(['pending']);
     });
 
     it('maps a driver failure to an HTTP error', async () => {
       modelMock.find.mockRejectedValue(new Error('connection lost'));
 
-      await expect(service.findConflictingBookingIds('siechnice', 'hala', 3)).rejects.toMatchObject({message: 'connection lost'});
+      await expect(service.findConflictingBookingIds('siechnice', 'hala', from, to)).rejects.toMatchObject({message: 'connection lost'});
     });
   });
 
@@ -388,7 +393,6 @@ describe('BookingService', () => {
     const pending = (overrides: Record<string, unknown> = {}) => ({
       _id: 'target',
       place: {place: 'hala', city: 'siechnice'},
-      month: 3,
       accepted: false,
       bookedTimes: [{day: DAY, startHours: new Date('2026-03-04T08:00:00Z'), endHours: new Date('2026-03-04T10:00:00Z')}],
       ...overrides,
@@ -451,6 +455,18 @@ describe('BookingService', () => {
 
       expect(modelMock.find).not.toHaveBeenCalled();
       expect(modelMock.findOneAndUpdate).toHaveBeenCalled();
+    });
+
+    it('scopes the candidate query to the facility and the target\'s own slot days', async () => {
+      await service.setApproval('target', true, false);
+
+      // T054: the days the target occupies, not its stored `month`, so a booking whose
+      // slots straddle a month boundary loads both sides of the boundary.
+      expect(modelMock.find).toHaveBeenCalledWith({
+        'place.city': 'siechnice',
+        'place.place': 'hala',
+        'bookedTimes.day': {$in: [DAY]},
+      });
     });
 
     it('records the actor and the timestamp with the write', async () => {
