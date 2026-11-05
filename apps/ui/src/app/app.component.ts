@@ -1,31 +1,38 @@
-import {Component, inject, OnInit} from '@angular/core';
-import {RouterModule} from '@angular/router';
-import {HttpClient} from '@angular/common/http';
-import {map, take} from 'rxjs';
-import {FacilityDatePipe} from './shared/facility-date.pipe';
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { FooterComponent } from './shell/footer.component';
+import { NavComponent } from './shell/nav.component';
 
+/**
+ * The application shell: navigation, the routed page, and the footer.
+ *
+ * It holds no state of its own. The starter's `HttpClient` call to
+ * `http://localhost:3000/api` is gone — a hard-coded origin is wrong in every
+ * environment and the shell has no reason to talk to the API at all.
+ */
 @Component({
-  standalone: true,
-  imports: [RouterModule, FacilityDatePipe],
   selector: 'book-space-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  imports: [RouterOutlet, NavComponent, FooterComponent],
+  template: `
+    <div class="bs-app">
+      <book-space-nav />
+      <main class="bs-app__main">
+        <router-outlet />
+      </main>
+      <book-space-footer />
+    </div>
+  `,
+  styles: [
+    `
+      .bs-app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      .bs-app__main {
+        flex: 1;
+      }
+    `,
+  ],
 })
-export class AppComponent implements OnInit {
-  title = 'frontend';
-  ocean = '';
-  /** Rendered through `FacilityDatePipe` so the shell exercises the shared date-time module. */
-  today = new Date();
-
-  private readonly http = inject(HttpClient);
-
-  ngOnInit(): void {
-    this.http
-      .get<{message: string}>('http://localhost:3000/api')
-      .pipe(
-        take(1),
-        map((cur) => cur.message)
-      )
-      .subscribe((res) => (this.ocean = res));
-  }
-}
+export class AppComponent {}

@@ -250,9 +250,25 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
 - **Never commit `apps/server/.env`.** It is gitignored; `apps/server/.env.example` is the
   template. The real MongoDB URI and `JWT_SECRET` were committed historically and remain in
   git history.
-- **`ui:test` has a single spec.** `apps/ui/src/app/app.component.spec.ts` is the only one, and
-  it exists to guard the test harness and the HttpClient wiring. A green UI run is still thin
-  evidence that the UI works — do not read it as coverage of the app.
+- **`ui:test` is no longer a single spec (T032).** The UI foundation landed the shell, the core
+  stores/guards/interceptors and the shared kit with specs for each, so the project now has a
+  real suite. The original warning still holds in spirit: a green UI run is evidence the
+  *unit* behaviour works, not that the screens do — T034–T040 are the surfaces that need
+  their own tests. `apps/ui/jest.config.ts` carries a `coverageThreshold` that was measured at
+  introduction and is a ratchet; adding an untested component lowers it and fails the run.
+- **Angular is zoneless, so a spec cannot drive a component with a plain mutable field.**
+  `provideZonelessChangeDetection()` means only a signal write marks a view dirty. A host
+  whose binding is `[open]="open"` with `open` a plain property renders once and then ignores
+  every later `fixture.detectChanges()`, so the child's signal input never changes — the test
+  fails while the component is correct. Bind to a signal (`[open]="open()"`, `open = signal()`)
+  or use `fixture.componentRef.setInput(...)`. `ModalComponent`'s spec hit exactly this: the
+  open/close `effect` looked broken and was not. The same trap is why `test-setup.ts` calls
+  `setupZonelessTestEnv()`, not `setupZoneTestEnv()`.
+- **jsdom does not implement `HTMLDialogElement.showModal`/`close`.** `ModalComponent` is built
+  on the native `<dialog>` for the focus trapping and inertness it gives free, so the gap is in
+  the environment, not the component. `test-setup.ts` installs the two methods when they are
+  absent. Any future `<dialog>`-based control inherits that stand-in; do not "fix" a
+  `showModal is not a function` failure by moving off `<dialog>`.
 - **Integration tests use `createMongoTestContext()`** (`apps/server/src/testing/`). CI has no
   MongoDB, so it starts an ephemeral `mongod` via `mongodb-memory-server`. Three traps, all
   already handled there:

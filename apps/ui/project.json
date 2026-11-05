@@ -17,7 +17,6 @@
         },
         "index": "apps/ui/src/index.html",
         "browser": "apps/ui/src/main.ts",
-        "polyfills": ["zone.js"],
         "tsConfig": "apps/ui/tsconfig.app.json",
         "assets": ["apps/ui/src/favicon.ico", "apps/ui/src/assets"],
         "styles": ["apps/ui/src/styles.scss"],
