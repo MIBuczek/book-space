@@ -1,39 +1,30 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-// Guards the jest-preset-angular 15 migration: the harness must be able to
-// bootstrap the Angular testing environment at all. If `setupZoneTestEnv` is
-// missing or mis-wired, this fails rather than silently reporting no tests.
+// Guards the harness and the shell layout. The starter's HttpClient wiring is
+// gone: the shell no longer talks to the API, so the spec asserts the three
+// layout slots render rather than a hard-coded message.
 describe('AppComponent', () => {
-  let httpMock: HttpTestingController;
-
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideRouter([])],
     }).compileComponents();
-
-    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
-
-  it('creates the component', () => {
+  it('creates the shell', () => {
     const fixture = TestBed.createComponent(AppComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  // Covers the Stage 3b change from constructor injection to inject() and the
-  // HttpClientModule to provideHttpClient() swap: the component must still be
-  // able to issue the request and project the response onto `ocean`.
-  it('loads the api message on init', () => {
+  it('renders the navigation, the routed outlet and the footer', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
 
-    httpMock.expectOne('http://localhost:3000/api').flush({ message: 'hello' });
-
-    expect(fixture.componentInstance.ocean).toBe('hello');
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('book-space-nav')).not.toBeNull();
+    expect(element.querySelector('router-outlet')).not.toBeNull();
+    expect(element.querySelector('book-space-footer')).not.toBeNull();
   });
 });

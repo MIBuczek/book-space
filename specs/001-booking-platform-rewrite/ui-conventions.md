@@ -214,53 +214,29 @@ export const adminGuard: CanActivateFn = () => {
 
 ## Zoneless
 
-**This is the one genuine migration item.** Zone.js is still wired up:
+**Landed in T032, before any feature component.** Zone.js is no longer wired up:
 
 ```
-apps/ui/project.json   →  targets.build.options.polyfills: ["zone.js"]
-apps/ui/src/test-setup.ts  →  setupZoneTestEnv()
-package.json           →  zone.js ~0.16.0
+apps/ui/project.json   →  polyfills: ["zone.js"] removed
+apps/ui/src/test-setup.ts  →  setupZonelessTestEnv()
+apps/ui/src/app/app.config.ts  →  provideZonelessChangeDetection()
 ```
 
-Verified working on the current tree — both changes applied together:
-
-```
-build   Application bundle generation complete   (300K → 264K)
-test    Test Suites: 1 passed   Tests: 2 passed
-```
-
-The change:
-
-```ts
-// app.config.ts
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideZonelessChangeDetection(),   // add
-    provideRouter(appRoutes, withEnabledBlockingInitialNavigation()),
-    provideHttpClient(),
-  ],
-};
-```
-
-```ts
-// test-setup.ts
-import { setupZonelessTestEnv } from 'jest-preset-angular/setup-env/zoneless';
-setupZonelessTestEnv();
-```
-
-and delete `polyfills: ["zone.js"]` from `apps/ui/project.json`.
-
-### Do this before T032, not after
+`package.json` still declares `zone.js ~0.16.0`, but nothing imports it — the build no longer
+lists it as a polyfill and no source references it. It can be dropped from `package.json` in a
+dependency cleanup, not as part of a feature task.
 
 Under Zone.js, a missed change-detection trigger is invisible — a template reading a plain
 field still updates, because the zone re-runs detection on every async boundary. Zoneless
 removes that safety net: **a value that is not a signal does not update the view.**
 
-Enabling zoneless first makes every "I forgot a signal" bug surface immediately, while the
-codebase is one component. Enabling it after 40 components means auditing all of them.
+Enabling zoneless first made every "I forgot a signal" bug surface immediately, while the
+codebase was one component; doing it after 40 components would mean auditing all of them.
 
 Cost while it is on: every mutable field read by a template must be a signal, and
-`markForCheck` is no longer available as a crutch.
+`markForCheck` is no longer available as a crutch. It also bites in specs — a test host that
+drives a component through a plain field silently stops updating after the first render. See
+the two zoneless notes in `AGENTS.md` for the shape that failure takes.
 
 ## Forms
 

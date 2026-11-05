@@ -62,7 +62,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 ## Phase 6 — Angular UI
 
-- [ ] T032 [P] UI foundation: application shell, routing for public and admin areas, HTTP interceptor attaching the bearer token, 401 handling, an error boundary, and a shared UI kit (button, input, select, checkbox, table, modal, pagination, date picker). (FR-039, NFR-006)
+- [X] T032 [P] UI foundation: application shell, routing for public and admin areas, HTTP interceptor attaching the bearer token, 401 handling, an error boundary, and a shared UI kit (button, input, select, checkbox, table, modal, pagination, date picker). (FR-039, NFR-006)
 - [ ] T033 [US2] Sign-in page, auth service with token storage, route guards for the admin area, and role-based navigation. (FR-001, FR-004, contracts/authorization-matrix.md)
 - [ ] T034 [US1] Public calendar: city and facility selectors, weekly/day/list views, event rendering with the accepted/unaccepted/quit colouring and the "only accepted bookings" notice. (FR-037, FR-038)
 - [ ] T035 [US1] Public booking request form: tenant fields, size selection limited to the facility's sizes, multi-slot entry, cyclical option, extra options for facilities that support them, RODO acknowledgement, and client-side validation mirroring the server. (FR-011, FR-012, FR-013)
