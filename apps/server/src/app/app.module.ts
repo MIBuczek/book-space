@@ -11,6 +11,7 @@ import {UsersModule} from './users/users.module';
 import {JwtModule} from '@nestjs/jwt';
 import {ClientModule} from './clients/client.module';
 import {BuildingModule} from './buildings/building.module';
+import {ReportingModule} from './reporting/reporting.module';
 import {PassportModule} from '@nestjs/passport';
 import {AuthorizationModule} from './authorization/authorization.module';
 import {validateEnv} from './config/env.validation';
@@ -38,7 +39,8 @@ import {LoggingModule} from './logging/logging.module';
     NotificationModule,
     UsersModule,
     ClientModule,
-    BuildingModule
+    BuildingModule,
+    ReportingModule
   ],
   controllers: [AppController],
   providers: [AppService]

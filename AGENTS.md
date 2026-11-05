@@ -750,3 +750,42 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   runs and the suite fails in teardown on `undefined`, which reads like a different bug — this
   passed locally and failed only in CI. `jest.config.ts` sets `testTimeout: 120_000` globally
   so a new spec cannot forget it.
+- **A service that reads a document through `.lean()` needs the stub to return a query, not a
+  promise.** `NotificationService.loadBooking` and `ReportingService.requireClient` call
+  `model.findOne(...).lean()`, so a unit-spec stub of `findOne` that resolves the document
+  itself throws `findOne(...).lean is not a function` and the service maps it to a 500 — the
+  test then fails with a status mismatch rather than the real cause. Stub
+  `findOne: () => ({lean: () => Promise.resolve(doc)})`.
+- **A boolean query flag needs `@BooleanQuery()`, not a bare `@IsBoolean()`.** The global pipe
+  runs with `transformOptions.enableImplicitConversion`, which coerces a query string with
+  `Boolean(value)` — and `Boolean('false')` is `true`. So `?fromTheBeginning=false` inverts.
+  A `@Transform` that reads the callback's `value` does **not** help: `value` is already
+  coerced by the time the transform runs. Read the raw source instead — the callback's
+  `obj[key]` is still the string. `summary-query.dto.ts` and `booking-query.dto.ts` both carry
+  a local `BooleanQuery`; each drives the real `ValidationPipe` in its spec, because a
+  hand-built `plainToInstance` would not reproduce it.
+- **A `@BooleanQuery()` transform needs an explicit-`undefined` case in its spec to reach the
+  branch it guards.** The branch is `raw === undefined ? undefined : ...`, and a query object
+  that omits the key (`{}`) does not run the transform at all — class-transformer skips an
+  absent key. `transform({fromTheBeginning: undefined})` is what executes the `undefined` arm;
+  without it the file sits at 75% branches and the reporting coverage group's 80% floor hides
+  a genuinely uncovered path.
+- **The reporting month range is facility-local, not UTC.** `startOfFacilityMonth` /
+  `endOfFacilityMonth` (`utility/facility-time.ts`) go through `instantFromWallClock`, so a
+  slot late on the last local day of a month belongs to that month even when its instant is in
+  the next UTC month. A `Date.UTC` bound would move a booking between months at the edges.
+- **The CSV column labels are the contract (FR-028), so the label set and order are asserted
+  one name at a time.** The file is `\uFEFF`-prefixed, `\r\n`-terminated and `;`-separated, and
+  the header is built from `CSV_COLUMNS.map((c) => c.label).join(';')`. A count assertion would
+  not catch a renamed or reordered column, and a downstream spreadsheet would silently read the
+  wrong column.
+- **The mail transport fails rather than dropping a message.** With `MAIL_ENDPOINT`/`MAIL_FROM`
+  unset the module installs `UnconfiguredMailTransport`, which throws on every send; the
+  service maps that to `502` (FR-036). A transport that resolved instead would report success
+  for a notification the operator believes was sent. The recipient is always resolved
+  server-side — never from the request body — so a caller cannot redirect a notification
+  (FR-035). `POST /notifications/booking` is `OFFICE`/`ADMIN`; `POST /notifications/message` is
+  public for the contact form.
+- **`POST /notifications/*` answers `202`, and Nest's `POST` default is `201`.** Both routes
+  need `@HttpCode(HttpStatus.ACCEPTED)`. Without it the integration spec's `202` assertion
+  fails for a reason unrelated to the behaviour (same trap as the approve/archive routes).

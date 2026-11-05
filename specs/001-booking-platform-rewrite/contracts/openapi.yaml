@@ -586,7 +586,6 @@ paths:
   /reporting/summary:
     get:
       tags: [reporting]
-      x-status: to-build
       summary: Per-client rental summary grouped by city (office or administrator)
       security: [{bearerAuth: []}]
       parameters:
@@ -609,13 +608,18 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ClientSummary'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Missing client, missing/inverted range, or a malformed month
 
   /reporting/summary.csv:
     get:
       tags: [reporting]
-      x-status: to-build
       summary: CSV export of the summary (one client, or all clients)
       security: [{bearerAuth: []}]
       parameters:
@@ -637,14 +641,17 @@ paths:
           content:
             text/csv:
               schema: {type: string}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Missing or inverted range, or a malformed month
 
   /notifications/booking:
     post:
       tags: [notifications]
-      x-status: to-build
-      summary: Send a booking notification to the facility or to SISK staff
+      summary: Send a booking notification to the facility or to SISK staff (office or administrator)
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -657,13 +664,20 @@ paths:
                 bookingId: {type: string}
                 audience: {type: string, enum: [FACILITY, STAFF]}
       responses:
-        '202': {description: Queued or sent}
+        '202': {description: Accepted; the recipient is resolved server-side}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Missing booking id, or an unknown audience
         '502': {description: Provider failure; the booking is unaffected}
 
   /notifications/message:
     post:
       tags: [notifications]
-      x-status: to-build
       summary: Send a contact-form or facility-employee message
       requestBody:
         required: true
@@ -680,7 +694,9 @@ paths:
                 recipient: {type: string, format: email}
       responses:
         '202': {description: Accepted}
-        '502': {description: Provider failure}
+        '422':
+          description: Missing field, or a malformed sender/recipient address
+        '502': {description: Provider failure, or an unconfigured mailbox}
 
 components:
   securitySchemes:
