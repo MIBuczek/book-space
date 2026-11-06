@@ -159,6 +159,17 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   re-checked on the *merged* record in the service, which is the only point both halves are
   visible. `ClientService.updateClient` merges `{...current.toObject(), ...body}` and refuses a
   company left without a NIP; a DTO-only implementation would let that through.
+- **The clients read is paged and searchable, and it reuses the booking list's helpers (T037,
+  #123).** `GET /clients` answered a bare array and downloaded the whole collection, which
+  FR-043 forbids; it now answers the same `{items, total, page, limit}` envelope `GET /bookings`
+  does. `resolvePagination` and `DEFAULT_LIMIT` are imported from `bookings/list/booking-list`
+  rather than copied, so the two reads cannot disagree on a default or a cap, and the escape for
+  the search term lives in `utility/escape-regexp.ts` for the same reason — one list escaping
+  and the other not is the drift that matters. The sort is `{name: 1, _id: 1}`: `name` is the
+  column and the index, and `_id` breaks a tie so two clients with the same name do not swap
+  between pages (the same total-order reasoning as the booking recency index). A whitespace-only
+  or empty `search` is dropped rather than compiled, because a `$regex: ''` matches every record
+  and looks like a working search that returns everything.
 - **The global `ValidationPipe` does not validate a top-level array body.** Nest's pipe
   declines an `Array` metatype (`toValidate` excludes it), so `@Body() x: SomeDto[]` reaches the
   handler unchecked — no `whitelist`, no field rules, and an extra property is silently kept.
@@ -731,20 +742,33 @@ Three things that are easy to get wrong:
   `status() === 'error'`. `nx test` does not type-check the template, so a green test run says
   nothing about it — the build is the only place this shows up, the same "a green test run is
   not a type check" shape as the server's `nx test`/`nx build` note.
-- **A `linkedSignal` computation runs only when its source changes value.** `building`'s
-  keep-the-previous branch fires when a facility refresh produces a *new* options array with the
-  same values; if the spec flushes the same array reference, `buildingOptions` stays memoised and
-  the computation never re-runs. Flush a fresh copy (`FACILITIES.map((f) => ({...f}))`), as a real
-  HTTP response is, or the branch is silently uncovered and the "keeps the chosen facility" test
-  passes for the wrong reason.
+- **`rxResource`'s `params` must be an object, and the object's identity is the reload key.**
+  `stream: ({params}) => api.list(params)` gives the stream the resolved params rather than the
+  whole request context. The `clients` tab passes `{search, page, limit}`; a `search` of `''` is
+  sent as `undefined` so the request omits the key (the server treats an absent search as "no
+  filter", and a `$regex: ''` would match everything).
+- **A component that reloads after a write needs the `reload()` to be awaited in the spec, and
+  `await Promise.resolve()` is not enough.** `rxResource.reload()` schedules the re-subscribe on
+  a microtask chain that a single `Promise.resolve()` does not drain, so `httpMock.expectOne`
+  finds no request and the test fails with "found none". `await new Promise((resolve) =>
+  setTimeout(resolve))` before the `expectOne` is the reliable flush.
+- **A `Row`/record read off a `Record<string, unknown>` must be indexed with brackets under
+  `strict`.** `toRow(client)` returns `Record<string, unknown>`, so `row.nipLabel` is TS4111
+  ("comes from an index signature, so it must be accessed with `['nipLabel']`"). The template's
+  `row.nipLabel` is fine (Angular's template type-checker permits it); only the spec's direct
+  access needs `row['nipLabel']`. This compiles under `nx test`'s ts-jest only because the spec
+  tsconfig is checked, so a green run does catch it — the failure is at suite-compile time, not
+  at an assertion.
 - **A test helper that finds a control by label must scope to the panel when labels repeat.**
   `control(fixture, label)` matched any `<label>` whose text *contains* the string, so the
   reschedule dialog's "Od"/"Do" hour selects resolved to the period loader's "Od początku"
   option instead — `setSelect` silently set the wrong `<select>` and the assertion failed for a
   reason unrelated to the reschedule. Pass the dialog root (`reschedulePanel(fixture)`) so the
   lookup is scoped. The same trap applies to `pressButton`, whose label match is exact but whose
-  root must be the panel when the button text also appears elsewhere.
-- **The `bookings` tab is a body in `admin.routes.ts`'s `TAB_COMPONENTS`, and `app.routes.spec`
+  root must be the panel when the button text also appears elsewhere. The `clients` spec hits
+  the same shape: "Zapisz"/"Anuluj" appear in the form panel and would resolve to a row action
+  without the `formPanel(fixture)` root.
+- **A tab's body is a body in `admin.routes.ts`'s `TAB_COMPONENTS`, and `app.routes.spec`
   asserts that map.** The tab list and the routes come from `ADMIN_TABS`, but the *body* is a
   separate decision (`T036–T039` land one tab at a time). A tab absent from the map still gets a
   route and renders `AdminTabPlaceholderComponent`; moving a tab into the map is the whole

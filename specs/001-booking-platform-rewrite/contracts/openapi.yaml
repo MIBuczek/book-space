@@ -177,16 +177,38 @@ paths:
   /clients:
     get:
       tags: [clients]
-      summary: List clients (office or administrator)
+      summary: List clients, paged and searchable (office or administrator)
+      description: >
+        Returns the `{items, total, page, limit}` envelope; `total` is the count before
+        pagination. `search` is a case-insensitive substring match over the client `name`,
+        `contactPerson`, `email` and `phone`. The read is paged so no endpoint returns the
+        whole collection by default (FR-043).
       security: [{bearerAuth: []}]
+      parameters:
+        - name: search
+          in: query
+          description: Substring match over name, contact person, e-mail and phone.
+          schema: {type: string, maxLength: 125}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
       responses:
         '200':
-          description: Clients
+          description: Paged clients
           content:
             application/json:
               schema:
-                type: array
-                items: {$ref: '#/components/schemas/Client'}
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Client'}
+                  total: {type: integer}
+                  page: {type: integer}
+                  limit: {type: integer}
         '403':
           $ref: '#/components/responses/Forbidden'
     post:

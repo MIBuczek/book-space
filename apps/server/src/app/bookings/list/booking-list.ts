@@ -1,4 +1,5 @@
 import {currentAcademicYearRange} from '@booking/date-time';
+import {escapeRegExp} from '../../utility/escape-regexp';
 
 /**
  * Booking-list scoping and pagination (FR-020, FR-022, FR-043, research.md R9).
@@ -172,15 +173,6 @@ const resolveBookingListRequest = (
 
   return {filter, pagination};
 };
-
-/**
- * Escapes the regular-expression metacharacters in a search term.
- *
- * A tenant-name search is a substring match, not a pattern: without this a name
- * containing `.` or `*` would be read as a pattern (matching more than the caller
- * asked for) and a term such as `(` would be an invalid expression the driver rejects.
- */
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Turns the filter into a MongoDB query document.

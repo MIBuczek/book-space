@@ -3,7 +3,9 @@ import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {Client, TClient} from '../schemas/client.schema';
 import {ClientDto, UpdateClientDto} from '../models/client.dto';
+import {ClientQueryDto} from '../models/client-query.dto';
 import {isNipValid} from '../models/client-nip.validator';
+import {buildClientQuery, resolveClientListRequest} from '../list/client-list';
 import {errorMessage, errorStatus} from '../../utility/http-error';
 
 /** The fields a caller may change. `createdAt`/`updatedAt` are server-owned. */
@@ -97,9 +99,31 @@ export class ClientService {
     }
   }
 
-  async findAllClients() {
+  /**
+   * Lists clients, paged and searchable (FR-022, FR-024, FR-043).
+   *
+   * The read used to return the whole collection; the search and the page are resolved by
+   * `resolveClientListRequest` and the query built by `buildClientQuery`, both pure, so the
+   * service stays a thin wrapper. `total` is a `countDocuments` on the same filter, so it is
+   * the pre-pagination count and a client can page without a second request — the same
+   * envelope `GET /bookings` answers. The sort is `{name: 1, _id: 1}`: `name` is the column
+   * the list shows and the index the search uses, and `_id` breaks a tie so two clients with
+   * the same name do not swap between pages.
+   */
+  async findAllClients(query: ClientQueryDto = {}) {
+    const {filter, pagination} = resolveClientListRequest(query);
+    const criteria = buildClientQuery(filter);
     try {
-      return await this.clientModel.find({});
+      const [items, total] = await Promise.all([
+        this.clientModel.find(criteria, null, {
+          sort: {name: 1, _id: 1},
+          skip: pagination.skip,
+          limit: pagination.limit,
+          lean: true
+        }),
+        this.clientModel.countDocuments(criteria)
+      ]);
+      return {items, total, page: pagination.page, limit: pagination.limit};
     } catch (e) {
       throw new HttpException(errorMessage(e), errorStatus(e));
     }

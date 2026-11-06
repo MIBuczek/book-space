@@ -48,9 +48,10 @@ describe('ClientController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('lists clients through the service', async () => {
-    await controller.getAllClients();
-    expect(service.findAllClients).toHaveBeenCalledTimes(1);
+  it('lists clients through the service with the query', async () => {
+    const query = {search: 'Jan', page: 2};
+    await controller.getAllClients(query as never);
+    expect(service.findAllClients).toHaveBeenCalledWith(query);
   });
 
   it('forwards the id when reading one client', async () => {

@@ -15,6 +15,7 @@ import { ADMIN_TABS } from '../../shell/navigation';
 const TAB_COMPONENTS: Record<string, Route['loadComponent']> = {
   bookings: () =>
     import('./bookings/bookings-table.component').then((m) => m.BookingsTableComponent),
+  clients: () => import('./clients/clients-table.component').then((m) => m.ClientsTableComponent),
 };
 
 /**

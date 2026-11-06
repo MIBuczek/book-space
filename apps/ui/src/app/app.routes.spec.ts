@@ -82,7 +82,10 @@ describe('adminRoutes', () => {
     // The tab that has a real body is keyed by path; every other tab still renders the
     // shared placeholder. The map is the whole difference, so a tab added to `ADMIN_TABS`
     // gets a route either way.
-    const realBodies: Record<string, string> = { bookings: 'BookingsTableComponent' };
+    const realBodies: Record<string, string> = {
+      bookings: 'BookingsTableComponent',
+      clients: 'ClientsTableComponent',
+    };
 
     for (const tab of ADMIN_TABS) {
       const tabRoute = child(tab.path);
