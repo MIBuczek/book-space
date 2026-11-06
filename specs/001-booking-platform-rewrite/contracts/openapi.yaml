@@ -243,7 +243,15 @@ paths:
     get:
       tags: [buildings]
       summary: List facilities with city, sizes and options
-      security: [{bearerAuth: []}]
+      description: >
+        Public and staff, one route at two levels of detail (the same shape
+        `GET /bookings` uses). An anonymous caller receives `_id`, `name`, `property`,
+        `city`, `sizes`, `lighting` and `toilets` — what the calendar's city/facility
+        selectors and the booking form's size options need (FR-007). `email`, `phone`,
+        `employees`, `street` and `zipCode` are removed for a public caller and are
+        staff-only (the Facilities tab, FR-009). An invalid credential is refused with
+        `401` rather than downgraded to an anonymous request.
+      security: []
       responses:
         '200':
           description: Facilities

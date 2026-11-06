@@ -6,52 +6,72 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import {Request} from 'express';
 import {AuthGuard} from '@nestjs/passport';
 import {BuildingService} from '../service/building.service';
 import {BuildingDto, UpdateBuildingDto} from '../models/building.dto';
 import {RolesGuard} from '../../authorization/guards/roles.guard';
 import {Roles} from '../../authorization/decorators/roles.decorator';
+import {OptionalJwtAuthGuard} from '../../authorization/guards/optional-jwt-auth.guard';
+import {CurrentUser} from '../../authorization/decorators/current-user.decorator';
+import {IActingUser, isStaff} from '../../authorization/ownership';
+import {serializePublicBuildings} from '../models/building.serializer';
 
 /**
- * Read is every staff role; write is `ADMIN` only (authorization matrix rows "Read
- * facilities and employees" and "Create/update/delete facilities").
+ * Facilities. The list is public; the single read and every write are staff-only.
  *
- * The read set is the class default and the write routes override it, so a route added
- * later is restricted by default. `RolesGuard` prefers the handler's `@Roles` over the
- * class one.
+ * `GET /buildings` is one route at two levels of detail, the same shape `GET /bookings`
+ * uses (T034). A public visitor needs the facility list to populate the calendar's city
+ * and facility selectors and the booking form's size options (FR-007), so the route runs
+ * `OptionalJwtAuthGuard` and answers a redacted record to an anonymous caller. It is
+ * fail-closed on both inputs — `request.isPublic` must be exactly `false` and the user must
+ * carry a recognised role — so a request that never reached the guard, or an authenticated
+ * request that lost its user, is served the public shape rather than the staff one.
  *
- * `OFFICE` is included in the read set because the matrix's "Read facilities and
- * employees" row is `isAdmin || isOffice || isEmployee`; the legacy
- * `adminSeeContentCredentials` gate quoted by the issue is the Clients/Facilities *tab*,
- * which is narrower than the facility *read*. Where the two disagree the matrix wins, and
- * an office user is not a write role here (the "Create/update/delete facilities" row is
- * administrator-only).
+ * The single read (`GET /buildings/:_id`) and the writes stay behind `AuthGuard('jwt')`
+ * and `RolesGuard`. Guards are attached per route rather than at the class, because a
+ * class-level `AuthGuard('jwt')` runs *before* the method's `OptionalJwtAuthGuard` (Nest
+ * concatenates class and method guards) and would reject the anonymous list request the
+ * route exists to serve.
+ *
+ * The write role set is `ADMIN` (authorization matrix: "Create/update/delete facilities");
+ * the staff read set is `EMPLOYEE`, `OFFICE` and `ADMIN`, since the matrix's "Read
+ * facilities and employees" row is every staff role and the booking form needs the facility
+ * list. Where the tab gate (`canSeeFacilitiesTab`, office/administrator) is narrower than
+ * the read, the matrix wins.
  */
 @Controller('buildings')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('EMPLOYEE', 'OFFICE', 'ADMIN')
 export class BuildingController {
   constructor(private buildingService: BuildingService) {}
 
   @Get()
-  getAllBuildings() {
-    return this.buildingService.findAllBuildings();
+  @UseGuards(OptionalJwtAuthGuard)
+  async getAllBuildings(@Req() request: Request, @CurrentUser() user: IActingUser | undefined) {
+    const staff = request.isPublic === false && isStaff(user);
+    const buildings = await this.buildingService.findAllBuildings();
+
+    return staff ? buildings : serializePublicBuildings(buildings);
   }
 
   @Get(':_id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('EMPLOYEE', 'OFFICE', 'ADMIN')
   getSingleBuilding(@Param('_id') _id: string) {
     return this.buildingService.findBuilding(_id);
   }
 
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   createBuilding(@Body() newBuilding: BuildingDto) {
     return this.buildingService.createBuilding(newBuilding);
   }
 
   @Put(':_id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   updateBuilding(
     @Param('_id') _id: string,
@@ -61,6 +81,7 @@ export class BuildingController {
   }
 
   @Delete(':_id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('ADMIN')
   deleteBuilding(@Param('_id') _id: string) {
     return this.buildingService.deleteBuilding(_id);

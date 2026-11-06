@@ -116,4 +116,63 @@ describe('facility identity over HTTP', () => {
       toilets: true,
     });
   });
+
+  describe('public facility read (T034)', () => {
+    beforeEach(async () => {
+      await buildingModel.create(facility());
+    });
+
+    it('serves the facility list to an anonymous caller', async () => {
+      const response = await fetch(`${ctx.baseUrl}/buildings`);
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as Array<Record<string, unknown>>;
+      expect(body).toHaveLength(1);
+      expect(body[0]).toMatchObject({
+        name: 'Hala sportowa',
+        property: 'hala-sportowa',
+        city: 'siechnice',
+        sizes: ['1/1', '1/2'],
+      });
+    });
+
+    it('removes the contact details and the employee list for an anonymous caller', async () => {
+      const response = await fetch(`${ctx.baseUrl}/buildings`);
+      // Asserted on the raw response text: a field present but `undefined` still travels,
+      // and a property assertion would not see it.
+      const text = await response.text();
+
+      expect(text).not.toContain('siechnice.hala@gmail.com');
+      expect(text).not.toContain('609996064');
+      expect(text).not.toContain('Bożena Kaczyńska');
+      expect(text).not.toContain('55-010');
+    });
+
+    it('serves the full record, including the contact details, to a staff caller', async () => {
+      const token = await signIn('admin@example.com');
+
+      const response = await fetch(`${ctx.baseUrl}/buildings`, {
+        headers: {authorization: `Bearer ${token}`},
+      });
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as Array<Record<string, unknown>>;
+      expect(body[0]).toMatchObject({email: 'siechnice.hala@gmail.com'});
+      expect(body[0].employees).toEqual(['Bożena Kaczyńska']);
+    });
+
+    it('refuses an invalid token rather than downgrading it to anonymous', async () => {
+      const response = await fetch(`${ctx.baseUrl}/buildings`, {
+        headers: {authorization: 'Bearer not-a-real-token'},
+      });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('keeps the single read staff-only', async () => {
+      const response = await fetch(`${ctx.baseUrl}/buildings/000000000000000000000000`);
+
+      expect(response.status).toBe(401);
+    });
+  });
 });

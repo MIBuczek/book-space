@@ -58,7 +58,8 @@ is now configuration.
 | See the conflict counter | ❌ | ❌ | ❌ | ✅ | `Bookings.tsx` |
 | Read clients | ❌ | ❌ | ✅ | ✅ | `adminSeeContentCredentials` — **enforced (T025)**: `ClientController` is `@Roles('OFFICE','ADMIN')` |
 | Create/update/delete clients | ❌ | ❌ | ❌ | ✅ | `Clients.tsx` (`adminCredentials`) — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
-| Read facilities and employees | ❌ | ✅ | ✅ | ✅ | `Building.tsx`, `hasRightsToSeeContent` — **enforced (T025)**: `BuildingController` is `@Roles('EMPLOYEE','OFFICE','ADMIN')` |
+| Read facilities and employees | ❌ | ✅ | ✅ | ✅ | `Building.tsx`, `hasRightsToSeeContent` — **enforced (T025)**: the single read and the writes are `@Roles('EMPLOYEE','OFFICE','ADMIN')` and `@Roles('ADMIN')` respectively |
+| Read the facility list (city, sizes, options) | ✅ | ✅ | ✅ | ✅ | `getBookingDataForUser` / `Calender.tsx` — the public calendar's selectors and the booking form's size options (FR-007, T034). `GET /buildings` is `OptionalJwtAuthGuard`; an anonymous caller receives a redacted facility (no `email`/`phone`/`employees`/`street`/`zipCode`). The contact details and employee list above stay staff-only |
 | Create/update/delete facilities | ❌ | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
 | Generate summary reports | ❌ | ❌ | ✅ | ✅ | `summaryUserRestriction` |
 | Generate summary reports (denied account) | ❌ | ❌ | ❌ | ❌ | `mkulakowski@umsiechnice.pl` |
