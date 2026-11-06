@@ -79,13 +79,20 @@ describe('adminRoutes', () => {
   });
 
   it('declares one guarded, lazily loaded route per tab', async () => {
+    // The tab that has a real body is keyed by path; every other tab still renders the
+    // shared placeholder. The map is the whole difference, so a tab added to `ADMIN_TABS`
+    // gets a route either way.
+    const realBodies: Record<string, string> = { bookings: 'BookingsTableComponent' };
+
     for (const tab of ADMIN_TABS) {
       const tabRoute = child(tab.path);
       expect(tabRoute.canMatch).toHaveLength(1);
       expect(tabRoute.data).toEqual({ title: tab.label });
 
       const component = await tabRoute.loadComponent?.();
-      expect((component as { name: string }).name).toBe('AdminTabPlaceholderComponent');
+      expect((component as { name: string }).name).toBe(
+        realBodies[tab.path] ?? 'AdminTabPlaceholderComponent'
+      );
     }
   });
 

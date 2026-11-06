@@ -74,6 +74,21 @@ export class BookingQueryDto {
   })
   clientId?: string;
 
+  /**
+   * Tenant-name search (FR-021). Staff-only in effect: the public branch of
+   * `resolveBookingListRequest` does not carry it, and a public caller has no tenant
+   * names to search anyway. Bounded in length so a pathological term is refused at the
+   * boundary rather than turned into an unbounded regex.
+   */
+  @Validator.IsOptional()
+  @Validator.IsString({
+    message: 'Search need to be a string.'
+  })
+  @Validator.MaxLength(125, {
+    message: 'Search can have maximal 125 characters.'
+  })
+  search?: string;
+
   @Validator.IsOptional()
   @Validator.IsInt({
     message: 'Page need to be an integer.'

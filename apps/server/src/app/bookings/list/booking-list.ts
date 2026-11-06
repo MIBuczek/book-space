@@ -106,6 +106,8 @@ interface IBookingListFilter {
   accepted?: boolean;
   archive: boolean;
   clientId?: string;
+  /** Tenant-name search (FR-021), matched case-insensitively against `personName`. */
+  search?: string;
 }
 
 /**
@@ -121,6 +123,7 @@ interface IBookingListRequest {
   accepted?: boolean;
   archive?: boolean;
   clientId?: string;
+  search?: string;
   page?: number;
   limit?: number;
   all?: boolean;
@@ -157,6 +160,7 @@ const resolveBookingListRequest = (
         accepted: input.accepted,
         archive: input.archive ?? false,
         clientId: input.clientId,
+        search: input.search,
       }
     : {
         ...range,
@@ -168,6 +172,15 @@ const resolveBookingListRequest = (
 
   return {filter, pagination};
 };
+
+/**
+ * Escapes the regular-expression metacharacters in a search term.
+ *
+ * A tenant-name search is a substring match, not a pattern: without this a name
+ * containing `.` or `*` would be read as a pattern (matching more than the caller
+ * asked for) and a term such as `(` would be an invalid expression the driver rejects.
+ */
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Turns the filter into a MongoDB query document.
@@ -194,6 +207,14 @@ const buildBookingQuery = (filter: IBookingListFilter): Record<string, unknown> 
   }
   if (filter.clientId !== undefined) {
     query.clientId = filter.clientId;
+  }
+  if (filter.search !== undefined && filter.search.trim() !== '') {
+    // Substring match on the tenant name (FR-021). The legacy search matched `person`
+    // case-insensitively with `includes`; the same semantics here are a case-insensitive
+    // regex, with the term escaped so it is a substring rather than a pattern. `nick` is
+    // not searched: FR-021 names the tenant name, and `nick` is a public calendar label,
+    // not an identifier staff look a booking up by.
+    query.personName = {$regex: escapeRegExp(filter.search.trim()), $options: 'i'};
   }
   if (filter.from !== undefined || filter.to !== undefined) {
     const range: Record<string, Date> = {};

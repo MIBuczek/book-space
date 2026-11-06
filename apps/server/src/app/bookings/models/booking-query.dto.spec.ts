@@ -44,6 +44,15 @@ describe('BookingQueryDto', () => {
       expect(dto.accepted).toBeUndefined();
     });
 
+    it('leaves an explicitly undefined flag undefined', async () => {
+      // A query object that omits the key does not run the transform at all
+      // (class-transformer skips an absent key), so this is the only case that executes
+      // the `raw === undefined` arm of `BooleanQuery`.
+      const dto = await transform({archive: undefined});
+
+      expect(dto.archive).toBeUndefined();
+    });
+
     it('accepts a boolean that is already a boolean', async () => {
       // Nest parses some query formats into real booleans before the pipe sees them, so
       // the transform must pass a boolean through unchanged as well as parse a string.
@@ -76,6 +85,20 @@ describe('BookingQueryDto', () => {
 
     it('rejects a page below 1', async () => {
       await expect(transform({page: '0'})).rejects.toThrow();
+    });
+  });
+
+  describe('tenant-name search', () => {
+    it('accepts a search term and passes it through', async () => {
+      await expect(transform({search: 'Kowalski'})).resolves.toMatchObject({search: 'Kowalski'});
+    });
+
+    it('rejects a search longer than the tenant-name bound', async () => {
+      await expect(transform({search: 'x'.repeat(126)})).rejects.toThrow();
+    });
+
+    it('rejects a non-string search', async () => {
+      await expect(transform({search: ['a', 'b']})).rejects.toThrow();
     });
   });
 
