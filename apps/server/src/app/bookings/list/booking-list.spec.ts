@@ -142,4 +142,35 @@ describe('buildBookingQuery', () => {
     expect(buildBookingQuery({archive: false})).not.toHaveProperty('clientId');
     expect(buildBookingQuery({archive: false, clientId: 'c1'})).toMatchObject({clientId: 'c1'});
   });
+
+  describe('tenant-name search', () => {
+    it('matches the tenant name case-insensitively', () => {
+      expect(buildBookingQuery({archive: false, search: 'Kowalski'})).toMatchObject({
+        personName: {$regex: 'Kowalski', $options: 'i'},
+      });
+    });
+
+    it('omits the search when it is absent, empty or whitespace', () => {
+      expect(buildBookingQuery({archive: false})).not.toHaveProperty('personName');
+      expect(buildBookingQuery({archive: false, search: ''})).not.toHaveProperty('personName');
+      expect(buildBookingQuery({archive: false, search: '   '})).not.toHaveProperty('personName');
+    });
+
+    it('trims the term before matching', () => {
+      expect(buildBookingQuery({archive: false, search: '  Kowalski  '})).toMatchObject({
+        personName: {$regex: 'Kowalski', $options: 'i'},
+      });
+    });
+
+    it('escapes regex metacharacters so the term is a substring, not a pattern', () => {
+      // Without escaping, `a.b` would match `axb` and `(` would be an invalid expression the
+      // driver rejects; the search is a substring match, not a pattern.
+      expect(buildBookingQuery({archive: false, search: 'a.b'})).toMatchObject({
+        personName: {$regex: 'a\\.b', $options: 'i'},
+      });
+      expect(buildBookingQuery({archive: false, search: '(x)'})).toMatchObject({
+        personName: {$regex: '\\(x\\)', $options: 'i'},
+      });
+    });
+  });
 });

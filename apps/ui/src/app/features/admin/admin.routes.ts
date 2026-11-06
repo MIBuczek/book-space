@@ -1,7 +1,21 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 import { capabilityGuard } from '../../core/capability.guard';
 import { AdminShellComponent } from './admin-shell.component';
 import { ADMIN_TABS } from '../../shell/navigation';
+
+/**
+ * The tab that has a real body, keyed by its route path.
+ *
+ * The tab list (`ADMIN_TABS`) and the routes come from one place, so a tab cannot be
+ * hidden while its route stays reachable — but the *body* of a tab is a separate decision,
+ * because T036–T039 land one tab at a time. A tab absent from this map still gets a route
+ * and still renders the placeholder, so adding a tab to `ADMIN_TABS` never produces a
+ * dangling link, and moving a tab here is the whole change that gives it a body.
+ */
+const TAB_COMPONENTS: Record<string, Route['loadComponent']> = {
+  bookings: () =>
+    import('./bookings/bookings-table.component').then((m) => m.BookingsTableComponent),
+};
 
 /**
  * The admin area's routes, loaded as one chunk behind `capabilityGuard('staff')`.
@@ -27,8 +41,10 @@ export const adminRoutes: Routes = [
       ...ADMIN_TABS.map((tab) => ({
         path: tab.path,
         canMatch: [capabilityGuard(tab.capability)],
-        loadComponent: () =>
-          import('./admin-tab-placeholder.component').then((m) => m.AdminTabPlaceholderComponent),
+        loadComponent:
+          TAB_COMPONENTS[tab.path] ??
+          (() =>
+            import('./admin-tab-placeholder.component').then((m) => m.AdminTabPlaceholderComponent)),
         data: { title: tab.label },
       })),
       { path: '**', redirectTo: 'calendar' },
