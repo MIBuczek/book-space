@@ -102,11 +102,87 @@ describe('clients over HTTP', () => {
     });
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Array<Record<string, unknown>>;
-    expect(body).toHaveLength(1);
-    expect(body[0]).toHaveProperty('nick', 'Kowalski');
-    expect(body[0]).toHaveProperty('createdAt');
-    expect(body[0]).toHaveProperty('updatedAt');
+    const body = (await response.json()) as {items: Array<Record<string, unknown>>; total: number};
+    expect(body.items).toHaveLength(1);
+    expect(body.total).toBe(1);
+    expect(body.items[0]).toHaveProperty('nick', 'Kowalski');
+    expect(body.items[0]).toHaveProperty('createdAt');
+    expect(body.items[0]).toHaveProperty('updatedAt');
+  });
+
+  describe('paging and search (FR-022, FR-043, issue #123)', () => {
+    const listClients = (token: string, query = '') =>
+      fetch(`${ctx.baseUrl}/clients${query}`, {headers: {authorization: `Bearer ${token}`}});
+
+    const seedClients = async (token: string, count: number): Promise<void> => {
+      for (let index = 1; index <= count; index += 1) {
+        const created = await postClient(
+          token,
+          clientPayload({name: `Klient ${String(index).padStart(2, '0')}`}),
+        );
+        expect(created.status).toBe(201);
+      }
+    };
+
+    it('answers a paged envelope and never the whole collection by default', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      await seedClients(token, 3);
+
+      const response = await listClients(token, '?limit=2&page=1');
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {items: unknown[]; total: number; page: number; limit: number};
+      expect(body.items).toHaveLength(2);
+      // `total` is the pre-pagination count, so the client can page without a second read.
+      expect(body.total).toBe(3);
+      expect(body).toMatchObject({page: 1, limit: 2});
+    });
+
+    it('returns the last page and an empty page beyond it', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      await seedClients(token, 3);
+
+      const last = (await (await listClients(token, '?limit=2&page=2')).json()) as {
+        items: unknown[];
+        total: number;
+      };
+      expect(last.items).toHaveLength(1);
+      expect(last.total).toBe(3);
+
+      const beyond = (await (await listClients(token, '?limit=2&page=9')).json()) as {
+        items: unknown[];
+        total: number;
+      };
+      expect(beyond.items).toHaveLength(0);
+      expect(beyond.total).toBe(3);
+    });
+
+    it('searches by name, e-mail and phone', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      await postClient(token, clientPayload({name: 'Anna Nowak', email: 'anna@example.com', phone: '601002003'}));
+      await postClient(token, clientPayload({name: 'Piotr Zielinski', email: 'piotr@firma.pl', phone: '602003004'}));
+
+      const byName = (await (await listClients(token, '?search=Nowak')).json()) as {items: Array<{name: string}>};
+      expect(byName.items.map((client) => client.name)).toEqual(['Anna Nowak']);
+
+      const byEmail = (await (await listClients(token, '?search=firma.pl')).json()) as {
+        items: Array<{name: string}>;
+      };
+      expect(byEmail.items.map((client) => client.name)).toEqual(['Piotr Zielinski']);
+
+      const byPhone = (await (await listClients(token, '?search=601002')).json()) as {
+        items: Array<{name: string}>;
+      };
+      expect(byPhone.items.map((client) => client.name)).toEqual(['Anna Nowak']);
+    });
+
+    it('rejects a page below 1 with a 422 from the query DTO', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+
+      const response = await listClients(token, '?page=0');
+
+      expect(response.status).toBe(422);
+    });
   });
 
   it('rejects a malformed zip code on update, which the mapped type would have let through', async () => {

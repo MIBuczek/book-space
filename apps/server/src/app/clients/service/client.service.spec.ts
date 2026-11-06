@@ -34,6 +34,7 @@ describe('ClientService', () => {
     findOne: jest.Mock;
     updateOne: jest.Mock;
     deleteOne: jest.Mock;
+    countDocuments: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -43,6 +44,7 @@ describe('ClientService', () => {
       findOne: jest.fn(),
       updateOne: jest.fn().mockResolvedValue({matchedCount: 1}),
       deleteOne: jest.fn(),
+      countDocuments: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,10 +70,60 @@ describe('ClientService', () => {
     expect(modelMock.create).toHaveBeenCalledWith(payload);
   });
 
-  it('lists clients', async () => {
-    modelMock.find.mockResolvedValue([]);
+  it('lists clients as a page with a pre-pagination total', async () => {
+    modelMock.find.mockResolvedValue([{name: 'Jan'}]);
+    modelMock.countDocuments.mockResolvedValue(1);
 
-    await expect(service.findAllClients()).resolves.toEqual([]);
+    await expect(service.findAllClients()).resolves.toEqual({
+      items: [{name: 'Jan'}],
+      total: 1,
+      page: 1,
+      limit: 50,
+    });
+    expect(modelMock.find).toHaveBeenCalledWith(
+      {},
+      null,
+      {sort: {name: 1, _id: 1}, skip: 0, limit: 50, lean: true},
+    );
+    expect(modelMock.countDocuments).toHaveBeenCalledWith({});
+  });
+
+  it('passes the page and limit through to the query', async () => {
+    modelMock.find.mockResolvedValue([]);
+    modelMock.countDocuments.mockResolvedValue(0);
+
+    await expect(service.findAllClients({page: 3, limit: 10})).resolves.toEqual({
+      items: [],
+      total: 0,
+      page: 3,
+      limit: 10,
+    });
+    expect(modelMock.find).toHaveBeenCalledWith(
+      {},
+      null,
+      {sort: {name: 1, _id: 1}, skip: 20, limit: 10, lean: true},
+    );
+  });
+
+  it('searches name, contact person, e-mail and phone case-insensitively', async () => {
+    modelMock.find.mockResolvedValue([]);
+    modelMock.countDocuments.mockResolvedValue(0);
+
+    await service.findAllClients({search: 'kowalski'});
+
+    const pattern = {$regex: 'kowalski', $options: 'i'};
+    expect(modelMock.find).toHaveBeenCalledWith(
+      {
+        $or: [
+          {name: pattern},
+          {contactPerson: pattern},
+          {email: pattern},
+          {phone: pattern},
+        ],
+      },
+      null,
+      expect.anything(),
+    );
   });
 
   it('reads one client', async () => {
