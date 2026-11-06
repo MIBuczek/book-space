@@ -725,6 +725,18 @@ Three things that are easy to get wrong:
 
 ## Angular UI conventions that are easy to break
 
+- **A `ResourceRef` has `status()`/`isLoading()`, not `isError()`.** `isError` is a private
+  field on `BaseWritableResource`, so `bookingsResource.isError()` compiles in a spec but fails
+  `nx build` with TS2551 (`Property 'isError' does not exist`). Read the error state as
+  `status() === 'error'`. `nx test` does not type-check the template, so a green test run says
+  nothing about it — the build is the only place this shows up, the same "a green test run is
+  not a type check" shape as the server's `nx test`/`nx build` note.
+- **A `linkedSignal` computation runs only when its source changes value.** `building`'s
+  keep-the-previous branch fires when a facility refresh produces a *new* options array with the
+  same values; if the spec flushes the same array reference, `buildingOptions` stays memoised and
+  the computation never re-runs. Flush a fresh copy (`FACILITIES.map((f) => ({...f}))`), as a real
+  HTTP response is, or the branch is silently uncovered and the "keeps the chosen facility" test
+  passes for the wrong reason.
 - **The navigation is driven by a `capabilities` object the API resolves, not by the role.**
   `authorization/capabilities.ts` (`capabilitiesFor`) is the single derivation; `libs/models`
   declares the shape; `openapi.yaml` (`UserCapabilities`) is the contract. It is returned on the
@@ -814,6 +826,19 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
 
 ## Backend conventions that are easy to break
 
+- **Guards must be attached per route when one route in a controller is public.**
+  `BuildingController`'s list is public (`OptionalJwtAuthGuard`) while its single read and
+  writes are staff-only. A class-level `@UseGuards(AuthGuard('jwt'), RolesGuard)` runs *before*
+  the method's `OptionalJwtAuthGuard` — Nest concatenates class and method guards — so it would
+  reject the anonymous list request the route exists to serve. The guard belongs on each route.
+  The same shape as `BookingController`, which is public on the list and per-route elsewhere.
+- **A public read of a route that also serves staff needs the redaction in a serialiser, and
+  the field list in `libs/models`.** `GET /buildings` answers the full record to staff and a
+  redacted one to an anonymous caller; `serializePublicBuildings` deletes
+  `PUBLIC_BUILDING_REDACTIONS` and the spec asserts each name individually, because a redaction
+  list that is wrong is a disclosure and a count assertion would not catch a missing name.
+  Assert on the raw response text in the integration test: a field present but `undefined` still
+  travels, and `toHaveProperty` does not see it.
 - **Validation and error mapping are configured once, in
   `apps/server/src/app/config/configure-app.ts`**, and applied by both `main.ts` and the test
   harness. Do not register a `ValidationPipe` or exception filter in `main.ts` directly: the

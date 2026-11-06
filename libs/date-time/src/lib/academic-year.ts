@@ -1,7 +1,7 @@
-import {facilityWallClock, startOfFacilityDay} from '@booking/date-time';
+import {facilityWallClock, startOfFacilityDay} from './facility-time';
 
 /**
- * Academic-year periods for the booking list (FR-020, research.md R9).
+ * Academic-year periods for the booking list and the public calendar (FR-020, research.md R9).
  *
  * The legacy application offered a period picker (`generateBookingDateOptions`) whose
  * periods were `1 August Y` → `31 August Y+1`, for years from 2022, plus an

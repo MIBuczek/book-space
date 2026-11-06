@@ -30,4 +30,18 @@ interface IBuilding {
   employees: string[];
 }
 
-export {CITIES, TCity, SIZES, TSize, IBuilding};
+/**
+ * Fields a public (anonymous) caller must never receive for a facility.
+ *
+ * The public calendar and booking form need a facility's identity and its rentable
+ * sizes (FR-007, FR-012), but not its contact details or the internal employee list —
+ * those are the Facilities-tab read (FR-009), which is staff-only. The list is the
+ * policy: the server serialiser removes exactly these keys, and the UI's
+ * `IPublicBuilding` omits them, so the boundary is written once.
+ */
+const PUBLIC_BUILDING_REDACTIONS = ['email', 'phone', 'employees', 'street', 'zipCode'] as const;
+
+/** A facility as a public caller receives it: contact details and the employee list removed. */
+type IPublicBuilding = Omit<IBuilding, (typeof PUBLIC_BUILDING_REDACTIONS)[number]>;
+
+export {CITIES, TCity, SIZES, TSize, PUBLIC_BUILDING_REDACTIONS, IBuilding, IPublicBuilding};

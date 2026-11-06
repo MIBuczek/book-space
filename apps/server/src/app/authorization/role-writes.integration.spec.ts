@@ -148,8 +148,12 @@ describe('client and facility role rules', () => {
   });
 
   describe('facilities', () => {
-    it('refuses an unauthenticated caller with 401', async () => {
-      expect((await request('GET', '/buildings')).status).toBe(401);
+    // The list is public (T034): the calendar's city/facility selectors and the booking
+    // form's size options need it, and FR-007 says the facilities are exposed to the UI.
+    // The anonymous caller gets a redacted record; the contact details and the employee
+    // list stay staff-only. The single read below is still 401.
+    it('serves the list to an unauthenticated caller with 200', async () => {
+      expect((await request('GET', '/buildings')).status).toBe(200);
     });
 
     it('lets an employee read', async () => {

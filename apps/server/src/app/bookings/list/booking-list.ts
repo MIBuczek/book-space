@@ -1,4 +1,4 @@
-import {currentAcademicYearRange} from './academic-year';
+import {currentAcademicYearRange} from '@booking/date-time';
 
 /**
  * Booking-list scoping and pagination (FR-020, FR-022, FR-043, research.md R9).
