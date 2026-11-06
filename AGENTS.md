@@ -737,6 +737,19 @@ Three things that are easy to get wrong:
   the computation never re-runs. Flush a fresh copy (`FACILITIES.map((f) => ({...f}))`), as a real
   HTTP response is, or the branch is silently uncovered and the "keeps the chosen facility" test
   passes for the wrong reason.
+- **A test helper that finds a control by label must scope to the panel when labels repeat.**
+  `control(fixture, label)` matched any `<label>` whose text *contains* the string, so the
+  reschedule dialog's "Od"/"Do" hour selects resolved to the period loader's "Od początku"
+  option instead — `setSelect` silently set the wrong `<select>` and the assertion failed for a
+  reason unrelated to the reschedule. Pass the dialog root (`reschedulePanel(fixture)`) so the
+  lookup is scoped. The same trap applies to `pressButton`, whose label match is exact but whose
+  root must be the panel when the button text also appears elsewhere.
+- **The `bookings` tab is a body in `admin.routes.ts`'s `TAB_COMPONENTS`, and `app.routes.spec`
+  asserts that map.** The tab list and the routes come from `ADMIN_TABS`, but the *body* is a
+  separate decision (`T036–T039` land one tab at a time). A tab absent from the map still gets a
+  route and renders `AdminTabPlaceholderComponent`; moving a tab into the map is the whole
+  change. The route spec carries a `realBodies` map, so adding a tab here is a two-line change,
+  not a rewrite of the assertion.
 - **The navigation is driven by a `capabilities` object the API resolves, not by the role.**
   `authorization/capabilities.ts` (`capabilitiesFor`) is the single derivation; `libs/models`
   declares the shape; `openapi.yaml` (`UserCapabilities`) is the contract. It is returned on the
@@ -826,6 +839,13 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
 
 ## Backend conventions that are easy to break
 
+- **A user-supplied substring search must be regex-escaped before it reaches `$regex`.**
+  `buildBookingQuery` turns the tenant-name `search` (FR-021) into
+  `{$regex: escapeRegExp(term), $options: 'i'}`. Without the escape, a term containing `.` or
+  `*` is read as a pattern (matching more than the caller asked for) and a term such as `(` is
+  an invalid expression the driver rejects. The legacy search used a string `includes`; a regex
+  is the closest MongoDB equivalent, so it has to be made a literal first. The DTO also bounds
+  the length (125), so a pathological term is refused at the boundary rather than compiled.
 - **Guards must be attached per route when one route in a controller is public.**
   `BuildingController`'s list is public (`OptionalJwtAuthGuard`) while its single read and
   writes are staff-only. A class-level `@UseGuards(AuthGuard('jwt'), RolesGuard)` runs *before*
