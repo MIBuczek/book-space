@@ -18,6 +18,40 @@ interface IPlace {
   city: string;
 }
 
+/**
+ * The body of `POST /bookings` (`contracts/openapi.yaml` `BookingDto`).
+ *
+ * The request shape and the stored document are deliberately different: the server owns the
+ * audit stamps (`createdBy`/`createdAt`/…), derives `extraOptions` and decides
+ * `accepted`/`archive`. A caller that could set any of those would be able to attribute a
+ * booking to someone else, approve its own request or claim add-ons it did not select. So the
+ * request type omits them, and the server's `whitelist`/`forbidNonWhitelisted` rejects a body
+ * that tries to supply one.
+ *
+ * `rodoAcknowledgement` is optional here and required by the service for an anonymous
+ * submission (FR-011): the rule needs to know whether the caller is public, which the body
+ * cannot say. `month` is the legacy month index (0–11) derived from the first slot; it is
+ * carried because the reporting and the migration read it, not because the form decides it.
+ */
+interface IBookingRequest {
+  type: TClientType;
+  place: IPlace;
+  size: string;
+  clientId?: string;
+  nick: string;
+  personName: string;
+  personCompany?: string;
+  personEmail: string;
+  personPhone: string;
+  month: number;
+  bookedTimes: IBookedTime[];
+  rodoAcknowledgement?: boolean;
+  comments?: string;
+  paymentMethod: TPayment;
+  discount?: string;
+  selectedOptions?: ISelectedExtraOption[];
+}
+
 interface IBooking {
   _id: string;
   type: TClientType;
@@ -52,4 +86,4 @@ interface IBooking {
   modifiedAt?: Date;
 }
 
-export {CLIENT_TYPES, TClientType, PAYMENTS, TPayment, IPlace, IBooking};
+export {CLIENT_TYPES, TClientType, PAYMENTS, TPayment, IPlace, IBookingRequest, IBooking};

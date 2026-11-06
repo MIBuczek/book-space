@@ -34,6 +34,13 @@ export const appRoutes: Route[] = [
       import('./features/sign-in/sign-in.component').then((m) => m.SignInComponent),
   },
   {
+    path: 'booking-request',
+    loadComponent: () =>
+      import('./features/booking-request/booking-request.component').then(
+        (m) => m.BookingRequestComponent
+      ),
+  },
+  {
     path: 'admin',
     canMatch: [authGuard, capabilityGuard('staff')],
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),

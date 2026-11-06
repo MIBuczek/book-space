@@ -67,7 +67,7 @@ so NestJS 11 takes `@nestjs/config@4.0.4`. See the constraint below.
 ```bash
 yarn install --frozen-lockfile
 yarn nx run-many --target=lint --all
-yarn nx run-many --target=test --projects=server,ui,date-time --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules --configuration=ci
 yarn nx run-many --target=build --projects=server,ui --configuration=production
 ```
 
@@ -894,7 +894,24 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `run-many --all` picks it up, but `--projects=server,ui` does not, so a change to the library
   must run `nx test date-time` (or `--all`) or its tests are silently skipped. Its
   `coverageThreshold` is 100 % and `collectCoverageFrom: ['src/**/*.ts']` excludes the barrel
-  (`/src/index.ts$`) the way the server excludes its re-export-only files.
+  (`/src/index.ts$`) the way the server excludes its re-export-only files. `libs/booking-rules`
+  (`@booking/rules`, T035) is a second one, and the `test`/coverage steps in `ci.yml` name it
+  explicitly (`--projects=server,ui,date-time,booking-rules`, plus its
+  `coverage/libs/booking-rules/coverage-summary.json` row) — a new library has to be added to
+  *both* the run-many list and the summary-merge table or its coverage never reaches the gate.
+- **The cyclical expansion, the slot-overlap predicate and the intra-booking check live in
+  `@booking/rules`, not in the server.** `expandBookingTimes`, `slotsConflict`, `slotsOverlap`
+  and `findIntraBookingOverlap` were moved out of `apps/server/src/app/bookings/` (T035) so the
+  public booking form and the API expand a request identically — the same single-source reason
+  the date/time conversion was extracted. `conflicts.ts` imports `slotsConflict`, and
+  `booking.service.ts` imports `findIntraBookingOverlap`, from the library; do not re-add a
+  local copy, which is what would let the week count or the "touching interval is not a
+  conflict" rule drift between the two callers. The library's `jest.config.ts` excludes the
+  barrel and holds the 100 % threshold, like `date-time`.
+- **The UI coverage gate is 100 % on every file, and `app.routes.ts` loaders count.** Adding a
+  lazy route without a spec that invokes its `loadComponent` leaves the loader uncovered and
+  fails the `ci` run; the `app.routes.spec.ts` table is where each route earns its coverage.
+  The booking-request route (T035) is asserted there alongside the calendar and sign-in routes.
 - **The CSV column labels are the contract (FR-028), so the label set and order are asserted
   one name at a time.** The file is `\uFEFF`-prefixed, `\r\n`-terminated and `;`-separated, and
   the header is built from `CSV_COLUMNS.map((c) => c.label).join(';')`. A count assertion would

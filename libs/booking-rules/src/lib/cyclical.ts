@@ -33,6 +33,12 @@ import {addFacilityDays, atFacilityTime, facilityDayNumber, startOfFacilityDay} 
  * transition keeps a constant local start hour rather than a constant UTC offset
  * (R4). `day` is the start of the facility-local day, which is what conflict
  * detection compares.
+ *
+ * The rule lives in this shared library rather than on the server alone (T035): the
+ * booking form must expand a cyclical request into individual slots before it submits,
+ * and the server must expand the same request identically. One implementation is what
+ * keeps the two from drifting — the constitution's single-source principle, and the
+ * same reason the date/time conversion was extracted (T055).
  */
 
 const DAYS_PER_WEEK = 7;

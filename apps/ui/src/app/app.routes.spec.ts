@@ -28,6 +28,11 @@ describe('appRoutes', () => {
     expect((component as { name: string }).name).toBe('SignInComponent');
   });
 
+  it('declares the public booking request route', async () => {
+    const component = await route('booking-request').loadComponent?.();
+    expect((component as { name: string }).name).toBe('BookingRequestComponent');
+  });
+
   it('declares the contact route', async () => {
     const component = await route('contact').loadComponent?.();
     expect((component as { name: string }).name).toBe('ContactComponent');

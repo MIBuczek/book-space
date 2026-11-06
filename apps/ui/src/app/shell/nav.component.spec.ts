@@ -37,6 +37,14 @@ describe('NavComponent', () => {
     expect(text).not.toContain('Admin');
   });
 
+  it('links the public booking request form', () => {
+    const fixture = render();
+    const link = (fixture.nativeElement as HTMLElement).querySelector(
+      'a[href="/booking-request"]'
+    );
+    expect(link?.textContent).toContain('Rezerwacja');
+  });
+
   it('offers the admin link and the user e-mail to an administrator', () => {
     TestBed.inject(SessionStore).set('token-1', adminUser());
     const fixture = render();
