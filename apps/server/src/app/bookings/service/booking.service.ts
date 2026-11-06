@@ -13,7 +13,7 @@ import {errorMessage, errorStatus} from '../../utility/http-error';
 import {StructuredLogger} from '../../logging/structured-logger';
 import {currentActorId} from '../../logging/request-context';
 import {bookedDays, findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
-import {findIntraBookingOverlap} from '../slots/intra-booking-overlap';
+import {findIntraBookingOverlap} from '@booking/rules';
 import {StructuredHttpException} from '../../config/structured-http-exception';
 import {isSizeOffered, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
 

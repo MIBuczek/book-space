@@ -28,12 +28,7 @@
  * (SC-002).
  */
 
-/** A single slot, as conflict detection reads it. */
-interface IConflictSlot {
-  day: Date;
-  startHours: Date;
-  endHours: Date;
-}
+import {slotsConflict, IConflictSlot} from '@booking/rules';
 
 /** A booking, as conflict detection reads it. */
 interface IConflictBooking {
@@ -41,51 +36,6 @@ interface IConflictBooking {
   accepted: boolean;
   bookedTimes: IConflictSlot[];
 }
-
-const toMillis = (value: Date): number => new Date(value).getTime();
-
-/**
- * Whether two slots are on the same day.
- *
- * The legacy `checkDay` compared the two instants for exact equality
- * (`Date.parse(a.toISOString()) - Date.parse(b.toISOString()) === 0`), and the
- * rewrite keeps that: `day` is stored as the calendar day with a zero time, so two
- * slots on the same day carry the same instant. A "same calendar day in local time"
- * test would be a *different* rule — it would additionally call two slots on the same
- * date at different times-of-day the same day — and re-implementing it here would
- * diverge from the reference the criterion compares against. The slot's *time of day*
- * lives in `startHours`/`endHours`, not in `day`.
- */
-const isSameDay = (one: Date, two: Date): boolean => toMillis(one) === toMillis(two);
-
-/** Whether `instant` is strictly between `startHour` and `endHour`. */
-const isStrictlyInside = (instant: Date, startHour: Date, endHour: Date): boolean => {
-  const at = toMillis(instant);
-  return at > toMillis(startHour) && at < toMillis(endHour);
-};
-
-/** Whether `[outerStart, outerEnd]` contains `[innerStart, innerEnd]`, ends inclusive. */
-const contains = (outerStart: Date, outerEnd: Date, innerStart: Date, innerEnd: Date): boolean =>
-  toMillis(outerStart) <= toMillis(innerStart) && toMillis(outerEnd) >= toMillis(innerEnd);
-
-/**
- * Whether two slots conflict.
- *
- * The three cases are not mutually exclusive and are evaluated with the same
- * short-circuit order as the legacy `checkSingleBookingTime`. "Strictly inside" and
- * "contains" together are what makes a touching interval a non-conflict: a range that
- * merely ends where another begins is neither strictly inside it nor containing it.
- */
-const slotsConflict = (slot: IConflictSlot, other: IConflictSlot): boolean => {
-  if (!isSameDay(slot.day, other.day)) {
-    return false;
-  }
-  return (
-    isStrictlyInside(slot.startHours, other.startHours, other.endHours) ||
-    isStrictlyInside(slot.endHours, other.startHours, other.endHours) ||
-    contains(slot.startHours, slot.endHours, other.startHours, other.endHours)
-  );
-};
 
 /**
  * Whether two bookings conflict: different records and at least one conflicting slot

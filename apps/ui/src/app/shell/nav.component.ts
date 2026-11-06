@@ -24,6 +24,7 @@ import { ButtonComponent } from '../shared/ui';
             Calendar
           </a>
         </li>
+        <li><a routerLink="/booking-request" routerLinkActive="active">Rezerwacja</a></li>
         <li><a routerLink="/contact" routerLinkActive="active">Contact</a></li>
         @if (session.capabilities()?.staff) {
           <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
