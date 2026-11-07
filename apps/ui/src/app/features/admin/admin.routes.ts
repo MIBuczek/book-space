@@ -16,6 +16,8 @@ const TAB_COMPONENTS: Record<string, Route['loadComponent']> = {
   bookings: () =>
     import('./bookings/bookings-table.component').then((m) => m.BookingsTableComponent),
   clients: () => import('./clients/clients-table.component').then((m) => m.ClientsTableComponent),
+  facilities: () =>
+    import('./facilities/facilities-tab.component').then((m) => m.FacilitiesTabComponent),
 };
 
 /**

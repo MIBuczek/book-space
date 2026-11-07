@@ -27,4 +27,24 @@ describe('FacilitiesApi', () => {
 
     expect(received).toEqual([{_id: 'a', name: 'Hala', property: 'hala', city: 'siechnice'}]);
   });
+
+  it('reads the full facility record for the Facilities tab (FR-009)', () => {
+    let received: unknown;
+    api.listStaff().subscribe((value) => (received = value));
+
+    const request = httpMock.expectOne('/api/buildings');
+    expect(request.request.method).toBe('GET');
+    const full = {
+      _id: 'a',
+      name: 'Hala',
+      property: 'hala',
+      city: 'siechnice',
+      email: 'a@b.pl',
+      phone: '123',
+      employees: ['Ada'],
+    };
+    request.flush([full]);
+
+    expect(received).toEqual([full]);
+  });
 });

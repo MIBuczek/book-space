@@ -1,6 +1,6 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
-import {IPublicBuilding} from '@models/building.model';
+import {IBuilding, IPublicBuilding} from '@models/building.model';
 import {Observable} from 'rxjs';
 
 /**
@@ -10,12 +10,25 @@ import {Observable} from 'rxjs';
  * its rentable sizes, with the contact details and the employee list removed. The service
  * is the UI's single entry point to that read, so a future screen cannot call the endpoint
  * with a different shape or a hand-built URL.
+ *
+ * The route is one at two levels of detail (the same shape `GET /bookings` uses): a staff
+ * caller receives the full record. `list()` types the public shape and is what the calendar
+ * and booking form use; `listStaff()` types the full record and is what the Facilities tab
+ * uses. Both hit the same URL — the bearer token the interceptor attaches is what selects
+ * the response — but naming the two shapes keeps a screen from reading `email` off a value
+ * typed as public, which would be a field the server had already removed.
  */
 @Injectable({providedIn: 'root'})
 export class FacilitiesApi {
   private readonly http = inject(HttpClient);
 
+  /** The public read: identity, sizes and the lighting/toilets flags. */
   list(): Observable<IPublicBuilding[]> {
     return this.http.get<IPublicBuilding[]>('/api/buildings');
+  }
+
+  /** The staff read: the full record, including the contact details and the employee list. */
+  listStaff(): Observable<IBuilding[]> {
+    return this.http.get<IBuilding[]>('/api/buildings');
   }
 }

@@ -1,6 +1,5 @@
-import {IPublicBuilding} from '@models/building.model';
+import {CITY_LABELS, IPublicBuilding} from '@models/building.model';
 import {
-  CITY_LABELS,
   CLIENT_TYPE_LABELS,
   END_HOUR_OPTIONS,
   PAYMENT_LABELS,

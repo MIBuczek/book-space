@@ -1,7 +1,7 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
+import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
 import {TClientType, TPayment} from '@models/booking.model';
 import {BookingRequestsApi} from '../../core/booking-requests.api';
 import {FacilitiesApi} from '../../core/facilities.api';
@@ -14,7 +14,6 @@ import {
   SelectComponent,
 } from '../../shared/ui';
 import {
-  CITY_LABELS,
   CLIENT_TYPE_LABELS,
   END_HOUR_OPTIONS,
   PAYMENT_LABELS,

@@ -272,7 +272,8 @@ paths:
         selectors and the booking form's size options need (FR-007). `email`, `phone`,
         `employees`, `street` and `zipCode` are removed for a public caller and are
         staff-only (the Facilities tab, FR-009). An invalid credential is refused with
-        `401` rather than downgraded to an anonymous request.
+        `401` rather than downgraded to an anonymous request. The Facilities tab reads
+        this route as staff to show the contact details and the employee list (T038).
       security: []
       responses:
         '200':
