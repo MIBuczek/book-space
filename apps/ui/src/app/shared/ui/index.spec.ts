@@ -10,6 +10,7 @@ describe('UI kit barrel', () => {
       'DatePickerComponent',
       'InputComponent',
       'ModalComponent',
+      'MonthPickerComponent',
       'PaginationComponent',
       'SelectComponent',
       'TableComponent',

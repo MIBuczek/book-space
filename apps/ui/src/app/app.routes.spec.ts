@@ -1,6 +1,6 @@
 import { Route } from '@angular/router';
 import { appRoutes } from './app.routes';
-import { adminRoutes } from './features/admin/admin.routes';
+import { adminRoutes, tabLoader } from './features/admin/admin.routes';
 import { ADMIN_TABS } from './shell/navigation';
 
 // The route table's behaviour is the loaders: a route that resolves to the
@@ -86,6 +86,7 @@ describe('adminRoutes', () => {
       bookings: 'BookingsTableComponent',
       clients: 'ClientsTableComponent',
       facilities: 'FacilitiesTabComponent',
+      summary: 'SummaryTabComponent',
     };
 
     for (const tab of ADMIN_TABS) {
@@ -103,5 +104,12 @@ describe('adminRoutes', () => {
   it('catches an unknown tab path so it does not fall through to the app 404', () => {
     const wildcard = shell.children?.find((r: Route) => r.path === '**');
     expect(wildcard?.redirectTo).toBe('calendar');
+  });
+
+  it('falls back to the shared placeholder for a tab with no body yet', async () => {
+    // Every current tab has a body, so this is the branch a later tab (added to ADMIN_TABS
+    // before its component lands) would take; asserting it here keeps it live.
+    const component = await tabLoader('not-a-real-tab')?.();
+    expect((component as { name: string }).name).toBe('AdminTabPlaceholderComponent');
   });
 });

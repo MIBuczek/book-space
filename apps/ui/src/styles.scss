@@ -1,1 +1,32 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles. */
+
+/*
+ * The printable report (FR-030).
+ *
+ * The Summary tab marks its report element `bs-printable` and calls `window.print()`; this
+ * stylesheet is what turns the whole page into that report when the browser prints. Hiding
+ * every element and then re-showing the report and its descendants is the standard "print only
+ * this node" technique: `display: none` on the ancestors would collapse the report too, so
+ * visibility is used instead and the report is lifted to the page's top-left.
+ *
+ * The legacy `PreviewPDF.tsx` opened a new window at a hardcoded production URL and wrote the
+ * report HTML into it, which could not work offline and depended on the deployed site. Printing
+ * the page the report is already rendered in removes both problems.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .bs-printable,
+  .bs-printable * {
+    visibility: visible;
+  }
+
+  .bs-printable {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 15mm;
+  }
+}

@@ -850,6 +850,45 @@ Three things that are easy to get wrong:
   `/src/testing/` from coverage — it holds shared spec fixtures, not application code, and counting
   them would inflate the denominator. The UI is at 100 % on every file; the `global` threshold is a
   ratchet that is never lowered.
+- **The report vocabulary lives in `libs/reporting`, and both artefacts import it.** The CSV
+  export (`apps/server/src/app/reporting/csv/`) and the printable report (`SummaryTabComponent`)
+  print the same values — statuses, cities, facility keys, payments, sizes, selected extra
+  options — so the label map, `toPercentage`, `displayBoolean`, `displaySelectedOptions` and
+  `summaryTotalBookingsNumber` are shared. A copy per artefact is the drift the constitution's
+  single-source principle forbids, and it surfaces only as a report whose wording disagrees with
+  the export it is supposed to match (T028 acceptance criterion 2). This is *not* the same map as
+  `CITY_LABELS` in `libs/models/building.model.ts`: that one labels the UI's screen selectors, this
+  one is the legacy Polish vocabulary a business artefact prints (it carries statuses, payments and
+  facility keys the screens never show). The city labels agree today, but they answer to different
+  audiences, so do not collapse one into the other. The library is a workspace
+  project with its own `test`/`lint` targets and a 100 % `coverageThreshold`; like `date-time`, a
+  change to it is *not* covered by `run-many --projects=server,ui` — add `reporting` (CI does).
+  `apps/server/src/app/reporting/csv/display.ts` and `.../summary/summary.ts` now re-export from
+  it, so the server's existing import sites are unchanged. The server's `display.ts` keeps the
+  date/time formatting (its projection of `@booking/date-time`) and nothing else.
+- **The printable report is the page, not a popup.** FR-030/T028 is satisfied by rendering the
+  report in a `bs-printable` node and calling `window.print()`; `styles.scss` hides every other
+  element under `@media print`. The legacy `PreviewPDF.tsx` opened a window at a hardcoded
+  production URL and wrote the HTML into it, which fails offline and depends on the deployment.
+  `ReportExport.print()` is the seam so a spec can stub the global rather than spy on it.
+- **jsdom needs `URL.createObjectURL`/`revokeObjectURL` stubbed for a download spec.** The CSV
+  download builds a `Blob` and hands its object URL to an anchor (a `data:` URI has a length
+  limit that would silently truncate a large export). `test-setup.ts` installs both when absent,
+  the same shape as the `<dialog>` stub, so the real download path is exercised rather than mocked
+  away. The anchor must be in the document before `click()` — a detached anchor is ignored by
+  Firefox — so a spec asserting the click also asserts the anchor was attached and then removed.
+- **A tab's body is `TAB_COMPONENTS`, and a tab with no entry renders the placeholder.** The
+  loader is the exported `tabLoader`, not an inline `??` inside the route map, so the placeholder
+  branch is reachable from a spec. Every current tab has a body, so the fallback is dead in
+  practice — but it is the branch a *later* tab (added to `ADMIN_TABS` before its component lands)
+  takes, and an unreachable fallback that renders nothing would be dropped in a "dead code" pass.
+  `app.routes.spec.ts` calls `tabLoader('not-a-real-tab')` to keep it live.
+- **The summary tab corrects `updateToMonthDataInForm`; do not reintroduce the coupling.** The
+  legacy form reset the end month to the start month whenever the start month changed, silently
+  discarding a chosen end month. Here `onFromMonth` sets only the start month and an inverted
+  range is refused with an explicit message (`rangeError`), so the two pickers are independent.
+  The spec pins both halves: changing the start month leaves `toMonth` untouched, and a start
+  after the end shows the message and keeps "Generuj podsumowanie" disabled.
 
 ## Logging
 
