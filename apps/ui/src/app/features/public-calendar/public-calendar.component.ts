@@ -1,6 +1,6 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
+import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
 import {BookingsApi} from '../../core/bookings.api';
 import {FacilitiesApi} from '../../core/facilities.api';
 import {SessionStore} from '../../core/session.store';
@@ -18,14 +18,6 @@ import {
   statusLabel,
   weekColumns,
 } from './calendar-events';
-
-/** The Polish labels for the four cities, matching the legacy `CITY_OPTIONS`. */
-const CITY_LABELS: Record<TCity, string> = {
-  siechnice: 'Siechnice',
-  radwanice: 'Radwanice',
-  'swieta-katarzyna': 'Święta Katarzyna',
-  'zerniki-wroclawskie': 'Żerniki Wrocławskie',
-};
 
 const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
 

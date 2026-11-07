@@ -1,4 +1,4 @@
-import {IPublicBuilding, TCity} from '@models/building.model';
+import {IPublicBuilding} from '@models/building.model';
 import {IBookingRequest, TClientType, TPayment} from '@models/booking.model';
 import {IBookedTime} from '@models/booked-time.model';
 import {ISelectedExtraOption} from '@models/selected-extra-option.model';
@@ -57,14 +57,6 @@ const PAYMENT_LABELS: Record<TPayment, string> = {
   TRANSFER: 'Przelew',
   CASH: 'Gotówka',
   FREE: 'Bezpłatne',
-};
-
-/** The Polish labels for the four cities, matching the legacy `CITY_OPTIONS`. */
-const CITY_LABELS: Record<TCity, string> = {
-  siechnice: 'Siechnice',
-  radwanice: 'Radwanice',
-  'swieta-katarzyna': 'Święta Katarzyna',
-  'zerniki-wroclawskie': 'Żerniki Wrocławskie',
 };
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -346,7 +338,6 @@ const buildRequest = (
 export {
   CLIENT_TYPE_LABELS,
   PAYMENT_LABELS,
-  CITY_LABELS,
   NICK_MIN,
   NICK_MAX,
   PERSON_NAME_MIN,

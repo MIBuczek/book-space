@@ -1,6 +1,6 @@
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
-import {TCity} from '@models/building.model';
+import {CITY_LABELS} from '@models/building.model';
 import {
   academicYearStartYear,
   atFacilityTime,
@@ -43,14 +43,6 @@ interface IResolvedPeriod {
 }
 
 const FROM_THE_BEGINNING = 'all';
-
-/** The Polish labels for the four cities, matching the legacy `CITY_OPTIONS`. */
-const CITY_LABELS: Record<TCity, string> = {
-  siechnice: 'Siechnice',
-  radwanice: 'Radwanice',
-  'swieta-katarzyna': 'Święta Katarzyna',
-  'zerniki-wroclawskie': 'Żerniki Wrocławskie',
-};
 
 /** The page sizes the table offers, matching the legacy `SIZE_OPTIONS`. */
 const PAGE_SIZES = [20, 50, 100];

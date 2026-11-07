@@ -774,6 +774,34 @@ Three things that are easy to get wrong:
   route and renders `AdminTabPlaceholderComponent`; moving a tab into the map is the whole
   change. The route spec carries a `realBodies` map, so adding a tab here is a two-line change,
   not a rewrite of the assertion.
+- **The Facilities tab reads `GET /buildings` as staff, and that read has no compiled-in
+  fallback (T038).** `FacilitiesApi.list()` types the *public* shape and `listStaff()` the full
+  record; both hit the same URL — the bearer token the interceptor attaches selects the response
+  — but naming the two shapes stops a screen reading `email` off a value typed as public, which
+  the server had already redacted. The legacy `Building.tsx` fell back to `INITIAL_ALL_BUILDINGS`
+  when the API had none; that fallback is the defect issue #42 names, so the tab renders no
+  detail rows and no employees for an absent facility rather than stale static data.
+  `facilityDetails(null)` returning `[]` is the mechanised form of "no fallback".
+- **The employee message is one route, two audiences, and the rewrite splits sender from
+  destination.** `POST /notifications/message` delivers to the SISK inbox without a `recipient`
+  (public contact form, FR-034) and to that address with one (Facilities tab, FR-041). The legacy
+  `Building.tsx` form had a single `email` field pre-filled with the facility address and used it
+  as the destination, conflating "who replies" with "who receives"; `IMessageRequest` keeps them
+  separate — `email` is the facility's contact address (the sender a reply returns to) and
+  `recipient` is the employee's destination. `buildMessageRequest` reads the sender from the
+  facility record, never from the form.
+- **`CITY_LABELS` lives in `libs/models/building.model.ts`, beside `CITIES` (T038).** It was
+  duplicated in the public calendar, the booking form and the bookings tab; the Facilities tab
+  was the fourth copy. Four copies of a display label is the drift the shared model exists to
+  prevent — a renamed city would render correctly on one screen and not another, with nothing to
+  catch it. Import it; do not re-declare it.
+- **A `linkedSignal` is the right tool for a form that must re-fill when its subject changes.**
+  The Facilities tab's message form is `linkedSignal({source: selectedFacility, computation:
+  emptyEmployeeMessage})`, so switching facility cannot leave the previous facility's address in
+  the recipient field — the stale-state bug the legacy form avoided with a hand-written reset.
+  A plain `signal` would keep the old value and only the manual `startMessage` reset would fix
+  it, which is exactly the kind of hand-maintained invariant this codebase replaces with a
+  derived one.
 - **The navigation is driven by a `capabilities` object the API resolves, not by the role.**
   `authorization/capabilities.ts` (`capabilitiesFor`) is the single derivation; `libs/models`
   declares the shape; `openapi.yaml` (`UserCapabilities`) is the contract. It is returned on the

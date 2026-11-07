@@ -85,6 +85,7 @@ describe('adminRoutes', () => {
     const realBodies: Record<string, string> = {
       bookings: 'BookingsTableComponent',
       clients: 'ClientsTableComponent',
+      facilities: 'FacilitiesTabComponent',
     };
 
     for (const tab of ADMIN_TABS) {
