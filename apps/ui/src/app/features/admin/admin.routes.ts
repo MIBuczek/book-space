@@ -18,7 +18,21 @@ const TAB_COMPONENTS: Record<string, Route['loadComponent']> = {
   clients: () => import('./clients/clients-table.component').then((m) => m.ClientsTableComponent),
   facilities: () =>
     import('./facilities/facilities-tab.component').then((m) => m.FacilitiesTabComponent),
+  summary: () => import('./summary/summary-tab.component').then((m) => m.SummaryTabComponent),
 };
+
+/**
+ * The loader for a tab's body: the real component when the path has one, the shared placeholder
+ * otherwise.
+ *
+ * Exported so the fallback can be exercised directly. Every current tab has a body, so the
+ * fallback would otherwise be unreachable from the route table — and an unreachable branch that
+ * renders the placeholder is exactly the one a coverage gate cannot see, so it would be dropped
+ * in a later "dead code" cleanup and a tab added without a body would then render nothing.
+ */
+const tabLoader = (path: string): Route['loadComponent'] =>
+  TAB_COMPONENTS[path] ??
+  (() => import('./admin-tab-placeholder.component').then((m) => m.AdminTabPlaceholderComponent));
 
 /**
  * The admin area's routes, loaded as one chunk behind `capabilityGuard('staff')`.
@@ -44,13 +58,12 @@ export const adminRoutes: Routes = [
       ...ADMIN_TABS.map((tab) => ({
         path: tab.path,
         canMatch: [capabilityGuard(tab.capability)],
-        loadComponent:
-          TAB_COMPONENTS[tab.path] ??
-          (() =>
-            import('./admin-tab-placeholder.component').then((m) => m.AdminTabPlaceholderComponent)),
+        loadComponent: tabLoader(tab.path),
         data: { title: tab.label },
       })),
       { path: '**', redirectTo: 'calendar' },
     ],
   },
 ];
+
+export {tabLoader};

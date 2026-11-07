@@ -2,13 +2,13 @@ import {IClient} from '@models/client.model';
 import {IBookedTime} from '@models/booked-time.model';
 import {ISelectedExtraOption} from '@models/selected-extra-option.model';
 import {
-  IBookedTimeSummary,
   IClientSummary,
   IGeneralBookingDetails,
   SUMMARY_CITIES,
   TCitySummary,
   TSummaryCity,
 } from '@models/reporting.model';
+import {summaryTotalBookingsNumber} from '@booking/reporting';
 
 /**
  * The month range a summary is taken over, in the facility's calendar.
@@ -118,19 +118,11 @@ const summariseClient = (
   return summary;
 };
 
-/** The legacy "N rezerwacji, w tym M zrealizowanych." counter, for one city's bookings. */
-const summaryTotalBookingsNumber = (bookings: IBookedTimeSummary[]): string => {
-  let all = 0;
-  let done = 0;
-  for (const entry of bookings) {
-    all += entry.bookingTimeDetails.length;
-    done += entry.bookingTimeDetails.filter((slot) => slot.status === 'DONE').length;
-  }
-  if (all === 0) {
-    return '0 rezerwacji.';
-  }
-  return `${all} rezerwacji, w tym ${done} zrealizowanych.`;
-};
-
+/**
+ * `summaryTotalBookingsNumber` is re-exported rather than defined here: the printable report
+ * (T028/T039) prints the same counter, so it lives in `@booking/reporting` where both the server
+ * and the UI import it. Re-exporting keeps the existing import sites (`reporting/` specs and the
+ * service) unchanged.
+ */
 export {slotInRange, summariseClient, summaryTotalBookingsNumber, isSummaryCity};
 export type {ISummaryRange, ISummaryBooking};
