@@ -135,6 +135,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The UI build stamps `git rev-list --count HEAD` as the version's build
+          # number, so a shallow clone would report a wrong count (and
+          # `generate-version.js` refuses to stamp one).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
