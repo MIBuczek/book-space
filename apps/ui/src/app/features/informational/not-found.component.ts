@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 /**
- * The 404 page.
+ * The 404 page (FR-039, issue #44).
  *
  * It offers a link back to the calendar rather than relying on the browser's
  * back button, which is what the legacy `NoMatch` did.
@@ -11,16 +11,23 @@ import { RouterLink } from '@angular/router';
   selector: 'book-space-not-found',
   imports: [RouterLink],
   template: `
-    <section class="bs-page">
-      <h1>Page not found</h1>
-      <p>The page you asked for does not exist.</p>
-      <a routerLink="/">Back to the calendar</a>
-    </section>
+    <main class="bs-not-found">
+      <h1>Strona nie istnieje</h1>
+      <p>Błąd 404</p>
+      <a routerLink="/">Powrót do kalendarza rezerwacji</a>
+    </main>
   `,
   styles: [
     `
-      .bs-page {
-        padding: 1.5rem;
+      .bs-not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 46.5vh;
+        margin-top: 5vh;
+        padding: 0 1.5rem;
+        text-align: center;
       }
     `,
   ],

@@ -1010,6 +1010,30 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   explicitly (`--projects=server,ui,date-time,booking-rules`, plus its
   `coverage/libs/booking-rules/coverage-summary.json` row) — a new library has to be added to
   *both* the run-many list and the summary-merge table or its coverage never reaches the gate.
+  `libs/version` (`@booking/version`, T040) is the third: `ci.yml` now runs
+  `--projects=server,ui,date-time,booking-rules,reporting,version` and prints its summary row.
+- **The build number is a task input, not just a task dependency.** `libs/version` stamps
+  `git rev-list --count HEAD` into a gitignored `generated/build-number.ts`, and both apps swap
+  it in through `fileReplacements`. Depending on `version:build` is *not* enough: Nx keys a
+  task's cache on its own inputs, and the app build reads the generated file as ordinary
+  source, so on the next commit the version task re-runs but the app build is a cache hit and
+  keeps the old number. Both apps therefore declare
+  `inputs: ["default", "^default", {"runtime": "git rev-list --count HEAD"}]` — the `runtime`
+  entry is what invalidates the app build when the count moves. Keep `^default` in that list;
+  specifying `inputs` replaces the default set, and dropping `^default` silently stops a
+  dependency's source change from invalidating the build. Verified by committing an empty
+  commit between two builds: without the `runtime` input the bundle stayed at the old count,
+  with it the bundle moves.
+- **The committed `build-number.ts` is the fallback, and it must stay `'0'`.** A test run and a
+  fresh checkout read `libs/version/src/lib/build-number.ts` (which is never overwritten), so
+  `APP_VERSION` is `1.0.0+0` there and `version.spec.ts` asserts the shape (`/^1\.0\.0\+\d+$/`)
+  rather than a number that changes with every merge. The generated file is under
+  `/libs/version/generated/` in `.gitignore`; committing it would make the stamp a merge
+  conflict on every branch.
+- **`git rev-list --count HEAD` needs full history.** CI already checks out with
+  `fetch-depth: 0` (Nx needs the merge base anyway), but a shallow clone would stamp a count
+  from the truncated history — a wrong number rather than an error. `--unshallow` before
+  trusting the value locally.
 - **The cyclical expansion, the slot-overlap predicate and the intra-booking check live in
   `@booking/rules`, not in the server.** `expandBookingTimes`, `slotsConflict`, `slotsOverlap`
   and `findIntraBookingOverlap` were moved out of `apps/server/src/app/bookings/` (T035) so the
