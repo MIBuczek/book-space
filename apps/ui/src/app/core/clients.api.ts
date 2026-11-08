@@ -2,7 +2,7 @@ import {HttpClient, HttpParams} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {IClient, IClientRequest} from '@models/client.model';
 import {IPaginated} from '@models/pagination.model';
-import {Observable} from 'rxjs';
+import {EMPTY, Observable, expand, reduce} from 'rxjs';
 
 /** The filters the Clients tab's list read accepts (FR-022, FR-024, FR-043). */
 interface IClientListQuery {
@@ -41,6 +41,25 @@ export class ClientsApi {
     const params = keys.reduce((acc, key) => setIfPresent(acc, key, query[key]), new HttpParams());
 
     return this.http.get<IPaginated<IClient>>('/api/clients', {params});
+  }
+
+  /**
+   * Every client, for a control that needs the whole collection (the Summary tab's selector).
+   *
+   * It walks the pages with `expand` rather than requesting a huge `limit`: FR-043 forbids an
+   * unbounded read, and the server caps `limit` at 200. Fetching page by page keeps each request
+   * inside the documented bounds while still giving the caller one list, and it stops when the
+   * page returns fewer rows than asked for (the last page). The selector needs names, not a
+   * paged view, so collecting them here is the one place this pattern is allowed.
+   */
+  listAll(): Observable<IClient[]> {
+    const pageSize = 200;
+    return this.list({page: 1, limit: pageSize}).pipe(
+      expand((page) =>
+        page.items.length < pageSize ? EMPTY : this.list({page: page.page + 1, limit: pageSize})
+      ),
+      reduce((clients, page) => [...clients, ...page.items], [] as IClient[])
+    );
   }
 
   create(body: IClientRequest): Observable<IClient> {

@@ -3,6 +3,7 @@ export { CheckboxComponent } from './checkbox.component';
 export { DatePickerComponent } from './date-picker.component';
 export { InputComponent } from './input.component';
 export { ModalComponent } from './modal.component';
+export { MonthPickerComponent } from './month-picker.component';
 export { PaginationComponent } from './pagination.component';
 export { SelectComponent } from './select.component';
 export { TableComponent } from './table.component';

@@ -65,4 +65,36 @@ describe('ClientsApi', () => {
     expect(request.request.method).toBe('DELETE');
     request.flush({});
   });
+
+  describe('listAll', () => {
+    it('collects every page until a short page ends the walk', () => {
+      const fullPage = Array.from({length: 200}, (_, index) => ({_id: `c${index}`}));
+      const collected: string[] = [];
+      api.listAll().subscribe((clients) => collected.push(...clients.map((client) => client._id)));
+
+      const first = httpMock.expectOne((candidate) => candidate.url === '/api/clients');
+      expect(first.request.params.get('page')).toBe('1');
+      expect(first.request.params.get('limit')).toBe('200');
+      first.flush({items: fullPage, total: 201, page: 1, limit: 200});
+
+      const second = httpMock.expectOne((candidate) => candidate.url === '/api/clients');
+      expect(second.request.params.get('page')).toBe('2');
+      second.flush({items: [{_id: 'last'}], total: 201, page: 2, limit: 200});
+
+      expect(collected).toHaveLength(201);
+      expect(collected.at(-1)).toBe('last');
+    });
+
+    it('stops after one request when the first page is short', () => {
+      const collected: string[] = [];
+      api.listAll().subscribe((clients) => collected.push(...clients.map((client) => client._id)));
+
+      httpMock
+        .expectOne((candidate) => candidate.url === '/api/clients')
+        .flush({items: [{_id: 'c1'}], total: 1, page: 1, limit: 200});
+
+      expect(collected).toEqual(['c1']);
+      httpMock.expectNone((candidate) => candidate.url === '/api/clients');
+    });
+  });
 });

@@ -19,3 +19,13 @@ if (!HTMLDialogElement.prototype.showModal) {
     this.dispatchEvent(new Event('close'));
   };
 }
+
+// jsdom does not implement URL.createObjectURL/revokeObjectURL either. The CSV
+// download builds a Blob and hands its object URL to an anchor, which is the only
+// way to name a download without a data: URI's length limit. Same shape as the
+// <dialog> stub above: stand in for the two methods so the real download path is
+// exercised rather than mocked away.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => 'blob:jsdom-stub';
+  URL.revokeObjectURL = () => undefined;
+}

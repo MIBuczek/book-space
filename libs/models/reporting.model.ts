@@ -60,5 +60,33 @@ interface ICSVColumn {
 /** A single CSV row, keyed by `ICSVColumn.key`. */
 type TCSVRow = Record<string, string>;
 
+/**
+ * The query `GET /reporting/summary` and `GET /reporting/summary.csv` accept
+ * (contracts/openapi.yaml, FR-027–FR-029).
+ *
+ * `fromMonth`/`toMonth` name a month (the first instant of it); the server widens each to its
+ * whole month. `fromTheBeginning` overrides the bounds and reads the whole history. `clientId`
+ * is required for the single-client summary and the per-client CSV, and omitted for the
+ * all-clients CSV.
+ *
+ * A request payload shared by the UI that builds it and the server that consumes it, so it lives
+ * here rather than in `apps/ui` (constitution, Principle IV): a field rename has to break both.
+ */
+interface ISummaryQuery {
+  clientId?: string;
+  fromMonth?: Date;
+  toMonth?: Date;
+  fromTheBeginning?: boolean;
+}
+
 export {SUMMARY_CITIES};
-export type {TSummaryCity, IGeneralBookingDetails, IBookedTimeSummary, TCitySummary, IClientSummary, ICSVColumn, TCSVRow};
+export type {
+  TSummaryCity,
+  IGeneralBookingDetails,
+  IBookedTimeSummary,
+  TCitySummary,
+  IClientSummary,
+  ICSVColumn,
+  TCSVRow,
+  ISummaryQuery,
+};
