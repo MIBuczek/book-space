@@ -131,6 +131,16 @@ describe('clientCsvRows', () => {
     expect(rows[0].nip).toBe('');
     expect(rows[0].participants).toBe('');
   });
+
+  it('renders an absent client name as empty rather than undefined', () => {
+    // `name` is the column the report is keyed on, and a client created before the field
+    // was mandatory can reach the export without one. The `?? ''` keeps the cell a string
+    // so the column stays aligned; without it the row would carry `undefined`.
+    const nameless = {_id: 'c3'} as unknown as IClient;
+    const rows = clientCsvRows(nameless, [booking()], range);
+
+    expect(rows[0].name).toBe('');
+  });
 });
 
 describe('csvHeader', () => {

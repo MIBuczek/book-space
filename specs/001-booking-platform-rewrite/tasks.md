@@ -81,7 +81,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 ## Phase 8 — Verification
 
-- [ ] T045 [P] Unit tests for conflict detection, cyclical expansion, report aggregation, permission checks and validation, achieving at least 80 % coverage of the domain modules. (SC-001, SC-008)
+- [x] T045 [P] Unit tests for conflict detection, cyclical expansion, report aggregation, permission checks and validation, achieving at least 80 % coverage of the domain modules. (SC-001, SC-008)
 - [ ] T046 [P] Integration tests for every endpoint asserting both the success and the forbidden/unauthorised outcome per role. (SC-001)
 - [ ] T047 [P] End-to-end tests for the P1 journeys: public request, sign-in and role-based navigation. (NFR-004)
 - [ ] T048 Accessibility pass: keyboard reachability, form-error announcements, and a non-colour conflict indicator. (NFR-006)
