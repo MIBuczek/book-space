@@ -95,7 +95,9 @@
     "serve-static": {
       "executor": "@nx/web:file-server",
       "options": {
-        "buildTarget": "ui:build"
+        "buildTarget": "ui:build",
+        "staticFilePath": "dist/apps/ui",
+        "spa": true
       }
     },
     "docker-build": {

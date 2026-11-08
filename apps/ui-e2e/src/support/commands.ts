@@ -1,33 +1,26 @@
 // ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
+// Custom commands shared by the P1 journey specs.
 //
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
+// The kit wraps every control in a `<label>`, so a field is reached by its visible label
+// text rather than by an id the caller would have to know. `field` returns the wrapping
+// `.bs-field` (an input, a select or a date picker); `checkBox` returns the `.bs-checkbox`
+// wrapper. Keeping the lookups here means a kit class rename is one edit, not one per spec.
 // ***********************************************
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace Cypress {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface Chainable<Subject> {
-    login(email: string, password: string): void;
+  interface Chainable {
+    /**
+     * The `.bs-field` wrapper for the control labelled `label`.
+     *
+     * Chain `.find('input')` or `.find('select')` to reach the control itself.
+     */
+    field(label: string): Chainable<JQuery<HTMLElement>>;
+    /** The `.bs-checkbox` wrapper labelled `label`. */
+    checkBox(label: string): Chainable<JQuery<HTMLElement>>;
   }
 }
-//
-// -- This is a parent command --
-Cypress.Commands.add('login', (email, password) => {
-  console.log('Custom command example: Login', email, password);
-});
-//
-// -- This is a child command --
-// Cypress.Commands.add("drag", { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+
+Cypress.Commands.add('field', (label: string) => cy.contains('.bs-field__label', label).parent());
+
+Cypress.Commands.add('checkBox', (label: string) => cy.contains('.bs-checkbox', label));

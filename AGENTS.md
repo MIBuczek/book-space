@@ -679,7 +679,14 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   seed to invent twelve addresses, so they are optional in the schema, DTO, contract and
   `data-model.md`. `spec.md` §4's per-city tables, CHK004 and the legacy constant all list
   **twelve** facilities; §1's introduction said "13" and was corrected to match.
-- E2E projects are not part of the CI gate: `ui-e2e` still asserts the Nx starter text.
+- **E2E projects are now part of the CI gate (T047).** `ui-e2e` was excluded while it asserted
+  the Nx starter text; it now carries the P1 journeys (`public-visitor.cy.ts`, `sign-in.cy.ts`)
+  and `ci.yml` runs `nx e2e ui-e2e --configuration=ci` under `xvfb-run`. The specs stub the API
+  with `cy.intercept`, so the `ci` configuration serves the *built* UI through `ui:serve-static`
+  — there is no server behind it, which is why `serve-static` now sets `spa: true` and an
+  explicit `staticFilePath` (the `ui:build` `outputPath` is an object, so the executor cannot
+  infer the directory and without a `spa` fallback a deep link such as `/admin` answers `404`
+  from http-server before Angular ever sees it). `apps/server-e2e` remains out of the gate.
 
 ## CI
 

@@ -165,13 +165,52 @@ jobs:
           fi
           node tools/scan-secrets.js
 
+  # The P1 journeys from `spec.md` (US1 and US2) run against the built UI with the API
+  # stubbed at the HTTP boundary. They are the only place the routes, guards and the
+  # role-derived navigation are exercised as a whole, so they belong in the gate rather
+  # than in a developer's local run.
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Where the Cypress postinstall puts its browser binary. Pinned to a
+      # workspace-absolute path so the cache step below and the install agree on one
+      # location — `actions/cache` does not expand `~`, and a path it cannot resolve is
+      # a silent no-op (the same trap the mongod cache documents).
+      CYPRESS_CACHE_FOLDER: ${{ github.workspace }}/.cache/Cypress
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The build stamps the version from the commit count, and Nx needs the merge base.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      # Cypress downloads its browser binary in a postinstall step. Caching it keeps the
+      # job from re-downloading ~200 MB on every run; the key carries the pinned version so
+      # a bump re-downloads exactly once.
+      - name: Cache the Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CYPRESS_CACHE_FOLDER }}
+          key: cypress-16.2.1-${{ runner.os }}
+
+      - run: yarn install --frozen-lockfile --non-interactive
+
+      # Cypress needs a display server; the runner is headless. `xvfb-run` provides one.
+      - name: Run the end-to-end tests
+        run: xvfb-run -a yarn nx e2e ui-e2e --configuration=ci
+
   # Single required check for branch protection. It fails unless every job above
   # succeeded, which keeps the ruleset stable when jobs are added or renamed.
   gate:
     name: CI
     runs-on: ubuntu-latest
     if: always()
-    needs: [lint, test, build, secrets]
+    needs: [lint, test, build, secrets, e2e]
     steps:
       - name: Check every job succeeded
         env:
@@ -181,7 +220,7 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ',') }}
         run: |
           echo "results: $RESULTS"
-          if [ "$RESULTS" != "success,success,success,success" ]; then
+          if [ "$RESULTS" != "success,success,success,success,success" ]; then
             echo "::error::One or more required jobs did not succeed."
             exit 1
           fi
