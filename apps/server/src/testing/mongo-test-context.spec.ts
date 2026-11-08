@@ -1,3 +1,4 @@
+import {APP_VERSION} from '@booking/version';
 import {createMongoTestContext, MongoTestContext} from './mongo-test-context';
 
 /**
@@ -26,7 +27,7 @@ describe('MongoTestContext', () => {
     const res = await fetch(ctx.baseUrl);
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({message: 'Hello API'});
+    expect(await res.json()).toEqual({message: 'Hello API', version: APP_VERSION});
   });
 
   it('connects to a real database', async () => {

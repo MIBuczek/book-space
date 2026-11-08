@@ -23,7 +23,8 @@
       "@server/utils/*": ["./apps/server/src/app/utility/*"],
       "@booking/date-time": ["./libs/date-time/src/index.ts"],
       "@booking/rules": ["./libs/booking-rules/src/index.ts"],
-      "@booking/reporting": ["./libs/reporting/src/index.ts"]
+      "@booking/reporting": ["./libs/reporting/src/index.ts"],
+      "@booking/version": ["./libs/version/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

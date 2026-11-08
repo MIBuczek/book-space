@@ -32,6 +32,12 @@ paths:
                 type: object
                 properties:
                   message: {type: string, example: Hello API}
+                  version:
+                    type: string
+                    description: >
+                      The deployed build, `1.0.0+<commit count>`. Stamped at build time and
+                      shared with the UI footer, so the two report the same build.
+                    example: 1.0.0+63
 
   /auth/sign-in:
     post:

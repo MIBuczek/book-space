@@ -9,6 +9,8 @@
       "executor": "@nx/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
+      "dependsOn": ["^build", "version:build"],
+      "inputs": ["default", "^default", {"runtime": "git rev-list --count HEAD"}],
       "options": {
         "target": "node",
         "compiler": "tsc",
@@ -17,7 +19,13 @@
         "tsConfig": "apps/server/tsconfig.app.json",
         "assets": ["apps/server/src/assets"],
         "isolatedConfig": true,
-        "webpackConfig": "apps/server/webpack.config.js"
+        "webpackConfig": "apps/server/webpack.config.js",
+        "fileReplacements": [
+          {
+            "replace": "libs/version/src/lib/build-number.ts",
+            "with": "libs/version/generated/build-number.ts"
+          }
+        ]
       },
       "configurations": {
         "development": {},

@@ -77,7 +77,7 @@ jobs:
       - run: yarn install --frozen-lockfile --non-interactive
 
       - name: Run unit tests
-        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting --configuration=ci
+        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version --configuration=ci
 
       # The threshold makes the build fail; this makes the number visible. The
       # original defect was that the reported figure (63.9%) was not the figure
@@ -92,7 +92,8 @@ jobs:
                               ["ui", "coverage/apps/ui/coverage-summary.json"],
                               ["date-time", "coverage/libs/date-time/coverage-summary.json"],
                               ["booking-rules", "coverage/libs/booking-rules/coverage-summary.json"],
-                              ["reporting", "coverage/libs/reporting/coverage-summary.json"]];
+                              ["reporting", "coverage/libs/reporting/coverage-summary.json"],
+                              ["version", "coverage/libs/version/coverage-summary.json"]];
             const keys = ["statements", "branches", "functions", "lines"];
             const rows = [];
             for (const [name, path] of projects) {
@@ -134,6 +135,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The UI build stamps `git rev-list --count HEAD` as the version's build
+          # number, so a shallow clone would report a wrong count (and
+          # `generate-version.js` refuses to stamp one).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24

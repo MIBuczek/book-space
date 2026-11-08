@@ -10,6 +10,8 @@
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
+      "dependsOn": ["^build", "version:build"],
+      "inputs": ["default", "^default", {"runtime": "git rev-list --count HEAD"}],
       "options": {
         "outputPath": {
           "base": "dist/apps/ui",
@@ -20,7 +22,13 @@
         "tsConfig": "apps/ui/tsconfig.app.json",
         "assets": ["apps/ui/src/favicon.ico", "apps/ui/src/assets"],
         "styles": ["apps/ui/src/styles.scss"],
-        "scripts": []
+        "scripts": [],
+        "fileReplacements": [
+          {
+            "replace": "libs/version/src/lib/build-number.ts",
+            "with": "libs/version/generated/build-number.ts"
+          }
+        ]
       },
       "configurations": {
         "production": {

@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 
+import { APP_VERSION } from '@booking/version';
 import { AppService } from './app.service';
 
 describe('AppService', () => {
@@ -7,15 +8,19 @@ describe('AppService', () => {
 
   beforeAll(async () => {
     const app = await Test.createTestingModule({
-      providers: [AppService],
+      providers: [AppService]
     }).compile();
 
     service = app.get<AppService>(AppService);
   });
 
   describe('getData', () => {
-    it('should return "Hello API"', () => {
-      expect(service.getData()).toEqual({ message: 'Hello API' });
+    it('reports the banner and the build version', () => {
+      expect(service.getData()).toEqual({ message: 'Hello API', version: APP_VERSION });
+    });
+
+    it('reports a semantic version, so an operator can identify the build', () => {
+      expect(service.getData().version).toMatch(/^\d+\.\d+\.\d+\+\d+$/);
     });
   });
 });

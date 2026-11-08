@@ -53,3 +53,8 @@ Thumbs.db
 # actions/cache can find it (the default is under $HOME); locally the package
 # uses $HOME, so this only matters when that variable is set.
 /.cache/mongodb-binaries
+
+# The build number is stamped into this file by `tools/generate-version.js`; the
+# committed `libs/version/src/lib/build-number.ts` is the fallback, so the stamped
+# value never reaches the repository.
+/libs/version/generated/
