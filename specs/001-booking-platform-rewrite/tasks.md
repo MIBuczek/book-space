@@ -83,7 +83,7 @@ acceptance criteria pass and the tests it names exist and are green.
 
 - [ ] T045 [P] Unit tests for conflict detection, cyclical expansion, report aggregation, permission checks and validation, achieving at least 80 % coverage of the domain modules. (SC-001, SC-008)
 - [ ] T046 [P] Integration tests for every endpoint asserting both the success and the forbidden/unauthorised outcome per role. (SC-001)
-- [ ] T047 [P] End-to-end tests for the P1 journeys: public request, sign-in and role-based navigation. (NFR-004)
+- [x] T047 [P] End-to-end tests for the P1 journeys: public request, sign-in and role-based navigation, and the administrator's approve/resolve/archive flow. (NFR-004)
 - [ ] T048 Accessibility pass: keyboard reachability, form-error announcements, and a non-colour conflict indicator. (NFR-006)
 - [ ] T049 Verify SC-007 by building the UI and grepping the output for secrets, and record the result. (SC-007)
 - [ ] T050 Performance check: booking list and calendar load, and summary CSV generation for a client with 200 bookings. (SC-006, NFR-009)

@@ -1,17 +1,7 @@
-// ***********************************************************
-// This example support/index.js is processed and
-// loaded automatically before your test files.
+// Cypress loads this support file before every spec.
 //
-// This is a great place to put global configuration and
-// behavior that modifies Cypress.
-//
-// You can change the location of this file or turn off
-// automatically serving support files with the
-// 'supportFile' configuration option.
-//
-// You can read more here:
-// https://on.cypress.io/configuration
-// ***********************************************************
+// It imports the custom commands the journeys use (`signIn`, the label-scoped field
+// helpers). The backend harness is *not* here: it runs in Node via `setupNodeEvents` in
+// `cypress.config.ts`, because a spec runs in the browser and cannot start a database.
 
-// Import commands.js using ES2015 syntax:
 import './commands';
