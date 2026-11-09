@@ -102,6 +102,51 @@ describe('client and facility role rules', () => {
       expect((await request('GET', '/clients', token)).status).toBe(200);
     });
 
+    it('refuses an unauthenticated single read with 401', async () => {
+      expect((await request('GET', '/clients/507f1f77bcf86cd799439011')).status).toBe(401);
+    });
+
+    it('lets an office user read a single client', async () => {
+      // The class-level `@Roles('OFFICE','ADMIN')` covers the single read as well as the
+      // list, so this is the success half of the row rather than a second list assertion.
+      const admin = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/clients', admin, CLIENT);
+      const {_id} = (await created.json()) as {_id: string};
+      const token = await signIn('office@example.com', 'OFFICE');
+
+      expect((await request('GET', `/clients/${_id}`, token)).status).toBe(200);
+    });
+
+    it('lets an administrator read a single client', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/clients', token, CLIENT);
+      const {_id} = (await created.json()) as {_id: string};
+
+      expect((await request('GET', `/clients/${_id}`, token)).status).toBe(200);
+    });
+
+    it('refuses an unauthenticated write with 401', async () => {
+      // The route-level `@Roles('ADMIN')` on the writes does not replace the class-level
+      // `AuthGuard('jwt')`, so an absent credential is a 401 rather than a 403 — the same
+      // "authentication before authorisation" order the users spec pins.
+      const id = '507f1f77bcf86cd799439011';
+      const responses = await Promise.all([
+        request('POST', '/clients', undefined, CLIENT),
+        request('PUT', `/clients/${id}`, undefined, {nick: 'X'}),
+        request('DELETE', `/clients/${id}`),
+      ]);
+
+      expect(responses.map((r) => r.status)).toEqual([401, 401, 401]);
+    });
+
+    it('lets an administrator update', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/clients', token, CLIENT);
+      const {_id} = (await created.json()) as {_id: string};
+
+      expect((await request('PUT', `/clients/${_id}`, token, {nick: 'Nowy nick'})).status).toBe(200);
+    });
+
     it('refuses an employee create with 403', async () => {
       const token = await signIn('employee@example.com', 'EMPLOYEE');
 
@@ -186,8 +231,61 @@ describe('client and facility role rules', () => {
       expect((await request('POST', '/buildings', token, FACILITY)).status).toBe(201);
     });
 
+    it('lets each staff role read a single facility', async () => {
+      // The single read is `@Roles('EMPLOYEE','OFFICE','ADMIN')` while the list is public,
+      // so the staff half of that row is proved here rather than by the list cases above.
+      const admin = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/buildings', admin, FACILITY);
+      const {_id} = (await created.json()) as {_id: string};
+      const employee = await signIn('employee@example.com', 'EMPLOYEE');
+      const office = await signIn('office@example.com', 'OFFICE');
+
+      const responses = await Promise.all([
+        request('GET', `/buildings/${_id}`, employee),
+        request('GET', `/buildings/${_id}`, office),
+        request('GET', `/buildings/${_id}`, admin),
+      ]);
+
+      expect(responses.map((r) => r.status)).toEqual([200, 200, 200]);
+    });
+
+    it('refuses an unauthenticated write with 401', async () => {
+      const id = '507f1f77bcf86cd799439011';
+      const responses = await Promise.all([
+        request('POST', '/buildings', undefined, FACILITY),
+        request('PUT', `/buildings/${id}`, undefined, {name: 'X'}),
+        request('DELETE', `/buildings/${id}`),
+      ]);
+
+      expect(responses.map((r) => r.status)).toEqual([401, 401, 401]);
+    });
+
+    it('lets an administrator update', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/buildings', token, FACILITY);
+      const {_id} = (await created.json()) as {_id: string};
+
+      expect((await request('PUT', `/buildings/${_id}`, token, {name: 'Nowa nazwa'})).status).toBe(200);
+    });
+
+    it('lets an administrator delete', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const created = await request('POST', '/buildings', token, FACILITY);
+      const {_id} = (await created.json()) as {_id: string};
+
+      expect((await request('DELETE', `/buildings/${_id}`, token)).status).toBe(200);
+    });
+
     it('refuses an employee update with 403', async () => {
       const token = await signIn('employee@example.com', 'EMPLOYEE');
+
+      const response = await request('PUT', '/buildings/507f1f77bcf86cd799439011', token, {name: 'X'});
+
+      expect(response.status).toBe(403);
+    });
+
+    it('refuses an office update with 403', async () => {
+      const token = await signIn('office@example.com', 'OFFICE');
 
       const response = await request('PUT', '/buildings/507f1f77bcf86cd799439011', token, {name: 'X'});
 

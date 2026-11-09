@@ -236,6 +236,22 @@ describe('reporting over HTTP', () => {
       const response = await get(`/reporting/summary.csv?${range}`, token);
       expect(response.status).toBe(403);
     });
+
+    it('refuses an unauthenticated caller', async () => {
+      const response = await get(`/reporting/summary.csv?${range}`);
+      expect(response.status).toBe(401);
+    });
+
+    it('lets an administrator export', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const clientId = await createClient();
+      await createBooking(clientId);
+
+      const response = await get(`/reporting/summary.csv?clientId=${clientId}&${range}`, token);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/csv');
+    });
   });
 
   describe('the Summary deny-list (FR-006)', () => {

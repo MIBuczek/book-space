@@ -251,6 +251,17 @@ describe('booking approval and archive over HTTP', () => {
     expect(response.status).toBe(403);
   });
 
+  it('refuses an office user with 403', async () => {
+    // The matrix row for approval is administrator-only, so the office role is refused as
+    // well as the employee — an office user is not an approver.
+    const {token} = await signIn('office@example.com', 'OFFICE');
+    const stored = await bookingModel.create(booking());
+
+    const response = await approve(String(stored._id), {accepted: true}, token);
+
+    expect(response.status).toBe(403);
+  });
+
   it('refuses an anonymous caller with 401', async () => {
     const stored = await bookingModel.create(booking());
 
@@ -301,6 +312,15 @@ describe('booking approval and archive over HTTP', () => {
 
   it('refuses an employee archiving with 403', async () => {
     const {token} = await signIn('employee@example.com', 'EMPLOYEE');
+    const stored = await bookingModel.create(booking());
+
+    const response = await archive(String(stored._id), {archive: true}, token);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('refuses an office user archiving with 403', async () => {
+    const {token} = await signIn('office@example.com', 'OFFICE');
     const stored = await bookingModel.create(booking());
 
     const response = await archive(String(stored._id), {archive: true}, token);

@@ -155,6 +155,17 @@ describe('notifications over HTTP', () => {
       expect(sent).toHaveLength(0);
     });
 
+    it('lets an administrator send', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const bookingId = await createBooking();
+
+      const response = await post('/notifications/booking', {bookingId, audience: 'STAFF'}, token);
+
+      expect(response.status).toBe(202);
+      expect(sent).toHaveLength(1);
+      expect(sent[0].to).toBe('biuro@example.com');
+    });
+
     it('refuses an unauthenticated caller', async () => {
       const bookingId = await createBooking();
       const response = await post('/notifications/booking', {bookingId, audience: 'FACILITY'});

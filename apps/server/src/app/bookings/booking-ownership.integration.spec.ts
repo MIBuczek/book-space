@@ -152,6 +152,41 @@ describe('booking ownership over HTTP', () => {
     expect(response.status).toBe(401);
   });
 
+  it('serves the single read to any authenticated staff member', async () => {
+    // The single read carries `AuthGuard('jwt')` only — it is not an ownership decision.
+    // Any staff member may read any booking; only the write routes compare identity.
+    const {id: ownerId} = await signIn('owner@example.com', 'EMPLOYEE');
+    const stored = await bookingModel.create(booking(ownerId));
+    const {token} = await signIn('other@example.com', 'EMPLOYEE');
+
+    const response = await fetch(`${ctx.baseUrl}/bookings/${String(stored._id)}`, {
+      headers: {authorization: `Bearer ${token}`},
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  it('refuses an unauthenticated single read with 401', async () => {
+    const {id: ownerId} = await signIn('owner@example.com', 'EMPLOYEE');
+    const stored = await bookingModel.create(booking(ownerId));
+
+    const response = await fetch(`${ctx.baseUrl}/bookings/${String(stored._id)}`);
+
+    expect(response.status).toBe(401);
+  });
+
+  it('refuses an unauthenticated delete with 401', async () => {
+    const {id: ownerId} = await signIn('owner@example.com', 'EMPLOYEE');
+    const stored = await bookingModel.create(booking(ownerId));
+
+    const response = await fetch(`${ctx.baseUrl}/bookings/${String(stored._id)}`, {
+      method: 'DELETE',
+    });
+
+    expect(response.status).toBe(401);
+    expect(await bookingModel.findById(String(stored._id))).not.toBeNull();
+  });
+
   it('lets a staff member update the booking they created', async () => {
     const {token, id: ownerId} = await signIn('owner@example.com', 'EMPLOYEE');
     const stored = await bookingModel.create(booking(ownerId));

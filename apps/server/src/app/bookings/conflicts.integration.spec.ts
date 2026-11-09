@@ -203,6 +203,16 @@ describe('GET /bookings/conflicts over HTTP', () => {
     expect(response.status).toBe(403);
   });
 
+  it('refuses an office user with 403', async () => {
+    // The conflict counter is administrator-only (matrix row "See the conflict counter"),
+    // so the office role is refused as well as the employee.
+    const token = await signIn('office@example.com', 'OFFICE');
+
+    const response = await getConflicts(token);
+
+    expect(response.status).toBe(403);
+  });
+
   it('refuses an anonymous caller with 401', async () => {
     const response = await getConflicts(undefined);
 
