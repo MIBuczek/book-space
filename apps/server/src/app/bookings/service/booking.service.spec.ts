@@ -146,6 +146,17 @@ describe('BookingService', () => {
       expect(modelMock.create).toHaveBeenCalled();
     });
 
+    it('looks the facility up by name alone when the place carries no city', async () => {
+      // The filter adds `city` only when it is present. A booking without a city is
+      // resolved by facility name, which is what lets the size rule apply at all rather
+      // than matching a `city: undefined` document that never exists.
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1']});
+
+      await service.createBooking({size: '1/1', place: {place: 'hala-sportowa'}} as never, 'u2', false);
+
+      expect(buildingModelMock.findOne).toHaveBeenCalledWith({property: 'hala-sportowa'}, {sizes: 1});
+    });
+
     it('maps a driver error onto an HTTP exception', async () => {
       modelMock.create.mockRejectedValue(new Error('connection lost'));
 

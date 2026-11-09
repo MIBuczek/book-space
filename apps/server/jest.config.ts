@@ -108,14 +108,14 @@ export default {
   // conflict rules are pure and fully exercised, so the group below mechanises the
   // 80% floor for that module. `reports` has no source at all (T026 is unbuilt).
   //
-  // `bookings` now measures ~98% in aggregate, but a per-file group cannot be set yet:
-  // Jest applies a glob threshold to each matching file, and `models/booking-query.dto.ts`
-  // measures 75% branches — the `BooleanQuery` transform's guard arms are not all
-  // exercised. The aggregate is the number SC-008 is about; the group lands with T045,
-  // which owns the domain-coverage criterion, and setting it earlier would fail the build
-  // on a file T011 did not touch. The two schema files that blocked it before are now
-  // covered: `booked-time.schema.ts` gained its spec in T011 and `booking.schema.ts`
-  // reaches 100% because the nested validation executes its validators.
+  // `bookings` is the fourth SC-008 module and gained its per-file group with T045.
+  // The blocker the note above used to record is gone: `models/booking-query.dto.ts`
+  // reached 100% branches once its spec drove the real `ValidationPipe` over every
+  // `BooleanQuery` arm (including the explicit-`undefined` case class-transformer would
+  // otherwise skip), and every file under `bookings/` now measures 100%. T045 also gave
+  // `booked-time.schema.ts` its own spec — its `endHours` validator guards against a
+  // non-`Date` value, and that arm is unreachable through parent validation because the
+  // `type: Date` cast runs first, so it is driven by calling the validator directly.
   //
   // `users` is deliberately not a group even though it now measures 100%: SC-008
   // does not name it, and a group whose files are all at 100% would be a second
@@ -159,15 +159,34 @@ export default {
       functions: 80,
       lines: 80,
     },
-    // Raised with the reporting workstream (T026–T029). The three per-file groups above take
-    // their files out of this pool, so the figure here is the aggregate of everything *except*
-    // `authorization/`, `bookings/conflicts/` and `reporting/` — 99.59/94.61/100/99.56 on this
-    // branch. The floor is set just below the measured value rather than at it, because the
-    // pool includes boot coverage from the integration specs, which can shift by a statement
-    // when a test is added or reordered; the point is that it cannot fall back.
+    // The bookings domain (T045). This is the fourth SC-008 module and the one the note
+    // above deferred: every file under `bookings/` now measures 100%, so 80 is the
+    // criterion's floor and a new file arriving without tests fails at 0% immediately.
+    // The key is placed *after* `bookings/conflicts/` on purpose — Jest assigns a file to
+    // the first matching key, so the narrower conflict group must win; were the order
+    // reversed this group would swallow the conflict rules and that key would be dead.
+    '**/src/app/bookings/**/*.ts': {
+      statements: 80,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+    },
+    // Raised with the domain-coverage work (T045). The four per-file groups above take
+    // their files out of this pool, so the figure here is the aggregate of everything
+    // *except* `authorization/`, `bookings/conflicts/`, `reporting/` and `bookings/` —
+    // 99.87/95.54/99.30/99.86 on this branch. Adding the `bookings/` group moved the pool
+    // again: those files are all at 100%, so removing them lowers the aggregate, which is
+    // why the floor was re-derived from the per-file rows rather than carried over. The
+    // branches figure also moved because T045 added the unit specs that drive the
+    // defensive arms a request cannot reach — the error filter's non-`Error` throw and
+    // unusable response, the redactor's unserialisable structure, the request context read
+    // outside a request. The floor is set just below the measured value rather than at it,
+    // because the pool includes boot coverage from the integration specs, which can shift
+    // by a statement when a test is added or reordered; the point is that it cannot fall
+    // back.
     global: {
       statements: 99,
-      branches: 94,
+      branches: 95,
       functions: 99,
       lines: 99,
     },

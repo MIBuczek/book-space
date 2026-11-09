@@ -63,4 +63,18 @@ describe('redact', () => {
 
     expect(() => redact(value)).not.toThrow();
   });
+
+  it('replaces a structure that cannot be walked rather than failing the request', () => {
+    // A log call must not be able to fail the request it describes. A getter that throws
+    // is the case a plain circular check does not catch, and the marker is what the
+    // operator sees instead of the request failing.
+    const hostile = {
+      get boom(): string {
+        throw new Error('getter exploded');
+      },
+    };
+
+    expect(() => redact(hostile)).not.toThrow();
+    expect(redact(hostile)).toBe('[unserialisable]');
+  });
 });

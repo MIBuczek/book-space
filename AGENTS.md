@@ -320,6 +320,28 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   first per-directory group made the global figure *fall* (81.62 → 78.18 statements) even
   though the excluded files were at 100%. Re-derive `global` from the report whenever a group
   is added; the drop is the arithmetic, not a regression.
+- **A narrower group key must come before a broader one, or it is dead.** Jest assigns a file
+  to the *first* matching key, so `'**/src/app/bookings/conflicts/**/*.ts'` has to be declared
+  above `'**/src/app/bookings/**/*.ts'` (T045); reversed, the broader key claims the conflict
+  rules and the narrower one matches nothing. The two happen to carry the same 80 floor today,
+  so the ordering is invisible until one of them is tightened — which is the point of keeping
+  them separate.
+- **The `bookings/**` group could not be set until T045.** Jest applies a glob threshold per
+  file, and `models/booking-query.dto.ts` sat at 75% branches until its spec drove the real
+  `ValidationPipe` over every `BooleanQuery` arm, including the explicit-`undefined` case
+  class-transformer skips. The group is now in and every file under `bookings/` measures 100%.
+  `booked-time.schema.ts` needed its own spec for the same reason: its `endHours` validator
+  guards against a non-`Date` value, and that arm is *unreachable* through parent validation
+  because the `type: Date` cast runs first, so the spec calls the validator directly.
+- **The `global` branch floor moved with T045 (94 → 95).** Adding the 100%-covered `bookings/`
+  group lowered the pool's aggregate branches to 93.56 — just under the old 94 — so the floor
+  was not lowered; reachable defensive arms were covered instead (the error filter's
+  non-`Error` throw and unusable response, the redactor's unserialisable structure, and the
+  request context read outside a request). Some arms stay uncovered on purpose because they
+  are not reachable from a test without contriving the failure: `mail-transport.ts`'s
+  `String(e)` for a non-`Error` rejection, the correlation middleware's array-header case, and
+  the interceptor's non-HTTP context. Measure the pool with `minimatch` against the real
+  absolute paths, not by reading the report's `total`.
 - **`JwtStrategy.validate` must `await` the user.** Passing the promise to `done` sets
   `request.user` to a `Promise`, so `RolesGuard` reads `role` off it, finds `undefined`, and
   refuses every role-restricted route for every caller — including an administrator. The
