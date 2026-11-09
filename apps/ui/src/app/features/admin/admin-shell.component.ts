@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { SessionStore } from '../../core/session.store';
 import { ButtonComponent } from '../../shared/ui';
@@ -75,10 +75,20 @@ import { visibleAdminTabs } from '../../shell/navigation';
 export class AdminShellComponent {
   private readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly tabs = computed(() => visibleAdminTabs(this.session.capabilities()));
 
+  /**
+   * Signs out and leaves the admin area (US2 scenario 6).
+   *
+   * Navigating away is part of the action, not a nicety: `authGuard` is a `CanMatchFn`, so it
+   * runs on navigation and not when the session changes. Clearing the session without moving
+   * therefore leaves the administrator on the admin route with the tabs gone and the loaded
+   * tab still rendered — a stranded state the top navigation's sign-out (which navigates to
+   * `/`) does not have. Both controls now behave the same way.
+   */
   signOut(): void {
-    this.auth.signOut().subscribe();
+    this.auth.signOut().subscribe(() => void this.router.navigate(['/']));
   }
 }

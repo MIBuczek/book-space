@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { AdminShellComponent } from './admin-shell.component';
 import { adminUser, employeeUser } from '../../../testing/fixtures';
@@ -56,8 +56,10 @@ describe('AdminShellComponent', () => {
     expect(links).toHaveLength(0);
   });
 
-  it('clears the session when sign-out is pressed', () => {
+  it('clears the session and leaves the admin area when sign-out is pressed', () => {
     const session = TestBed.inject(SessionStore);
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
     session.set('token-1', adminUser());
     const fixture = render();
 
@@ -69,5 +71,8 @@ describe('AdminShellComponent', () => {
     httpMock.expectOne('/api/auth/sign-out').flush({ message: 'Signed out' });
 
     expect(session.isAuthenticated()).toBe(false);
+    // The guard runs on navigation, so clearing the session without moving would strand the
+    // administrator on the admin route (US2 scenario 6).
+    expect(navigate).toHaveBeenCalledWith(['/']);
   });
 });

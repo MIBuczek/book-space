@@ -679,12 +679,30 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   seed to invent twelve addresses, so they are optional in the schema, DTO, contract and
   `data-model.md`. `spec.md` §4's per-city tables, CHK004 and the legacy constant all list
   **twelve** facilities; §1's introduction said "13" and was corrected to match.
-- E2E projects are not part of the CI gate: `ui-e2e` still asserts the Nx starter text.
+- **`ui-e2e` is now part of the CI gate (T047).** The generated stub is gone; the project
+  runs three P1 journeys (`public-journey`, `staff-auth`, `admin-approval`) against the real
+  stack. The harness (`apps/ui-e2e/src/support/backend.ts`) starts an ephemeral
+  `mongodb-memory-server` and spawns the *built* `dist/apps/server/main.js` in
+  `setupNodeEvents`, and the browser reaches it through the `/api` proxy the dev server
+  carries (`apps/ui/proxy.conf.json`). Seeding is exposed as Cypress tasks because a spec runs
+  in the browser and cannot open a database connection; each spec resets the seed in
+  `beforeEach`. `server-e2e` is still not gated — it is a different project and T047 covers
+  only `ui-e2e`.
+- **The `ci` configuration serves the production UI bundle through `ui:serve:production`, not
+  `ui:serve-static`.** `@nx/web:file-server` cannot do both: its `spa` option makes a single
+  404-fallback proxy and the `/api` proxy then swallows the deep links, so `cy.visit('/sign-in')`
+  answers `404` from http-server rather than the SPA. It also cannot read the UI's structured
+  `outputPath` (`{base, browser}`) — `getBuildTargetOutputPath` passes the object straight to
+  `path.join` and dies with `The "path" argument must be of type string`. The Angular dev
+  server serves the production build *and* honours `proxyConfig`, so it is the correct target
+  for a headless CI run. The e2e job needs `xvfb-run` for Electron.
 
 ## CI
 
-`.github/workflows/ci.yml` runs lint, unit tests, build and a client-bundle secret scan on
-every PR, then a `gate` job that fails unless all of them passed.
+`.github/workflows/ci.yml` runs lint, unit tests, build, the P1 journey end-to-end tests and a
+client-bundle secret scan on every PR, then a `gate` job that fails unless all of them passed.
+The e2e job (`xvfb-run -a yarn nx e2e ui-e2e --configuration=ci`) boots its own `mongod` and
+the built server, so it needs the same `MONGOMS_DOWNLOAD_DIR` cache as the unit-test job.
 
 ## Branch ruleset
 

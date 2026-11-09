@@ -18,9 +18,15 @@
           "devServerTarget": "ui:serve:production"
         },
         "ci": {
-          "devServerTarget": "ui:serve-static"
+          "devServerTarget": "ui:serve:production"
         }
-      }
+      },
+      "dependsOn": [
+        {
+          "projects": ["server"],
+          "target": "build"
+        }
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",

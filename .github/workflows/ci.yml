@@ -129,6 +129,40 @@ jobs:
           test -f dist/apps/server/main.js || { echo "server bundle missing"; exit 1; }
           test -f dist/apps/ui/index.html || { echo "ui bundle missing"; exit 1; }
 
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The e2e harness starts its own `mongodb-memory-server`, so it needs the same cached
+      # binary the unit tests do. Sharing the key means one download serves both jobs.
+      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.cache/mongodb-binaries
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The version stamp reads `git rev-list --count HEAD`, and Nx needs the merge base.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      # Before `yarn install`: the package's postinstall hook downloads the binary when absent.
+      - name: Cache the mongod binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
+          key: mongod-8.2.6-${{ runner.os }}
+
+      - run: yarn install --frozen-lockfile --non-interactive
+
+      # The journeys drive a real browser against the built server and an ephemeral `mongod`
+      # (apps/ui-e2e/src/support/backend.ts), so the whole stack is exercised, not mocks. The
+      # `ci` configuration serves the production UI bundle with the `/api` proxy the dev server
+      # carries. `xvfb-run` gives Electron the display Cypress expects on a headless runner.
+      - name: Run the P1 journey end-to-end tests
+        run: xvfb-run -a yarn nx e2e ui-e2e --configuration=ci
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
@@ -171,7 +205,7 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
     if: always()
-    needs: [lint, test, build, secrets]
+    needs: [lint, test, build, e2e, secrets]
     steps:
       - name: Check every job succeeded
         env:
@@ -181,7 +215,7 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ',') }}
         run: |
           echo "results: $RESULTS"
-          if [ "$RESULTS" != "success,success,success,success" ]; then
+          if [ "$RESULTS" != "success,success,success,success,success" ]; then
             echo "::error::One or more required jobs did not succeed."
             exit 1
           fi
