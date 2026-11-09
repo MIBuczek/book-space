@@ -371,6 +371,22 @@ switching the project to npm or pnpm: `yarn.lock` v1 is not readable by them, an
   and `BuildingController` is `@Roles('EMPLOYEE','OFFICE','ADMIN')` with the same
   administrator-only writes — so "read for staff, write for admin" is one class decorator plus
   three route decorators, not five per-route decisions.
+- **The role matrix is asserted per role, and an administrator-only row must refuse the
+  *office* role as well as the employee (T046, SC-001).** An earlier round of specs proved an
+  employee's `403` on the approve, archive, conflicts and facility-write rows and stopped
+  there, which leaves the office role untested: it is the one role that sits between employee
+  and administrator on several rows and the one most likely to be accidentally admitted by a
+  `@Roles('ADMIN')` widened to `@Roles('OFFICE','ADMIN')`. Every administrator-only row now
+  carries an office refusal, and the success half of each row is proved too — the users create
+  and single read, the client single read, the facility single read for each staff role, the
+  booking single read, and the CSV export — rather than inferring them from a neighbouring
+  route that shares the decorator. A decorator that is attached is not the same claim as a
+  decorator that is attached *and* produces the right status on each route.
+- **An unauthenticated write is `401`, not `403`, even on a route whose `@Roles` is narrow.**
+  The route-level `@Roles('ADMIN')` does not replace the class-level `AuthGuard('jwt')`, so the
+  credential is checked first: an absent token answers `401` before `RolesGuard` ever reads a
+  role. The clients and facilities writes and the booking delete now pin that, the same
+  authentication-before-authorisation order the users spec pins.
 - **A new `@Roles` on a controller breaks every unit spec that boots it with only
   `overrideGuard(AuthGuard('jwt'))`.** The real `RolesGuard` then runs, reads the (absent) role
   off the stub request and answers `403` before the handler is reached, so a spec about route

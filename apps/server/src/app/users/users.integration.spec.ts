@@ -97,6 +97,39 @@ describe('users routes are administrator-only', () => {
     expect(response.status).toBe(200);
   });
 
+  it('lets an administrator create, read and update a user', async () => {
+    // The success half of every users row, not just the list read: the class decorator
+    // admits the administrator to all five routes, so the create and the single read are
+    // proved here rather than assumed from the list case.
+    await seedUser('admin@example.com', 'ADMIN');
+    const token = await signIn('admin@example.com');
+
+    const created = await fetch(`${ctx.baseUrl}/users`, {
+      method: 'POST',
+      headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'},
+      body: JSON.stringify({
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        password: 'correct horse battery',
+        recheckPassword: 'correct horse battery',
+        email: 'grace@example.com',
+        role: 'EMPLOYEE',
+        city: 'siechnice',
+      }),
+    });
+    expect(created.status).toBe(201);
+    const {_id} = (await created.json()) as {_id: string};
+
+    expect((await fetch(`${ctx.baseUrl}/users/${_id}`, {headers: {authorization: `Bearer ${token}`}})).status).toBe(200);
+
+    const updated = await fetch(`${ctx.baseUrl}/users/${_id}`, {
+      method: 'PUT',
+      headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'},
+      body: JSON.stringify({firstName: 'Grace B.'}),
+    });
+    expect(updated.status).toBe(200);
+  });
+
   it('refuses a write from an employee as well as a read', async () => {
     await seedUser('employee@example.com', 'EMPLOYEE');
     const token = await signIn('employee@example.com');
