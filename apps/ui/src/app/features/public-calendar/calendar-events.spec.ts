@@ -139,6 +139,34 @@ describe('bookingsToEvents', () => {
 
     expect(events).toHaveLength(3);
   });
+
+  /**
+   * The calendar's client-side half of NFR-009 (T050, issue #54).
+   *
+   * The server-side load is timed in `apps/server/src/app/performance.integration.spec.ts`;
+   * this is the other half of "the calendar renders within 2 s" — turning the loaded bookings
+   * into events. It is a pure function over a year of bookings, so the measurement is the
+   * transform rather than a jsdom render, which would be measuring the test environment. The
+   * bound is the specification's own 2 s target and the data set is a year; on this machine the
+   * transform runs in single-digit milliseconds, so a failure means the flattening gained a
+   * quadratic path, not that the runner was slow. The number is printed so it is recorded.
+   */
+  it('turns a year of bookings into events well under 2 s (NFR-009)', () => {
+    const yearStart = new Date('2026-01-01T00:00:00Z').getTime();
+    const hourStep = (365 * 24 * 3_600_000) / 1200;
+    const year: IBooking[] = Array.from({length: 1200}, (_, index) =>
+      booking({_id: `b${index}`, bookedTimes: [slot({day: new Date(yearStart + index * hourStep)})]})
+    );
+
+    const started = performance.now();
+    const events = bookingsToEvents(year, true);
+    const ms = performance.now() - started;
+
+    // eslint-disable-next-line no-console
+    console.log(`[T050] calendar transform, year of bookings: ${ms.toFixed(1)} ms`);
+    expect(events).toHaveLength(1200);
+    expect(ms).toBeLessThan(2000);
+  });
 });
 
 describe('weekDays', () => {
