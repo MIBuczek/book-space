@@ -416,6 +416,8 @@ paths:
               schema: {$ref: '#/components/schemas/Booking'}
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /bookings/{_id}:
     parameters:
@@ -716,6 +718,14 @@ paths:
     post:
       tags: [notifications]
       summary: Send a contact-form or facility-employee message
+      description: >
+        Public for the contact form (FR-034). A `recipient` names a facility employee
+        (FR-041), which is a staff action: it is honoured only for an authenticated staff
+        caller and only when it matches a facility's stored contact address (FR-051). A
+        public caller that supplies one is refused with `403`; a staff caller whose
+        address matches no facility is refused with `422`. The route is rate-limited
+        (FR-048), refuses a filled decoy field (FR-049) and caps outbound sends per
+        recipient (FR-050).
       requestBody:
         required: true
         content:
@@ -724,15 +734,24 @@ paths:
               type: object
               required: [person, email, message]
               properties:
-                person: {type: string}
-                email: {type: string, format: email}
-                phone: {type: string}
-                message: {type: string}
-                recipient: {type: string, format: email}
+                person: {type: string, minLength: 1, maxLength: 125}
+                email: {type: string, format: email, maxLength: 125}
+                phone: {type: string, maxLength: 20}
+                message: {type: string, minLength: 1, maxLength: 2000}
+                recipient: {type: string, format: email, maxLength: 125}
+                website:
+                  type: string
+                  description: >
+                    Bot-mitigation decoy (FR-049). A human never fills it; a non-empty
+                    value is refused with `422`. Omit it or send an empty string.
       responses:
         '202': {description: Accepted}
+        '403':
+          description: A public caller named a message recipient
         '422':
-          description: Missing field, or a malformed sender/recipient address
+          description: Missing field, a malformed sender/recipient address, an over-long field, or a filled decoy field
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '502': {description: Provider failure, or an unconfigured mailbox}
 
 components:
@@ -770,6 +789,13 @@ components:
       content:
         application/json:
           schema: {$ref: '#/components/schemas/ValidationError'}
+    TooManyRequests:
+      description: >
+        The caller exceeded the rate limit (FR-048) or the per-recipient outbound quota
+        (FR-050). `retryAfterSeconds` says when the window resets.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/TooManyRequestsError'}
 
   schemas:
     Error:
@@ -788,6 +814,17 @@ components:
           items: {type: string}
           example: ['E-mail address need to contains correct pattern.']
         error: {type: string, example: Unprocessable Entity}
+
+    TooManyRequestsError:
+      type: object
+      properties:
+        statusCode: {type: integer, example: 429}
+        message: {type: string, example: Too many requests. Please try again later.}
+        error: {type: string, example: Too Many Requests}
+        retryAfterSeconds:
+          type: integer
+          description: Seconds until the window resets
+          example: 540
 
     ConflictError:
       description: >
@@ -994,8 +1031,8 @@ components:
           type: object
           required: [place, city]
           properties:
-            place: {type: string, description: 'Facility property key, e.g. hala-sportowa'}
-            city: {type: string}
+            place: {type: string, minLength: 1, maxLength: 125, description: 'Facility property key, e.g. hala-sportowa'}
+            city: {type: string, minLength: 1, maxLength: 125}
         size: {type: string, pattern: '^[0-9]/[0-9]$'}
         clientId: {type: string}
         nick: {type: string, minLength: 3, maxLength: 100}
@@ -1019,6 +1056,11 @@ components:
         selectedOptions:
           type: array
           items: {$ref: '#/components/schemas/SelectedExtraOption'}
+        website:
+          type: string
+          description: >
+            Bot-mitigation decoy (FR-049). A human never fills it; a non-empty value is
+            refused with `422`. Omit it or send an empty string.
 
     Booking:
       allOf:

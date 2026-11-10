@@ -1,4 +1,4 @@
-import {BadGatewayException, HttpException, Inject, Injectable, NotFoundException} from '@nestjs/common';
+import {BadGatewayException, ForbiddenException, HttpException, Inject, Injectable, NotFoundException, UnprocessableEntityException} from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {ConfigService} from '@nestjs/config';
 import {Model} from 'mongoose';
@@ -12,6 +12,7 @@ import {INotifiableBooking, bookingEmail} from '../mail/booking-email';
 import {renderTemplate} from '../templates/render';
 import {NOTIFICATION_TEMPLATES} from '../templates/templates';
 import {BookingNotificationDto, MessageDto} from '../models/notification.dto';
+import {OutboundQuotaService} from '../../security/quota/outbound-quota.service';
 
 /** The recipient address an audience resolves to. */
 const STAFF_AUDIENCE = 'STAFF';
@@ -24,6 +25,7 @@ export class NotificationService {
     @InjectModel('Building') private buildingModel: Model<Building>,
     @Inject(MAIL_TRANSPORT) private readonly transport: IMailTransport,
     private readonly configService: ConfigService,
+    private readonly quota: OutboundQuotaService,
     private readonly logger: StructuredLogger
   ) {}
 
@@ -61,18 +63,39 @@ export class NotificationService {
   }
 
   /**
-   * Sends a contact-form or facility-employee message (FR-034, FR-041).
+   * Sends a contact-form or facility-employee message (FR-034, FR-041, FR-050).
    *
-   * With a `recipient` the message goes to that facility employee; without one it goes to the
-   * SISK inbox from configuration. The sender's address is carried in the body so the recipient
-   * can answer the visitor directly, which the legacy form's fields imply and a plain body does
-   * not carry.
+   * Two shapes, told apart by `recipient`:
+   *
+   * - **without `recipient`** it is the public contact form (FR-034) and the message goes to
+   *   the SISK inbox from configuration;
+   * - **with `recipient`** it is the Facilities-tab message to a facility employee (FR-041).
+   *   That path is *staff only* and the address must be a facility's contact address.
+   *
+   * The allow-list is the fix for issue #124. `recipient` used to be sent to directly, so the
+   * public route — which requires no credential — would deliver the SISK-branded
+   * `employee-message` template to any syntactically valid address a caller named: an open
+   * relay. Now the address is only honoured when the caller is authenticated staff (`isPublic`
+   * is `false`) and the address matches a facility's stored `email`. A public caller who sends
+   * a `recipient` is refused with `403`; a staff caller whose address matches no facility is
+   * refused with `422`, so a typo is distinguished from an authorisation failure.
+   *
+   * The outbound quota (FR-050) is checked after the recipient resolves and before the
+   * transport is called, so a message that would exceed the per-recipient cap is a `429` that
+   * never reaches the provider — the send that would have cost the operator money does not
+   * happen. The quota counts the *resolved* recipient, so the SISK inbox and each facility
+   * address each have their own ceiling.
    */
-  async sendMessage(request: MessageDto): Promise<{status: string}> {
-    const recipient = request.recipient ?? this.configService.get<string>('SISK_CONTACT_EMAIL');
+  async sendMessage(request: MessageDto, isPublic: boolean): Promise<{status: string}> {
+    const recipient = request.recipient
+      ? await this.resolveEmployeeRecipient(request.recipient, isPublic)
+      : this.configService.get<string>('SISK_CONTACT_EMAIL');
+
     if (!recipient) {
       throw new BadGatewayException('The contact mailbox is not configured (set SISK_CONTACT_EMAIL)');
     }
+
+    this.quota.assertAllowed(recipient);
 
     // The employee variant is the Facilities-tab message (FR-041); the contact variant is the
     // public form (FR-034). They differ only in the recipient and whether the sender's phone is
@@ -89,6 +112,35 @@ export class NotificationService {
       audience: request.recipient ? 'EMPLOYEE' : 'CONTACT',
     });
     return {status: 'sent'};
+  }
+
+  /**
+   * Resolves an employee-message recipient, refusing anything but a facility's contact address.
+   *
+   * `isPublic` is the caller's kind (fail-closed: `true` unless the request was positively
+   * marked staff). A public caller may never name a recipient, because the public contact form
+   * does not offer one and the only reason to send one is to reach an employee. A staff caller
+   * may, but only to an address a facility record already carries — so the module can still be
+   * used as an open relay only by someone who could already edit the facilities.
+   *
+   * The comparison is case-insensitive (addresses are case-insensitive in practice, and the
+   * schema stores the facility address lower-cased). A staff address that matches no facility
+   * is a `422` rather than a `404`: the *field* is wrong, not the resource.
+   */
+  private async resolveEmployeeRecipient(recipient: string, isPublic: boolean): Promise<string> {
+    if (isPublic) {
+      this.logger.warn('notification.message.rejected', {actorId: currentActorId(), reason: 'public_recipient'});
+      throw new ForbiddenException('A recipient may only be named by staff');
+    }
+
+    const facility = await this.buildingModel.findOne(
+      {email: recipient.trim().toLowerCase()},
+      {email: 1}
+    );
+    if (!facility?.email) {
+      throw new UnprocessableEntityException('The recipient is not a facility contact address');
+    }
+    return facility.email;
   }
 
   /**

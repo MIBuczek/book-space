@@ -322,6 +322,27 @@ describe('BookingRequestComponent', () => {
     expect(element(fixture).textContent).toContain('Dziękujemy');
   });
 
+  it('renders the bot-mitigation decoy off-screen and outside the keyboard order (FR-049)', async () => {
+    const fixture = await render();
+    const decoy = element(fixture).querySelector('.bs-request__decoy');
+
+    expect(decoy).not.toBeNull();
+    expect(decoy?.getAttribute('aria-hidden')).toBe('true');
+    expect(decoy?.querySelector('input')?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('sends the decoy empty for a real visitor', async () => {
+    const fixture = await render();
+    fillRequired(fixture);
+    addSlot(fixture);
+    setCheckbox(fixture, 'Akceptuję klauzulę informacyjną RODO', true);
+    submit(fixture);
+
+    const request = bookingRequest();
+    expect((request.request.body as IBookingRequest).website).toBe('');
+    request.flush(createdBooking());
+  });
+
   it('reports a validation failure from the server', async () => {
     const fixture = await render();
     fillRequired(fixture);

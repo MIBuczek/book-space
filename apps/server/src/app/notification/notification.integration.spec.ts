@@ -215,16 +215,46 @@ describe('notifications over HTTP', () => {
       expect(String(sent[0].text)).toContain('Proszę o kontakt');
     });
 
-    it('delivers a message to a selected facility employee', async () => {
+    it('delivers to a facility contact address for a staff caller', async () => {
+      const token = await signIn('office@example.com', 'OFFICE');
+      await createFacility();
+
+      const response = await post(
+        '/notifications/message',
+        {person: 'Anna Nowak', email: 'anna@example.com', message: 'Pytanie', recipient: 'facility@example.com'},
+        token
+      );
+
+      expect(response.status).toBe(202);
+      expect(sent[0].to).toBe('facility@example.com');
+    });
+
+    it('refuses a public caller that names a recipient (open-relay fix, #124)', async () => {
+      await createFacility();
+
       const response = await post('/notifications/message', {
         person: 'Anna Nowak',
         email: 'anna@example.com',
         message: 'Pytanie',
-        recipient: 'employee@example.com',
+        recipient: 'attacker@example.com',
       });
 
-      expect(response.status).toBe(202);
-      expect(sent[0].to).toBe('employee@example.com');
+      expect(response.status).toBe(403);
+      expect(sent).toHaveLength(0);
+    });
+
+    it('refuses a staff recipient that is not a facility contact address', async () => {
+      const token = await signIn('office@example.com', 'OFFICE');
+      await createFacility();
+
+      const response = await post(
+        '/notifications/message',
+        {person: 'Anna Nowak', email: 'anna@example.com', message: 'Pytanie', recipient: 'attacker@example.com'},
+        token
+      );
+
+      expect(response.status).toBe(422);
+      expect(sent).toHaveLength(0);
     });
 
     it('answers 422 for a malformed sender address', async () => {
@@ -234,6 +264,18 @@ describe('notifications over HTTP', () => {
         message: 'Pytanie',
       });
       expect(response.status).toBe(422);
+    });
+
+    it('refuses a submission that filled the honeypot field (FR-049)', async () => {
+      const response = await post('/notifications/message', {
+        person: 'Anna Nowak',
+        email: 'anna@example.com',
+        message: 'Pytanie',
+        website: 'http://spam.example',
+      });
+
+      expect(response.status).toBe(422);
+      expect(sent).toHaveLength(0);
     });
   });
 });

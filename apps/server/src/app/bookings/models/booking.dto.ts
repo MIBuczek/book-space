@@ -38,6 +38,17 @@ export class BookingDto {
   })
   type!: TClientType;
 
+  /**
+   * The booked facility, as a nested object.
+   *
+   * The fields carry explicit maximum lengths (T057, FR-047): `@IsObject` alone checks only
+   * that the value is an object, so an unbounded `place.place`/`place.city` reached the
+   * database and every index built on them. `@ValidateNested` plus `@Type` is what makes the
+   * nested rules run — without both, `@IsObject` sees a plain object and validates nothing
+   * inside it, the same gap `BookingDto.bookedTimes` had before T011.
+   */
+  @Validator.ValidateNested()
+  @Type(() => PlaceDto)
   @Validator.IsObject({
     message: 'City and street information need to be added.'
   })
@@ -141,4 +152,34 @@ export class BookingDto {
   @Validator.ValidateNested({each: true})
   @Type(() => SelectedExtraOptionDto)
   selectedOptions?: SelectedExtraOptionDto[];
+
+  /**
+   * The bot-mitigation decoy (FR-049). Declared so `whitelist` keeps it; a non-empty value is
+   * refused by `HoneypotGuard` with `422`. A real form submits an empty string or omits it.
+   */
+  @Validator.IsOptional()
+  @Validator.IsString()
+  website?: string;
+}
+
+/**
+ * The nested `place` object (FR-047).
+ *
+ * A concrete class so `@ValidateNested` has a metatype and the two string fields carry
+ * explicit maximum lengths. Before T057 `place` was only `@IsObject`, so `place.place` and
+ * `place.city` were unbounded and reached the database — and the facility index — as whatever
+ * length the caller sent.
+ */
+export class PlaceDto implements IPlace {
+  @Validator.IsString({message: 'Place need to be a string.'})
+  @Validator.Length(1, 125, {
+    message: 'Place can have between 1 and 125 characters.'
+  })
+  place!: string;
+
+  @Validator.IsString({message: 'City need to be a string.'})
+  @Validator.Length(1, 125, {
+    message: 'City can have between 1 and 125 characters.'
+  })
+  city!: string;
 }

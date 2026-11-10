@@ -50,6 +50,12 @@ interface IBookingRequest {
   paymentMethod: TPayment;
   discount?: string;
   selectedOptions?: ISelectedExtraOption[];
+  /**
+   * The bot-mitigation decoy (FR-049). The real form renders it off-screen and always sends
+   * it empty; a script that fills every input sends a value, which the server refuses. Named
+   * `website` to match `HONEYPOT_FIELD` on the server.
+   */
+  website?: string;
 }
 
 interface IBooking {

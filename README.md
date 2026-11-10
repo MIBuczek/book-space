@@ -69,6 +69,10 @@ cp apps/server/.env.example apps/server/.env
 | `MAIL_API_KEY`        | no       | Bearer token sent to `MAIL_ENDPOINT`.                                                                                                                                    |
 | `MAIL_FROM`           | no       | Sender address on outbound mail.                                                                                                                                         |
 | `SISK_CONTACT_EMAIL`  | no       | The SISK inbox that staff notifications and contact-form messages are delivered to (FR-033, FR-034).                                                                     |
+| `PUBLIC_RATE_LIMIT`   | no       | Requests allowed per window from one client address and per submitted e-mail on the public write routes (FR-048). Defaults to `12`; `0` disables the check.             |
+| `PUBLIC_RATE_LIMIT_WINDOW_MS` | no | The rate-limit window in milliseconds. Defaults to `600000` (10 minutes).                                                                                                |
+| `NOTIFICATION_QUOTA`  | no       | Outbound messages allowed per recipient address per window (FR-050). Defaults to `20`; `0` disables the check.                                                          |
+| `NOTIFICATION_QUOTA_WINDOW_MS` | no | The outbound-quota window in milliseconds. Defaults to `3600000` (1 hour).                                                                                              |
 
 The server validates the environment at boot and refuses to start with a message naming what
 is wrong, rather than failing later inside `JwtModule` or `MongooseModule`. `DB_URI` and

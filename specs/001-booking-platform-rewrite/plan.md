@@ -114,6 +114,7 @@ apps/
 │   │   │   ├── buildings/                # cities and facilities
 │   │   │   ├── bookings/                 # bookings + embedded booked times
 │   │   │   ├── notification/             # outbound e-mail (currently an empty shell)
+│   │   │   ├── security/                 # abuse protection: rate limit, honeypot, outbound quota
 │   │   │   ├── reporting/                # TO BUILD — summaries, CSV, PDF data
 │   │   │   └── utility/                  # validation-error mapping, guards, decorators
 │   │   └── assets/
@@ -156,3 +157,4 @@ duplicated. A new `tools/migration` project holds the one-off Firebase import.
 | Separate `reporting` module | Reporting aggregates across clients, bookings and facilities and has its own contract and tests | Folding it into `bookings` mixes read models with the write model and makes the CSV/PDF contract hard to test in isolation |
 | `tools/migration` project | Legacy data must be transformed (missing fields, `invoice` → `transfer`, `bookingTime` → `bookedTimes`, denormalised city/building → reference) | A one-off script inside the server would ship migration code into production and would not be independently runnable or testable |
 | Embedded `bookedTimes` documents | The legacy model treats slots as part of one request, and every slot is written with the parent | A separate collection adds a join and a transaction for every booking write with no query benefit at this scale |
+| In-memory rate-limit/quota store (`security/`) | A process-local fixed-window counter needs no Redis, no schema and no operational dependency for a single-replica municipal deployment | A shared store (Redis) adds an infrastructure component and a failure mode the deployment does not otherwise have; the store is behind a `record()` seam so one can be dropped in later without touching the guards (FR-048–FR-050) |

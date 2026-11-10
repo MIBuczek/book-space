@@ -31,6 +31,8 @@ import {RolesGuard} from '../../authorization/guards/roles.guard';
 import {Roles} from '../../authorization/decorators/roles.decorator';
 import {actingUserId, canModifyBooking, IActingUser, isStaff} from '../../authorization/ownership';
 import {serializePublicBookings} from '../models/booking.serializer';
+import {RateLimitGuard} from '../../security/rate-limit/rate-limit.guard';
+import {HoneypotGuard} from '../../security/honeypot/honeypot.guard';
 
 @Controller('bookings')
 export class BookingController {
@@ -124,9 +126,13 @@ export class BookingController {
    * person whose identity they are about to impersonate. The DTO does not declare
    * the field, so `whitelist`/`forbidNonWhitelisted` already rejects a body that
    * tries to set it; stamping here is the positive half of that.
+   *
+   * `RateLimitGuard` caps how fast one IP and one submitted address may post (FR-048), and
+   * `HoneypotGuard` refuses a body that filled the hidden decoy field (FR-049). Both run
+   * before the handler, so an abusive request never reaches the database.
    */
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard, RateLimitGuard, HoneypotGuard)
   createBooking(
     @Req() request: Request,
     @Body() newBooking: BookingDto,

@@ -1251,3 +1251,72 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   audience receives, which is what the task exists to prevent. Do not rename a placeholder in a
   template without the builder; `templates.spec.ts` asserts every declared variable is
   populated for a complete booking.
+
+## Abuse protection (T057)
+
+- **The abuse controls sit on the two public write routes, and only those.** `POST /bookings`
+  and `POST /notifications/message` are the only endpoints an unauthenticated caller can drive,
+  so they are the only ones carrying `RateLimitGuard`, `HoneypotGuard` and the outbound quota.
+  The guards are attached per route, not at the class: a controller-level guard would run on the
+  authenticated reads too. `SecurityModule` is `@Global` so a guard is resolvable from any
+  controller's module context without every module importing it.
+- **The rate-limit and quota stores are in memory, and that is a decision, not an oversight.**
+  `security/rate-limit/rate-limit.store.ts` is a process-local fixed-window counter behind a
+  `record(key, limit, windowMs)` seam. Behind more than one replica the effective limit is
+  multiplied by the replica count and a restart clears the counters; the single-replica
+  municipal deployment makes that acceptable and the seam lets a shared backend drop in without
+  touching the guard. Do not "fix" it by reaching for Redis without the deployment change that
+  needs it.
+- **A limit of `0` disables the check, and an empty setting is *absent*, not zero.** The guard's
+  `numberFrom` treats `undefined`/`null`/`''` as "use the default" and a non-numeric value as the
+  default too, because `Number('')` is `0` and a typo must not turn the limit off — a limit of
+  zero that refused everything would make a misconfigured environment look like a broken
+  endpoint. `0` is the operator's deliberate off switch.
+- **The test harness raises the limits, and must.** `createMongoTestContext` sets
+  `PUBLIC_RATE_LIMIT`/`NOTIFICATION_QUOTA` to `100000` *before* importing `AppModule`, because
+  `ConfigModule.forRoot` captures the environment at import time and the booking-size spec alone
+  posts a booking per seeded size. The one suite that exercises the limits
+  (`security/abuse.integration.spec.ts`) sets its own small values *before* calling
+  `createMongoTestContext`, which is the only place a later change would have an effect.
+  `reset()` also calls `RateLimitStore.clear()`: the windows live in memory, so dropping the
+  database does not clear them and a suite would start answering `429` partway through.
+- **A filled decoy is `422` from a guard, and the field is `optional` on the DTO.** The honeypot
+  is a hidden `website` field; `HoneypotGuard` refuses a non-empty value with `422` (the same
+  status as any bad field, so the response tells a bot nothing). The field is declared
+  `@IsOptional()` on `MessageDto`/`BookingDto` so `whitelist`/`forbidNonWhitelisted` do not
+  reject it as unknown before the guard can read it. It is a guard, not a DTO rule, because the
+  *value* rule needs the raw value and a single-field guard keeps the refusal in one place. A
+  bot mitigation must not be a CAPTCHA: that would break NFR-006, so the decoy is chosen for its
+  accessibility neutrality.
+- **The decoy must actually be rendered, or the guard is inert.** The public booking form
+  renders `.bs-request__decoy` — off-screen via `clip-path`, *not* `display:none`, so a bot that
+  skips hidden fields still fills it — with `aria-hidden="true"` and `tabindex="-1"` so it is
+  invisible to assistive technology and the keyboard order, and always submits it empty. A guard
+  on a field no form renders protects nothing; the component spec asserts the decoy is present,
+  `aria-hidden`, `tabindex="-1"`, and sent empty.
+- **The 429 body carries `retryAfterSeconds` through `StructuredHttpException`.** The global
+  `ErrorExceptionFilter` narrows every `HttpException` to `{statusCode, message, error}`, which
+  would drop the hint — the same reason the conflicted-approval `409` uses that class. It is
+  honoured only below `500`, so it cannot smuggle a driver message out.
+- **The client address is Express's `request.ip`, never a raw `X-Forwarded-For`.** Reading the
+  header unconditionally lets a caller pick their own key and walk around the limit; the
+  operator opts in by setting `trust proxy`.
+- **The outbound quota counts the *recipient*, and runs before the transport.** It is a different
+  control from the request limit: a script behind rotating IPs, or one that stays just under the
+  request limit, still spends the recipient's allowance. Checking it inside `NotificationService`
+  before `transport.send` means a message that would exceed the cap is a `429` that never reaches
+  the provider.
+- **`MessageDto.recipient` is allow-listed, and that is the fix for the open relay (#124).** The
+  public route (no credential) would otherwise deliver the SISK-branded `employee-message`
+  template to any syntactically valid address a caller named. It is honoured only when the caller
+  is authenticated staff (`request.isPublic === false`) *and* the address matches a facility's
+  stored contact address: a public caller that names one gets `403`, a staff caller whose address
+  matches no facility gets `422` (a wrong field, not a missing resource).
+- **`BookingDto.place` needed `@ValidateNested` + a concrete `PlaceDto`.** `@IsObject` alone
+  validates nothing inside the object, so `place.place`/`place.city` were unbounded and reached
+  the database and their index at whatever length the caller sent — the same gap `bookedTimes`
+  had before T011. A nested object is validated only when `@ValidateNested` and `@Type` are both
+  present.
+- **Every free-text field on a public route carries an explicit server-side `maxLength`.** The
+  DTO is the boundary (`422`) and the contract documents the same bound; an unbounded value is
+  what reaches an index and a report. `comments` is bounded at 525 (FR-047).

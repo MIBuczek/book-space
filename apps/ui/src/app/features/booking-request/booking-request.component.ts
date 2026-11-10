@@ -284,6 +284,24 @@ const RODO_CLAUSE_URL =
             <p class="bs-request__error" role="alert">{{ message }}</p>
           }
 
+          <!--
+            Bot-mitigation decoy (FR-049). Off-screen, not display:none, so a naive bot that
+            skips hidden fields still fills it; a human never sees it and leaves it empty. It is
+            aria-hidden and tabindex="-1" so it is invisible to assistive technology and the
+            keyboard order, which is what keeps the mitigation accessible (NFR-006).
+          -->
+          <label class="bs-request__decoy" aria-hidden="true">
+            <span>Strona internetowa</span>
+            <input
+              type="text"
+              name="website"
+              tabindex="-1"
+              autocomplete="off"
+              [value]="value().website"
+              (input)="update({website: $any($event.target).value})"
+            />
+          </label>
+
           <book-space-button type="submit" [disabled]="!canSubmit()">
             Wyślij prośbę o rezerwację
           </book-space-button>
@@ -323,6 +341,21 @@ const RODO_CLAUSE_URL =
         gap: 0.25rem;
         margin-bottom: 1rem;
       }
+      /*
+        The decoy (FR-049) is positioned off-screen rather than display:none or
+        visibility:hidden, so a bot that skips hidden fields still finds and fills it. It is
+        not left:-9999px either: some bots skip a value that is obviously off-page, so it sits
+        in place, clipped to a single pixel.
+      */
+      .bs-request__decoy {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
     `,
   ],
 })
@@ -350,6 +383,7 @@ export class BookingRequestComponent {
     paymentMethod: 'TRANSFER',
     discount: '',
     rodoAcknowledgement: false,
+    website: '',
   });
 
   readonly draftDay = signal(new Date());

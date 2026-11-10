@@ -1,10 +1,11 @@
 import {Test, TestingModule} from '@nestjs/testing';
 import {ConfigService} from '@nestjs/config';
 import {getModelToken} from '@nestjs/mongoose';
-import {BadGatewayException, NotFoundException} from '@nestjs/common';
+import {BadGatewayException, ForbiddenException, NotFoundException, UnprocessableEntityException} from '@nestjs/common';
 import {NotificationService} from './notification.service';
 import {IMailMessage, MAIL_TRANSPORT} from '../mail/mail-transport';
 import {StructuredLogger} from '../../logging/structured-logger';
+import {OutboundQuotaService} from '../../security/quota/outbound-quota.service';
 
 /**
  * The unit spec drives the service against a recording transport and a model stub. The
@@ -48,7 +49,8 @@ describe('NotificationService', () => {
               return Promise.resolve();
             }
           }
-        }
+        },
+        {provide: OutboundQuotaService, useValue: {assertAllowed: jest.fn()}}
       ]
     }).compile();
 
@@ -130,6 +132,7 @@ describe('NotificationService', () => {
           {provide: getModelToken('Building'), useValue: buildingModel},
           {provide: StructuredLogger, useValue: loggerMock},
           {provide: ConfigService, useValue: {get: (key: string) => config.get(key)}},
+          {provide: OutboundQuotaService, useValue: {assertAllowed: jest.fn()}},
           {provide: MAIL_TRANSPORT, useValue: {send: () => Promise.reject(new Error('provider down'))}}
         ]
       }).compile();
@@ -197,24 +200,51 @@ describe('NotificationService', () => {
   describe('sendMessage', () => {
     it('delivers to the SISK inbox by default', async () => {
       config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
-      await service.sendMessage({person: 'Anna', email: 'anna@example.com', message: 'Pytanie'});
+      await service.sendMessage({person: 'Anna', email: 'anna@example.com', message: 'Pytanie'}, true);
       expect(sent[0].to).toBe('biuro@example.com');
       expect(sent[0].text).toContain('Pytanie');
     });
 
-    it('delivers to a named facility employee', async () => {
-      await service.sendMessage({
-        person: 'Anna',
-        email: 'anna@example.com',
-        message: 'Pytanie',
-        recipient: 'employee@example.com'
-      });
-      expect(sent[0].to).toBe('employee@example.com');
+    it('delivers to a facility contact address for a staff caller', async () => {
+      buildingModel.findOne.mockResolvedValue({email: 'fitness@example.com'});
+      await service.sendMessage(
+        {
+          person: 'Anna',
+          email: 'anna@example.com',
+          message: 'Pytanie',
+          recipient: 'fitness@example.com'
+        },
+        false
+      );
+      expect(sent[0].to).toBe('fitness@example.com');
+      expect(buildingModel.findOne).toHaveBeenCalledWith({email: 'fitness@example.com'}, expect.anything());
+    });
+
+    it('refuses a named recipient from a public caller (open-relay fix, #124)', async () => {
+      buildingModel.findOne.mockResolvedValue({email: 'fitness@example.com'});
+      await expect(
+        service.sendMessage(
+          {person: 'Anna', email: 'anna@example.com', message: 'Pytanie', recipient: 'fitness@example.com'},
+          true
+        )
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(sent).toHaveLength(0);
+    });
+
+    it('refuses a staff recipient that is not a facility contact address', async () => {
+      buildingModel.findOne.mockResolvedValue(null);
+      await expect(
+        service.sendMessage(
+          {person: 'Anna', email: 'anna@example.com', message: 'Pytanie', recipient: 'attacker@example.com'},
+          false
+        )
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(sent).toHaveLength(0);
     });
 
     it('refuses a contact message when the inbox is unconfigured', async () => {
       await expect(
-        service.sendMessage({person: 'Anna', email: 'anna@example.com', message: 'Pytanie'})
+        service.sendMessage({person: 'Anna', email: 'anna@example.com', message: 'Pytanie'}, true)
       ).rejects.toBeInstanceOf(BadGatewayException);
     });
   });

@@ -263,6 +263,33 @@ undo the booking.
 - *A full queue with retries* — deferred; a direct send with error surfacing matches current
   behaviour, and FR-036 preserves the "booking is not lost" property.
 
+**Abuse protection (T057, FR-048–FR-051)**. The module's two routes are the only ones an
+unauthenticated caller can drive, so the controls live here as well as on `POST /bookings`:
+
+- **Request rate limit** — a fixed-window counter keyed on the client address *and* the
+  submitted sender address, answering `429` with a `retryAfterSeconds` hint. The window is
+  process-local (`security/rate-limit/`), which is correct for the single-replica municipal
+  deployment this project targets; behind more than one replica the effective limit is
+  multiplied, and the store is a class behind a `record()` seam so a shared backend can
+  replace it without touching the guard.
+- **Bot mitigation** — a hidden decoy field, not a CAPTCHA. A CAPTCHA would conflict with
+  NFR-006 and introduce a third-party dependency for a low-value municipal form; the decoy is
+  accessibility-neutral and a false positive is a retryable `422`, not an unsolvable wall.
+- **Outbound quota** — a per-recipient cap checked before the transport is called, so the
+  contact route cannot be driven as a relay. Counting the *recipient* rather than the caller is
+  what makes it a different control from the request limit: a script behind rotating IPs still
+  spends the recipient's allowance.
+- **Recipient allow-list** — the fix for #124. `MessageDto.recipient` used to be sent to
+  directly, so the public route would deliver the SISK-branded `employee-message` template to
+  any syntactically valid address. It is now honoured only for an authenticated staff caller
+  *and* only when it matches a facility's stored contact address; a public caller that names one
+  gets `403`, a staff caller whose address matches no facility gets `422`.
+
+The limit is read from `PUBLIC_RATE_LIMIT` / `NOTIFICATION_QUOTA` (and their `_WINDOW_MS`
+counterparts); `0` disables the check. The client address comes from Express's own resolution
+so the operator opts into `X-Forwarded-For` through `trust proxy` rather than a caller picking
+their own key.
+
 ---
 
 ## R9 — Booking list loading and pagination

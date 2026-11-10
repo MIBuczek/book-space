@@ -7,6 +7,8 @@ import {AuthGuard} from '@nestjs/passport';
 import {BookingController} from './booking.controller';
 import {BookingService} from '../service/booking.service';
 import {IActingUser} from '../../authorization/ownership';
+import {RateLimitGuard} from '../../security/rate-limit/rate-limit.guard';
+import {HoneypotGuard} from '../../security/honeypot/honeypot.guard';
 
 const ADMIN: IActingUser = {_id: 'u1', email: 'admin@example.com', role: 'ADMIN'};
 const EMPLOYEE: IActingUser = {_id: 'u2', email: 'employee@example.com', role: 'EMPLOYEE'};
@@ -62,6 +64,13 @@ describe('BookingController', () => {
       ]
     })
       .overrideGuard(AuthGuard('jwt'))
+      .useValue({canActivate: () => true})
+      // The public write route now runs `RateLimitGuard` and `HoneypotGuard` (T057). This spec
+      // calls the handlers directly, so both are stubbed rather than given their real
+      // dependencies — the rate-limit behaviour is covered by its own spec.
+      .overrideGuard(RateLimitGuard)
+      .useValue({canActivate: () => true})
+      .overrideGuard(HoneypotGuard)
       .useValue({canActivate: () => true})
       .compile();
 

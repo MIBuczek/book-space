@@ -7,6 +7,8 @@ import {AuthGuard} from '@nestjs/passport';
 import {BookingController} from './controller/booking.controller';
 import {BookingService} from './service/booking.service';
 import {OptionalJwtAuthGuard} from '../authorization/guards/optional-jwt-auth.guard';
+import {RateLimitGuard} from '../security/rate-limit/rate-limit.guard';
+import {HoneypotGuard} from '../security/honeypot/honeypot.guard';
 
 /**
  * Regression test for the error-handling defect described in #107.
@@ -51,6 +53,12 @@ describe('BookingService error mapping (regression)', () => {
       // GET /bookings moved to the optional guard, which `overrideGuard(AuthGuard('jwt'))`
       // does not cover: it is a subclass, so the base override leaves it in place.
       .overrideGuard(OptionalJwtAuthGuard)
+      .useValue({canActivate: () => true})
+      // The public write route also runs the abuse guards (T057); this spec is about error
+      // mapping, so they are stubbed rather than wired to real dependencies.
+      .overrideGuard(RateLimitGuard)
+      .useValue({canActivate: () => true})
+      .overrideGuard(HoneypotGuard)
       .useValue({canActivate: () => true})
       .compile();
 
