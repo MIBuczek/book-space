@@ -1056,6 +1056,21 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   A value in the spring gap maps forward; a value in the autumn repeated hour resolves to the
   *later* occurrence — the same reading `atFacilityTime` gives, pinned by the spec. Do not
   "simplify" this to `new Date(...)`, which is the exact defect the legacy issues #27/#58 are.
+- **The migration tool is the `migration` Nx project under `tools/migration`, and it is not in
+  the server image (T041/T042).** It reads a directory of per-collection JSON exports, validates
+  every transformed record against the server's **real** `SchemaFactory.createForClass(...)`
+  schemas, and writes by idempotent upsert on an `_id` derived from the legacy id
+  (`lib/identity.ts`). Two traps are worth naming. First, the database-touching code is injected
+  rather than imported at module top level (`run(cli, {hashPassword, connect})`), because a
+  top-level `import('mongoose')` trips Jest's `vm` sandbox — the same dynamic-import trap the
+  server harness documents. Second, the four schemas are imported through `@server/*` aliases,
+  and `@nx/enforce-module-boundaries` forbids an app import from anywhere, so the one exception
+  is scoped to `tools/migration/eslint.config.mjs` rather than added to the root config. Its
+  `coverageThreshold` is 100 % on every metric, and it is named in CI's `run-many` list and
+  coverage-summary table; a new project that is not added to both never reaches the gate.
+  `month` is derived from the first slot in the **facility** calendar
+  (`facilityWallClock(...).month - 1`), matching the UI form's `buildRequest` — `getUTCMonth()`
+  on the local-midnight instant reads the previous UTC day for a slot late in the local evening.
 - **A new shared library is a project, and its Jest coverage is separate from the apps'.**
   `libs/date-time` declares `test`/`lint` targets in `project.json`; the workspace-wide
   `run-many --all` picks it up, but `--projects=server,ui` does not, so a change to the library
