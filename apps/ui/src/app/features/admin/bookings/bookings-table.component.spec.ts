@@ -173,14 +173,14 @@ describe('BookingsTableComponent', () => {
     fixture.detectChanges();
   };
 
-  const resolvePanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-bookings__resolve') as ParentNode;
-  const editPanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-bookings__edit') as ParentNode;
-  const deletePanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-bookings__delete') as ParentNode;
-  const reschedulePanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-bookings__reschedule') as ParentNode;
+  /** The one dialog a press has opened; the four modals are always mounted, only one open. */
+  const openPanel = (fixture: Fixture): ParentNode => {
+    const dialog = element(fixture).querySelector('dialog[open]');
+    if (!dialog) {
+      throw new Error('No open dialog');
+    }
+    return dialog;
+  };
 
   it('loads the facilities and lists the bookings of the first facility', async () => {
     const fixture = await render();
@@ -383,7 +383,7 @@ describe('BookingsTableComponent', () => {
     setText(fixture, 'Nazwa w kalendarzu', 'Nowa nazwa');
     setText(fixture, 'Imię i nazwisko', 'Anna Nowak');
     setText(fixture, 'Telefon', '111222333');
-    pressButton(fixture, 'Zapisz', editPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/bookings/b1');
     expect(request.request.method).toBe('PUT');
@@ -401,9 +401,29 @@ describe('BookingsTableComponent', () => {
     const fixture = await render([booking({_id: 'b1'})], []);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Anuluj', editPanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.editTarget()).toBeNull();
+    httpMock.expectNone('/api/bookings/b1');
+  });
+
+  it('opens the edit dialog modally, and Esc clears the pending target (NFR-006)', async () => {
+    const fixture = await render([booking({_id: 'b1'})], []);
+
+    pressButton(fixture, 'Edytuj');
+    const dialog = openPanel(fixture) as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    // `aria-modal` is what tells a screen reader the rest of the page is inert; the native
+    // `showModal()` makes that true, and the attribute is what exposes it.
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+
+    // `Esc` closes a native modal and the browser fires `close`; the component turns that
+    // into the caller clearing its state, so a dismissed dialog cannot leave a stale edit.
+    dialog.dispatchEvent(new Event('close'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.editTarget()).toBeNull();
+    expect(dialog.open).toBe(false);
     httpMock.expectNone('/api/bookings/b1');
   });
 
@@ -416,7 +436,7 @@ describe('BookingsTableComponent', () => {
     setSelect(fixture, 'Status', 'DONE');
     setText(fixture, 'Uczestnicy', '5');
     setText(fixture, 'Komentarz', 'ok');
-    pressButton(fixture, 'Zapisz', resolvePanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/bookings/b1/booked-times');
     expect(request.request.method).toBe('PUT');
@@ -444,7 +464,7 @@ describe('BookingsTableComponent', () => {
 
     setCheckbox(fixture, 'Pokaż szczegóły rezerwacji', true);
     pressButton(fixture, 'Rozlicz');
-    pressButton(fixture, 'Anuluj', resolvePanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.resolveTarget()).toBeNull();
     httpMock.expectNone('/api/bookings/b1/booked-times');
@@ -455,7 +475,7 @@ describe('BookingsTableComponent', () => {
 
     pressButton(fixture, 'Usuń');
     expect(element(fixture).textContent).toContain('Czy na pewno chcesz usunąć tą rezerwację?');
-    pressButton(fixture, 'Usuń', deletePanel(fixture));
+    pressButton(fixture, 'Usuń', openPanel(fixture));
 
     const request = httpMock.expectOne(
       (r) => r.url === '/api/bookings/b1' && r.method === 'DELETE'
@@ -469,7 +489,7 @@ describe('BookingsTableComponent', () => {
     const fixture = await render([booking({_id: 'b1'})], []);
 
     pressButton(fixture, 'Usuń');
-    pressButton(fixture, 'Anuluj', deletePanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.deleteTarget()).toBeNull();
     httpMock.expectNone((r) => r.url === '/api/bookings/b1' && r.method === 'DELETE');
@@ -611,7 +631,7 @@ describe('BookingsTableComponent', () => {
 
     setCheckbox(fixture, 'Pokaż szczegóły rezerwacji', true);
     pressButton(fixture, 'Rozlicz');
-    pressButton(fixture, 'Zapisz', resolvePanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/bookings/b1/booked-times');
     const body = request.request.body as IBookedTime[];
@@ -642,9 +662,9 @@ describe('BookingsTableComponent', () => {
     setCheckbox(fixture, 'Pokaż szczegóły rezerwacji', true);
     pressButton(fixture, 'Przenieś');
 
-    setSelect(fixture, 'Od', '10', reschedulePanel(fixture));
-    setSelect(fixture, 'Do', '12', reschedulePanel(fixture));
-    pressButton(fixture, 'Zapisz', reschedulePanel(fixture));
+    setSelect(fixture, 'Od', '10', openPanel(fixture));
+    setSelect(fixture, 'Do', '12', openPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/bookings/b1/booked-times');
     expect(request.request.method).toBe('PUT');
@@ -664,7 +684,7 @@ describe('BookingsTableComponent', () => {
 
     setCheckbox(fixture, 'Pokaż szczegóły rezerwacji', true);
     pressButton(fixture, 'Przenieś');
-    pressButton(fixture, 'Anuluj', reschedulePanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.rescheduleTarget()).toBeNull();
     httpMock.expectNone('/api/bookings/b1/booked-times');

@@ -10,6 +10,7 @@ import {
   ButtonComponent,
   ISelectOption,
   InputComponent,
+  ModalComponent,
   PaginationComponent,
   SelectComponent,
   TableComponent,
@@ -50,7 +51,14 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
  */
 @Component({
   selector: 'book-space-clients-table',
-  imports: [ButtonComponent, InputComponent, PaginationComponent, SelectComponent, TableComponent],
+  imports: [
+    ButtonComponent,
+    InputComponent,
+    ModalComponent,
+    PaginationComponent,
+    SelectComponent,
+    TableComponent,
+  ],
   template: `
     <section class="bs-page">
       <h1>Lista klientów</h1>
@@ -105,10 +113,12 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
         />
       }
 
-      @if (editing()) {
-        <section class="bs-clients__form" role="dialog" aria-label="Formularz klienta">
-          <h2>{{ editTarget() ? 'Edytuj klienta' : 'Dodaj klienta' }}</h2>
-
+      <book-space-modal
+        [open]="editing()"
+        [title]="editTarget() ? 'Edytuj klienta' : 'Dodaj klienta'"
+        (closed)="cancelEdit()"
+      >
+        @if (editing()) {
           <book-space-select
             label="Typ"
             [options]="clientOptions"
@@ -177,20 +187,27 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
             <p class="bs-clients__error" role="alert">{{ message }}</p>
           }
 
-          <div class="bs-clients__form-actions">
+          <div class="bs-modal__actions">
             <book-space-button variant="primary" (pressed)="confirmSave()">Zapisz</book-space-button>
             <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
           </div>
-        </section>
-      }
+        }
+      </book-space-modal>
 
-      @if (deleteTarget(); as target) {
-        <section class="bs-clients__delete" role="alertdialog" aria-label="Usuń klienta">
+      <book-space-modal
+        [open]="deleteTarget() !== null"
+        title="Usuń klienta"
+        role="alertdialog"
+        (closed)="cancelDelete()"
+      >
+        @if (deleteTarget(); as target) {
           <p>Czy na pewno chcesz usunąć klienta {{ target.name }}?</p>
-          <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
-        </section>
-      }
+          <div class="bs-modal__actions">
+            <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
+          </div>
+        }
+      </book-space-modal>
     </section>
   `,
   styles: [
@@ -204,23 +221,6 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
         gap: 1rem;
         flex-wrap: wrap;
         margin-bottom: 1rem;
-      }
-      .bs-clients__form,
-      .bs-clients__delete {
-        border: 1px solid #d9d9d9;
-        border-radius: 6px;
-        padding: 1rem;
-        margin-top: 1rem;
-      }
-      .bs-clients__form {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        max-width: 32rem;
-      }
-      .bs-clients__form-actions {
-        display: flex;
-        gap: 0.75rem;
       }
       .bs-clients__error {
         color: #a4262c;

@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { AdminShellComponent } from './admin-shell.component';
 import { adminUser, employeeUser } from '../../../testing/fixtures';
+
+@Component({ selector: 'book-space-tab-stub', template: '' })
+class TabStubComponent {}
 
 describe('AdminShellComponent', () => {
   let httpMock: HttpTestingController;
@@ -13,7 +17,17 @@ describe('AdminShellComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AdminShellComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([
+          {
+            path: 'admin',
+            component: AdminShellComponent,
+            children: [{ path: 'bookings', component: TabStubComponent }],
+          },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -47,6 +61,25 @@ describe('AdminShellComponent', () => {
     ).map((a) => a.textContent?.trim());
 
     expect(links).toEqual(['Calendar', 'Bookings', 'Clients', 'Facilities', 'Summary']);
+  });
+
+  it('marks the active tab with aria-current, not only colour and weight (NFR-006)', async () => {
+    TestBed.inject(SessionStore).set('token-1', adminUser());
+    const router = TestBed.inject(Router);
+    const fixture = render();
+
+    await router.navigateByUrl('/admin/bookings');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const links = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.bs-admin__tabs a')
+    );
+    const active = links.filter((a) => a.getAttribute('aria-current') === 'page');
+    // Exactly one tab is current, and it is the routed one: the `active` class alone is a
+    // colour change, which is the "state conveyed by colour only" defect NFR-006 names.
+    expect(active).toHaveLength(1);
+    expect(active[0].textContent?.trim()).toBe('Bookings');
   });
 
   it('renders no tabs when the session has no capabilities', () => {

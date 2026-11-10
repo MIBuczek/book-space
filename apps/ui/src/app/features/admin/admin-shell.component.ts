@@ -28,6 +28,7 @@ import { visibleAdminTabs } from '../../shell/navigation';
               <a
                 [routerLink]="tab.path"
                 routerLinkActive="active"
+                ariaCurrentWhenActive="page"
                 [routerLinkActiveOptions]="{ exact: false }"
               >
                 {{ tab.label }}

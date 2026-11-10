@@ -98,15 +98,19 @@ describe('ClientsTableComponent', () => {
     fixture.detectChanges();
   };
 
-  const formPanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-clients__form') as ParentNode;
-  const deletePanel = (fixture: Fixture): ParentNode =>
-    element(fixture).querySelector('.bs-clients__delete') as ParentNode;
+  /** The one dialog a press has opened; the two modals are always mounted, only one open. */
+  const openPanel = (fixture: Fixture): ParentNode => {
+    const dialog = element(fixture).querySelector('dialog[open]');
+    if (!dialog) {
+      throw new Error('No open dialog');
+    }
+    return dialog;
+  };
 
   /** Fills the form with a complete company so a save is not blocked by client validation. */
   const fillValidCompany = (fixture: Fixture): void => {
     setSelect(fixture, 'Typ', 'COMPANY');
-    const panel = formPanel(fixture);
+    const panel = openPanel(fixture);
     setText(fixture, 'Nazwa firmy', 'Firma sp. z o.o.', panel);
     setText(fixture, 'Osoba kontaktowa', 'Jan Nowak', panel);
     setText(fixture, 'Telefon', '609996064', panel);
@@ -222,7 +226,7 @@ describe('ClientsTableComponent', () => {
 
     pressButton(fixture, 'Dodaj klienta');
     fillValidCompany(fixture);
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients');
     expect(request.request.method).toBe('POST');
@@ -242,33 +246,33 @@ describe('ClientsTableComponent', () => {
 
     pressButton(fixture, 'Dodaj klienta');
     // Defaults to an individual: no NIP field.
-    expect(formPanel(fixture).textContent).not.toContain('NIP');
+    expect(openPanel(fixture).textContent).not.toContain('NIP');
 
     setSelect(fixture, 'Typ', 'COMPANY');
-    expect(formPanel(fixture).textContent).toContain('NIP');
+    expect(openPanel(fixture).textContent).toContain('NIP');
 
     // Submitting without a NIP is refused client-side: no request is sent.
-    setText(fixture, 'Nazwa firmy', 'Firma sp. z o.o.', formPanel(fixture));
-    setText(fixture, 'Osoba kontaktowa', 'Jan Nowak', formPanel(fixture));
-    setText(fixture, 'Telefon', '609996064', formPanel(fixture));
-    setText(fixture, 'E-mail', 'biuro@example.com', formPanel(fixture));
-    setText(fixture, 'Ulica', 'ul. Kwiatowa 1', formPanel(fixture));
-    setText(fixture, 'Miasto', 'siechnice', formPanel(fixture));
-    setText(fixture, 'Kod pocztowy', '55-010', formPanel(fixture));
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    setText(fixture, 'Nazwa firmy', 'Firma sp. z o.o.', openPanel(fixture));
+    setText(fixture, 'Osoba kontaktowa', 'Jan Nowak', openPanel(fixture));
+    setText(fixture, 'Telefon', '609996064', openPanel(fixture));
+    setText(fixture, 'E-mail', 'biuro@example.com', openPanel(fixture));
+    setText(fixture, 'Ulica', 'ul. Kwiatowa 1', openPanel(fixture));
+    setText(fixture, 'Miasto', 'siechnice', openPanel(fixture));
+    setText(fixture, 'Kod pocztowy', '55-010', openPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     httpMock.expectNone('/api/clients');
-    expect(formPanel(fixture).textContent).toContain('NIP jest wymagany dla firmy');
+    expect(openPanel(fixture).textContent).toContain('NIP jest wymagany dla firmy');
   });
 
   it('switches the name label with the type', async () => {
     const fixture = await render([]);
 
     pressButton(fixture, 'Dodaj klienta');
-    expect(formPanel(fixture).textContent).toContain('Imię i nazwisko');
+    expect(openPanel(fixture).textContent).toContain('Imię i nazwisko');
 
     setSelect(fixture, 'Typ', 'COMPANY');
-    expect(formPanel(fixture).textContent).toContain('Nazwa firmy');
+    expect(openPanel(fixture).textContent).toContain('Nazwa firmy');
   });
 
   it('edits a client through the update route', async () => {
@@ -277,8 +281,8 @@ describe('ClientsTableComponent', () => {
     pressButton(fixture, 'Edytuj');
     expect(fixture.componentInstance.form().name).toBe('Firma sp. z o.o.');
 
-    setText(fixture, 'Nazwa firmy', 'Nowa nazwa', formPanel(fixture));
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    setText(fixture, 'Nazwa firmy', 'Nowa nazwa', openPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     expect(request.request.method).toBe('PUT');
@@ -292,7 +296,7 @@ describe('ClientsTableComponent', () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Anuluj', formPanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.editing()).toBe(false);
     httpMock.expectNone('/api/clients/c1');
@@ -302,7 +306,7 @@ describe('ClientsTableComponent', () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     request.flush(
@@ -312,14 +316,14 @@ describe('ClientsTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.fieldErrors().city).toMatch(/city/);
-    expect(formPanel(fixture).textContent).toContain('city must be longer');
+    expect(openPanel(fixture).textContent).toContain('city must be longer');
   });
 
   it('shows a message that names no field as a general error', async () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     request.flush(
@@ -329,14 +333,14 @@ describe('ClientsTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.generalError()).toBe('property nonsense should not exist');
-    expect(formPanel(fixture).textContent).toContain('property nonsense should not exist');
+    expect(openPanel(fixture).textContent).toContain('property nonsense should not exist');
   });
 
   it('shows a general message for a non-validation failure', async () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     request.flush('boom', {status: 500, statusText: 'Server Error'});
@@ -349,7 +353,7 @@ describe('ClientsTableComponent', () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     request.flush(
@@ -359,14 +363,14 @@ describe('ClientsTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.generalError()).toBe('Popraw dane i spróbuj ponownie.');
-    expect(formPanel(fixture).textContent).toContain('Popraw dane i spróbuj ponownie.');
+    expect(openPanel(fixture).textContent).toContain('Popraw dane i spróbuj ponownie.');
   });
 
   it('falls back to a general message for a 422 with an empty body', async () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Edytuj');
-    pressButton(fixture, 'Zapisz', formPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
 
     const request = httpMock.expectOne('/api/clients/c1');
     request.flush(null, {status: 422, statusText: 'Unprocessable Entity'});
@@ -390,7 +394,7 @@ describe('ClientsTableComponent', () => {
     pressButton(fixture, 'Usuń');
     expect(element(fixture).textContent).toContain('Czy na pewno chcesz usunąć klienta');
 
-    pressButton(fixture, 'Usuń', deletePanel(fixture));
+    pressButton(fixture, 'Usuń', openPanel(fixture));
     const request = httpMock.expectOne('/api/clients/c1');
     expect(request.request.method).toBe('DELETE');
     request.flush({});
@@ -402,7 +406,7 @@ describe('ClientsTableComponent', () => {
     const fixture = await render([client()]);
 
     pressButton(fixture, 'Usuń');
-    pressButton(fixture, 'Anuluj', deletePanel(fixture));
+    pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.deleteTarget()).toBeNull();
     httpMock.expectNone('/api/clients/c1');

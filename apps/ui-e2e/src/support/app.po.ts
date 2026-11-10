@@ -60,7 +60,7 @@ export const bookings = {
   approveButton: () => cy.contains('button', 'Zatwierdź'),
   archiveButton: () => cy.contains('button', 'Archiwizuj'),
   resolveButton: () => cy.contains('button', 'Rozlicz'),
-  saveResolve: () => cy.contains('.bs-bookings__resolve button', 'Zapisz'),
+  saveResolve: () => cy.contains('dialog[open] button', 'Zapisz'),
 };
 
 /** The printable summary tab. */

@@ -834,6 +834,33 @@ Three things that are easy to get wrong:
 
 ## Angular UI conventions that are easy to break
 
+- **A dialog is `ModalComponent` (native `<dialog>`), never a `<section role="dialog">` (T048,
+  NFR-006/FR-039).** `showModal()` is what provides focus trapping, `Esc`-to-close, an inert
+  background, a `::backdrop` and focus returned to the trigger; a hand-rolled box carries the
+  `role` and none of the behaviour, which is a dialog only to a screen reader that cannot tell
+  the difference. Six dialogs (the four bookings ones and the two clients ones) were hand-rolled
+  until T048. The body is projected, so the caller keeps its own fields and buttons; the
+  component owns only the chrome and the accessible name (`aria-modal`, and an `aria-labelledby`
+  pointing at a heading rendered *only while open*, so a closed dialog adds no text to the
+  page). `Esc` closes the element natively and the component forwards the resulting `close` as
+  `(closed)`, which the caller must wire to clear its pending target — otherwise a dismissed
+  dialog leaves stale state behind. The element is closed, not removed, because `close()` is
+  what restores focus to the trigger. A confirmation that demands an answer is
+  `role="alertdialog"`.
+- **A field's error must be tied to the control, not merely rendered beside it (T048).**
+  `InputComponent` and `SelectComponent` both set `aria-invalid` and `aria-describedby` on the
+  control and put the message in a `role="alert"` node with the matching id. `SelectComponent`
+  rendered the message but did not associate it until T048, so a `<select>` error was silent to
+  assistive tech while the `<input>` beside it was announced — the same error, two behaviours.
+  When adding a field control, copy the association from `InputComponent`, do not just render
+  the text.
+- **Navigation marks the current page with `aria-current="page"`, not only a colour class
+  (T048).** `RouterLinkActive` sets an `active` class, and the class is a colour/weight change —
+  the "state conveyed by colour alone" defect NFR-006 names, invisible to a screen reader.
+  `ariaCurrentWhenActive="page"` is what carries it, on both the top navigation and the admin
+  tabs. The spec asserts exactly one link is current after navigating and that it is the routed
+  one; it needs `await fixture.whenStable()` after `navigateByUrl`, because the active state is
+  applied after the navigation promise resolves.
 - **A `ResourceRef` has `status()`/`isLoading()`, not `isError()`.** `isError` is a private
   field on `BaseWritableResource`, so `bookingsResource.isError()` compiles in a spec but fails
   `nx build` with TS2551 (`Property 'isError' does not exist`). Read the error state as

@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../core/session.store';
 import { NavComponent } from './nav.component';
 import { adminUser, employeeUser } from '../../testing/fixtures';
+
+@Component({ selector: 'book-space-route-stub', template: '' })
+class RouteStubComponent {}
 
 describe('NavComponent', () => {
   let httpMock: HttpTestingController;
@@ -13,7 +17,15 @@ describe('NavComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [NavComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([
+          { path: '', component: RouteStubComponent },
+          { path: 'booking-request', component: RouteStubComponent },
+          { path: 'contact', component: RouteStubComponent },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -64,6 +76,21 @@ describe('NavComponent', () => {
 
     expect(text).toContain('Admin');
     expect(text).toContain('Sign out');
+  });
+
+  it('marks the current page with aria-current, not only colour (NFR-006)', async () => {
+    const router = TestBed.inject(Router);
+    const fixture = render();
+
+    await router.navigateByUrl('/booking-request');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a'));
+    const current = links.filter((a) => a.getAttribute('aria-current') === 'page');
+    // The `active` class is a colour change; `aria-current` is what a screen reader reads.
+    expect(current).toHaveLength(1);
+    expect(current[0].textContent?.trim()).toBe('Rezerwacja');
   });
 
   it('clears the session when sign-out is pressed', () => {

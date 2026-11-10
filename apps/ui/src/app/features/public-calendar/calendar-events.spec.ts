@@ -162,7 +162,6 @@ describe('bookingsToEvents', () => {
     const events = bookingsToEvents(year, true);
     const ms = performance.now() - started;
 
-    // eslint-disable-next-line no-console
     console.log(`[T050] calendar transform, year of bookings: ${ms.toFixed(1)} ms`);
     expect(events).toHaveLength(1200);
     expect(ms).toBeLessThan(2000);
