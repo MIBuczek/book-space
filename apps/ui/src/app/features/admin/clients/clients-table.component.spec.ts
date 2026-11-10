@@ -18,6 +18,7 @@ const client = (overrides: Partial<IClient> = {}): IClient => ({
   city: 'siechnice',
   zipCode: '55-010',
   nip: '8991234567',
+  active: true,
   ...overrides,
 });
 
@@ -84,6 +85,18 @@ describe('ClientsTableComponent', () => {
     const select = control(fixture, label) as HTMLSelectElement;
     select.value = value;
     select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+  };
+
+  const setCheckbox = (
+    fixture: Fixture,
+    label: string,
+    checked: boolean,
+    root?: ParentNode
+  ): void => {
+    const input = control(fixture, label, root) as HTMLInputElement;
+    input.checked = checked;
+    input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
   };
 
@@ -292,6 +305,23 @@ describe('ClientsTableComponent', () => {
     await flushReload([client({name: 'Nowa nazwa'})]);
   });
 
+  it('deactivates a client through the active checkbox (T059)', async () => {
+    // The supported retirement path: a delete is refused while a booking references the
+    // client, so the form's active flag is how the operator retires one instead.
+    const fixture = await render([client()]);
+
+    pressButton(fixture, 'Edytuj');
+    setCheckbox(fixture, 'Klient aktywny', false, openPanel(fixture));
+    pressButton(fixture, 'Zapisz', openPanel(fixture));
+
+    const request = httpMock.expectOne('/api/clients/c1');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toMatchObject({active: false});
+    request.flush(client({active: false}));
+
+    await flushReload([client({active: false})]);
+  });
+
   it('cancels an edit without sending a request', async () => {
     const fixture = await render([client()]);
 
@@ -410,5 +440,38 @@ describe('ClientsTableComponent', () => {
 
     expect(fixture.componentInstance.deleteTarget()).toBeNull();
     httpMock.expectNone('/api/clients/c1');
+  });
+
+  it('shows the server message when a delete is refused with 409 (T059)', async () => {
+    // A client a booking still references is refused; the modal must say so rather than
+    // silently doing nothing, which would look like a broken button.
+    const fixture = await render([client()]);
+
+    pressButton(fixture, 'Usuń');
+    pressButton(fixture, 'Usuń', openPanel(fixture));
+    const request = httpMock.expectOne('/api/clients/c1');
+    request.flush(
+      {statusCode: 409, message: 'This client is referenced by a booking and cannot be deleted.'},
+      {status: 409, statusText: 'Conflict'}
+    );
+    fixture.detectChanges();
+
+    expect(element(fixture).textContent).toContain('referenced by a booking');
+    // The modal stays open so the operator can read the message and cancel.
+    expect(fixture.componentInstance.deleteTarget()).not.toBeNull();
+  });
+
+  it('falls back to a generic message when a delete fails for another reason', async () => {
+    const fixture = await render([client()]);
+
+    pressButton(fixture, 'Usuń');
+    pressButton(fixture, 'Usuń', openPanel(fixture));
+    const request = httpMock.expectOne('/api/clients/c1');
+    request.flush(null, {status: 500, statusText: 'Server Error'});
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.deleteError()).toBe(
+      'Nie udało się usunąć klienta. Spróbuj ponownie później.'
+    );
   });
 });

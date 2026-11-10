@@ -2,6 +2,7 @@ import {HttpException, HttpStatus, Injectable, NotFoundException} from '@nestjs/
 import {InjectModel} from '@nestjs/mongoose';
 import {Model} from 'mongoose';
 import {Client, TClient} from '../schemas/client.schema';
+import {Booking} from '../../bookings/schemas/booking.schema';
 import {ClientDto, UpdateClientDto} from '../models/client.dto';
 import {ClientQueryDto} from '../models/client-query.dto';
 import {isNipValid} from '../models/client-nip.validator';
@@ -19,12 +20,27 @@ const UPDATABLE_FIELDS = [
   'street',
   'city',
   'zipCode',
-  'nip'
+  'nip',
+  'active'
 ] as const;
+
+/**
+ * The message a refused client delete carries (T059, FR-024).
+ *
+ * A client referenced by a booking is not deleted: the legacy `deleteClient` removed the
+ * document and left every booking's `clientId` dangling, and because the summary is built
+ * from `clientId` those bookings then vanished from reports. Deactivation
+ * (`PUT /clients/{_id} {active: false}`) is the supported way to retire a client.
+ */
+const CLIENT_IN_USE_MESSAGE =
+  'This client is referenced by a booking and cannot be deleted. Deactivate it instead (active: false).';
 
 @Injectable()
 export class ClientService {
-  constructor(@InjectModel('Client') private clientModel: Model<Client>) {}
+  constructor(
+    @InjectModel('Client') private clientModel: Model<Client>,
+    @InjectModel('Booking') private bookingModel: Model<Booking>
+  ) {}
 
   async createClient(client: ClientDto) {
     try {
@@ -83,10 +99,27 @@ export class ClientService {
     }
   }
 
+  /**
+   * Deletes a client, refusing when a booking still references it (T059, FR-024).
+   *
+   * The rule is restrict, not cascade: a booking is a historical record and a client is a
+   * party to it, so removing the client would orphan the booking and — because the summary
+   * is built from `clientId` — silently drop it from every report. A `409` names the
+   * situation and points at the supported alternative, deactivation. The reference test is
+   * one `countDocuments` on `clientId`, which the `{clientId: 1, accepted: 1}` index
+   * already serves.
+   */
   async deleteClient(_id: string) {
     try {
+      const references = await this.bookingModel.countDocuments({clientId: _id});
+      if (references > 0) {
+        throw new HttpException(CLIENT_IN_USE_MESSAGE, HttpStatus.CONFLICT);
+      }
       return await this.clientModel.deleteOne({_id});
     } catch (e) {
+      if (e instanceof HttpException) {
+        throw e;
+      }
       throw new HttpException(errorMessage(e), errorStatus(e));
     }
   }

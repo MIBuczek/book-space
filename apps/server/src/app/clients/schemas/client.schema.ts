@@ -98,6 +98,26 @@ export class Client {
   })
   nip?: string;
 
+  /**
+   * Whether the client is still in use (T059, FR-024).
+   *
+   * A hard delete is refused with `409` while a booking references the client, so the
+   * supported way to retire one is a deactivation: `PUT /clients/{_id} {active: false}`.
+   * The record survives for the bookings and reports that point at it, which is what the
+   * legacy `deleteClient` broke — it removed the document and left every booking's
+   * `clientId` dangling, and because the summary is built from `clientId` those bookings
+   * vanished from reports.
+   *
+   * `default: true` so an existing document written before this field reads as active; the
+   * reads treat an absent value as active too (`active !== false`), so a document written
+   * by a direct driver call is not silently retired.
+   */
+  @Prop({
+    type: Boolean,
+    default: true
+  })
+  active!: boolean;
+
   createdAt?: Date;
   updatedAt?: Date;
 }

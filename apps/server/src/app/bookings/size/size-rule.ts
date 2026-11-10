@@ -18,9 +18,21 @@
 /** The message a rejected size carries; the UI shows it against the `size` field. */
 export const SIZE_NOT_OFFERED_MESSAGE = 'The selected size is not offered by this facility.';
 
+/**
+ * The message a booking against a retired facility carries (T059, FR-010).
+ *
+ * A deactivated facility is withheld from the public `GET /buildings` read, so the booking
+ * form stops offering it; this is the server-side half of the same rule, which is what makes
+ * it a rule rather than a UI convenience — a crafted `POST /api/bookings` can still name a
+ * facility the form no longer shows.
+ */
+export const FACILITY_INACTIVE_MESSAGE = 'This facility is no longer available for booking.';
+
 /** The part of a facility this rule reads. */
 export interface IFacilitySizes {
   sizes: readonly string[];
+  /** Absent on a legacy document, which reads as active (T059). */
+  active?: boolean;
 }
 
 /**

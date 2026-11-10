@@ -44,6 +44,15 @@ interface IBuilding {
    * later is a data migration rather than a contract change.
    */
   employees: string[];
+  /**
+   * Whether the facility is still in use (T059, FR-010). A hard delete is refused with
+   * `409` while a booking or an employee assignment references it, so retiring a facility
+   * is a deactivation (`PUT /buildings/{_id} {active: false}`). An inactive facility is
+   * withheld from the public `GET /buildings` read (the calendar and booking form), which
+   * is the referential-integrity fix: the legacy delete silently orphaned the bookings
+   * that referenced it. Absent on a legacy document, which reads as active.
+   */
+  active?: boolean;
 }
 
 /**

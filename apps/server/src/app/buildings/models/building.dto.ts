@@ -72,6 +72,11 @@ export class BuildingDto {
   @Validator.IsArray({message: 'Employees must be a list of names.'})
   @Validator.IsString({each: true, message: 'Every employee must be a name.'})
   employees?: string[];
+
+  /** Whether the facility is active (T059). Optional on create, defaulting to active. */
+  @Validator.IsOptional()
+  @Validator.IsBoolean({message: 'Active must be true or false.'})
+  active?: boolean;
 }
 
 /**
@@ -143,4 +148,9 @@ export class UpdateBuildingDto {
   @Validator.IsArray({message: 'Employees must be a list of names.'})
   @Validator.IsString({each: true, message: 'Every employee must be a name.'})
   employees?: string[];
+
+  /** Deactivates (`false`) or reactivates (`true`) a facility (T059). */
+  @Validator.IsOptional()
+  @Validator.IsBoolean({message: 'Active must be true or false.'})
+  active?: boolean;
 }

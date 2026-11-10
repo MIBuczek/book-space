@@ -51,7 +51,10 @@ export class BuildingController {
   @UseGuards(OptionalJwtAuthGuard)
   async getAllBuildings(@Req() request: Request, @CurrentUser() user: IActingUser | undefined) {
     const staff = request.isPublic === false && isStaff(user);
-    const buildings = await this.buildingService.findAllBuildings();
+    // Staff receive retired facilities too (`includeInactive`), because the Facilities tab shows
+    // the record and the Users tab offers it for assignment (T059). A public caller is served only
+    // the active ones, so the calendar and booking form cannot offer a facility that is retired.
+    const buildings = await this.buildingService.findAllBuildings(staff);
 
     return staff ? buildings : serializePublicBuildings(buildings);
   }

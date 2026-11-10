@@ -146,6 +146,34 @@ describe('BookingService', () => {
       expect(modelMock.create).toHaveBeenCalled();
     });
 
+    it('refuses a booking against a deactivated facility with 422', async () => {
+      // The public read withholds a retired facility, so this is the server-side half of
+      // the same rule: a crafted request cannot book a facility the form no longer shows.
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1'], active: false});
+
+      await expect(
+        service.createBooking(
+          {size: '1/1', place: {place: 'hala-sportowa', city: 'siechnice'}} as never,
+          'u2',
+          false
+        )
+      ).rejects.toMatchObject({status: 422});
+      expect(modelMock.create).not.toHaveBeenCalled();
+    });
+
+    it('treats a facility with no active field as bookable', async () => {
+      // A legacy document written before the field existed reads as active.
+      buildingModelMock.findOne.mockResolvedValue({sizes: ['1/1']});
+
+      await service.createBooking(
+        {size: '1/1', place: {place: 'hala-sportowa', city: 'siechnice'}} as never,
+        'u2',
+        false
+      );
+
+      expect(modelMock.create).toHaveBeenCalled();
+    });
+
     it('looks the facility up by name alone when the place carries no city', async () => {
       // The filter adds `city` only when it is present. A booking without a city is
       // resolved by facility name, which is what lets the size rule apply at all rather
@@ -154,7 +182,7 @@ describe('BookingService', () => {
 
       await service.createBooking({size: '1/1', place: {place: 'hala-sportowa'}} as never, 'u2', false);
 
-      expect(buildingModelMock.findOne).toHaveBeenCalledWith({property: 'hala-sportowa'}, {sizes: 1});
+      expect(buildingModelMock.findOne).toHaveBeenCalledWith({property: 'hala-sportowa'}, {sizes: 1, active: 1});
     });
 
     it('maps a driver error onto an HTTP exception', async () => {

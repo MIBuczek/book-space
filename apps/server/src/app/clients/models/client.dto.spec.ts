@@ -126,4 +126,14 @@ describe('UpdateClientDto', () => {
 
     expect(fieldNames(errors)).toContain('nip');
   });
+
+  it('accepts an active flag, which the deactivation route sends (T059)', async () => {
+    await expect(validateUpdateDto({active: false})).resolves.toHaveLength(0);
+  });
+
+  it('rejects a non-boolean active value', async () => {
+    const errors = await validateUpdateDto({active: 'no'});
+
+    expect(fieldNames(errors)).toContain('active');
+  });
 });

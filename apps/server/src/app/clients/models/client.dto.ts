@@ -53,6 +53,14 @@ export class ClientDto {
    */
   @Validator.Validate(ClientNip)
   nip?: string;
+
+  /**
+   * Whether the client is active (T059). Optional on create, defaulting to active in the
+   * schema; a deactivation is normally a `PUT {active: false}` on an existing record.
+   */
+  @Validator.IsOptional()
+  @Validator.IsBoolean({message: 'Active must be true or false.'})
+  active?: boolean;
 }
 
 /**
@@ -116,5 +124,10 @@ export class UpdateClientDto {
     message: 'NIP may only contain digits, dots, slashes and dashes'
   })
   nip?: string;
+
+  /** Deactivates (`false`) or reactivates (`true`) a client (T059). */
+  @Validator.IsOptional()
+  @Validator.IsBoolean({message: 'Active must be true or false.'})
+  active?: boolean;
 }
 
