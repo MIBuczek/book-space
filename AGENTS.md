@@ -67,11 +67,38 @@ so NestJS 11 takes `@nestjs/config@4.0.4`. See the constraint below.
 ```bash
 yarn install --frozen-lockfile
 yarn nx run-many --target=lint --all
-yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration --configuration=ci
 yarn nx run-many --target=build --projects=server,ui --configuration=production
 ```
 
 Add `--skip-nx-cache` when you need to be sure a result is real rather than replayed.
+
+The `test` list must name every project with a `test` target, including the shared libraries —
+`--projects=server,ui` silently skips `date-time`, `booking-rules`, `reporting`, `version` and
+`migration`, so a change to one of those would pass unnoticed. CI runs the same list.
+
+## Docker
+
+`docker compose up --build` starts MongoDB, the API and the nginx-served UI on
+`http://localhost:4200`. Both Dockerfiles are multi-stage production builds:
+
+- **`apps/server/Dockerfile`** — a `node:24` builder runs `nx build server --configuration=production`;
+  the runtime is `node:24-slim` with the production `node_modules` (the bundle is webpack-externalised
+  against them) and runs as the non-root `node` user. `bcrypt` is a native addon and is compiled in
+  the builder stage, where the toolchain is present.
+- **`apps/ui/Dockerfile`** — a `node:24` builder runs `nx build ui --configuration=production`; the
+  runtime is `nginx:alpine` serving the bundle and proxying `/api/` to `${API_UPSTREAM}`
+  (`apps/ui/nginx.conf.template`, substituted by the nginx image's `envsubst` entrypoint at start).
+
+Two traps:
+
+- **The build context must carry full git history.** The Nx build depends on `version:build`, which
+  runs `git rev-list --count HEAD`; a shallow clone makes the generator exit non-zero and the image
+  build fails. That is deliberate — a shallow clone would stamp a wrong build number, not an error
+  (see "The build number is a task input").
+- **`--production` in the deps stage installs only `dependencies`.** The server bundle requires
+  nothing from `devDependencies` at runtime; adding a runtime import of a dev-only package moves it
+  to `dependencies` or the container fails at start with `Cannot find module`.
 
 ## Environment setup
 
