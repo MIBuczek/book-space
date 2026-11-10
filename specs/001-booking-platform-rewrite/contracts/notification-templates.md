@@ -116,4 +116,4 @@ the assets here.
 
 `spec.md` open question 5 asks whether the **applicant** should be notified when a request is
 approved or rejected. That is a fifth e-mail, not one of the four legacy templates. It is
-tracked as T060 and is deliberately not implemented until the question is answered.
+tracked as T062 and is deliberately not implemented until the question is answered.
