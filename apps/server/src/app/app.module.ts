@@ -16,6 +16,7 @@ import {PassportModule} from '@nestjs/passport';
 import {AuthorizationModule} from './authorization/authorization.module';
 import {validateEnv} from './config/env.validation';
 import {LoggingModule} from './logging/logging.module';
+import {SecurityModule} from './security/security.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import {LoggingModule} from './logging/logging.module';
     // expression is evaluated, so the value is guaranteed by the time it is read.
     MongooseModule.forRoot(process.env.DB_URI!, {dbName: 'book_space'}),
     LoggingModule,
+    SecurityModule,
     AuthorizationModule,
     BookingsModule,
     NotificationModule,

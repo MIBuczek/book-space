@@ -51,6 +51,14 @@ export async function createMongoTestContext(): Promise<MongoTestContext> {
   process.env.DB_URI = uri;
   process.env.JWT_SECRET = process.env.JWT_SECRET ?? TEST_JWT_SECRET;
 
+  // The abuse limits (T057) default to values a single test case would blow through: the
+  // booking-size spec alone posts a booking per seeded size. The harness raises them so the
+  // suite is not accidentally testing the rate limiter, and the dedicated abuse spec sets its
+  // own small values *before* calling this — `ConfigModule.forRoot` captures the environment
+  // when `AppModule` is imported below, so a later change would have no effect.
+  process.env.PUBLIC_RATE_LIMIT = process.env.PUBLIC_RATE_LIMIT ?? '100000';
+  process.env.NOTIFICATION_QUOTA = process.env.NOTIFICATION_QUOTA ?? '100000';
+
   const [{Test}, {AppModule}, {getConnectionToken}, {configureApp}] = await Promise.all([
     import('@nestjs/testing'),
     import('../app/app.module'),
@@ -95,6 +103,13 @@ export async function createMongoTestContext(): Promise<MongoTestContext> {
     // does nothing.
     await client.db(TEST_DB_NAME).dropDatabase();
     await client.close();
+
+    // The rate-limit windows live in memory, not in MongoDB, so dropping the database does
+    // not clear them. Without this a suite that makes more than `PUBLIC_RATE_LIMIT` requests
+    // across its cases would start answering `429` partway through — a failure with nothing
+    // to do with the case under test (T057).
+    const {RateLimitStore} = await import('../app/security/rate-limit/rate-limit.store');
+    app.get(RateLimitStore).clear();
   };
 
   const close = async () => {

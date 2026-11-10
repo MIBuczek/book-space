@@ -73,6 +73,11 @@ interface IBookingFormValue {
   /** Optional and administrator-only in the legacy form; a percentage such as `10%`. */
   discount: string;
   rodoAcknowledgement: boolean;
+  /**
+   * The bot-mitigation decoy (FR-049). A real visitor never sees or fills it; it is sent empty
+   * so a script that fills every input submits a value the server refuses.
+   */
+  website: string;
 }
 
 /** A slot as the form holds it, before expansion: a local day and an hour range. */
@@ -331,6 +336,10 @@ const buildRequest = (
   if (selectedOptions.length > 0) {
     request.selectedOptions = selectedOptions;
   }
+
+  // The decoy is always sent (empty) so the request shape matches what the server expects and
+  // a test can prove the field travels; the guard only refuses a *filled* one (FR-049).
+  request.website = value.website;
 
   return request;
 };

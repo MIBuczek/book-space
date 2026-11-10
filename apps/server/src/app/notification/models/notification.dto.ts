@@ -31,23 +31,43 @@ export class BookingNotificationDto {
  */
 export class MessageDto {
   @Validator.IsString()
-  @Validator.IsNotEmpty({message: 'Person is required'})
+  @Validator.Length(1, 125, {message: 'Person can have between 1 and 125 characters'})
   person!: string;
 
   @Validator.IsEmail({}, {message: 'A valid email is required'})
+  @Validator.MaxLength(125, {message: 'Email can have maximal 125 characters'})
   email!: string;
 
   @Validator.IsString()
-  @Validator.IsNotEmpty({message: 'Message is required'})
+  @Validator.Length(1, 2000, {message: 'Message can have between 1 and 2000 characters'})
   message!: string;
 
   @Validator.IsOptional()
   @Validator.IsString()
+  @Validator.MaxLength(20, {message: 'Phone can have maximal 20 characters'})
   phone?: string;
 
+  /**
+   * The destination (FR-041).
+   *
+   * A syntactically valid address is not sufficient: `NotificationService` allow-lists it
+   * against a facility's contact address before sending, so the public route cannot be used
+   * to deliver the SISK-branded employee template to an arbitrary inbox (issue #124). The
+   * field stays an e-mail here so a malformed value is a `422` at the boundary; the
+   * allow-list is the service's job, because it needs the database.
+   */
   @Validator.IsOptional()
   @Validator.IsEmail({}, {message: 'Recipient must be a valid email'})
+  @Validator.MaxLength(125, {message: 'Recipient can have maximal 125 characters'})
   recipient?: string;
+
+  /**
+   * The bot-mitigation decoy (FR-049). Declared so `whitelist` keeps it; a non-empty value is
+   * refused by `HoneypotGuard` with `422`.
+   */
+  @Validator.IsOptional()
+  @Validator.IsString()
+  website?: string;
 }
 
 export {NOTIFICATION_AUDIENCES};

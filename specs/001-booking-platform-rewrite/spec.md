@@ -323,6 +323,18 @@ bookings it created remain readable.
   defaults (`createdBy` defaulted to `michal.hoffman@sisk-siechnice.pl`, `modifiedBy`
   to `Unknown`).
 - Legacy `payment` value `invoice` is mapped to `transfer` on read.
+- A public write route (booking request, contact message) is submitted by a script
+  rather than a person: the request is refused with `429` once the caller exceeds the
+  per-address allowance, or with `422` if the hidden decoy field is filled (FR-048,
+  FR-049). A caller behind a shared address (a school, an office NAT) shares the
+  allowance; the limit is set generously enough for a human form and a refusal is
+  retryable, not terminal.
+- A public caller names a message `recipient`: the request is refused with `403`
+  because the public contact form does not offer a recipient and only staff may name
+  one (FR-051). A staff caller whose address matches no facility is refused with `422`.
+- A free-text field on a public route exceeds its documented maximum length: the
+  request is refused with `422` at the boundary, before the value reaches the database
+  (FR-051).
 
 ---
 
@@ -466,6 +478,32 @@ bookings it created remain readable.
   key that removal cascades. The system MUST refuse any change that would leave no
   active administrator.
 
+**Abuse protection**
+
+- **FR-048**: The system MUST rate-limit the two public write routes
+  (`POST /bookings`, `POST /notifications/message`) per client address and per
+  submitted e-mail address, answering `429 Too Many Requests` with a `retryAfterSeconds`
+  hint once the allowance is exceeded. The allowance and window MUST be configurable, and
+  a limit of `0` MUST disable the check. The client address MUST come from Express's own
+  resolution (which honours the operator's `trust proxy` setting) rather than from
+  `X-Forwarded-For` read unconditionally, so a caller cannot pick their own key.
+- **FR-049**: The system MUST apply a non-interactive bot mitigation to the public write
+  routes — a hidden decoy field that a human never fills and a script typically does — and
+  refuse a submission that filled it with `422`. It MUST NOT use a CAPTCHA: a visual or
+  interactive challenge would conflict with NFR-006, so the decoy is chosen for its
+  accessibility neutrality and its failure mode (a false positive is a `422` a human can
+  resubmit past, not an unsolvable wall).
+- **FR-050**: The system MUST cap how many outbound e-mail messages one recipient address
+  may receive in a window, answering `429` before the transport is called, so the public
+  contact route cannot be driven as a relay. The cap MUST be configurable and a value of
+  `0` MUST disable it.
+- **FR-051**: Every free-text field on a public write route MUST carry an explicit
+  server-side maximum length, documented in the contract, so an unbounded value cannot
+  reach the database or an index. The message `recipient` MUST additionally be
+  allow-listed against a facility's stored contact address, and only an authenticated
+  staff caller MAY name one — a public caller that supplies a `recipient` is refused with
+  `403`, and a staff caller whose address matches no facility is refused with `422`.
+
 ### 6.2 Non-Functional Requirements
 
 - **NFR-001 (Security)**: No secrets in the client bundle. All credentials (database,
@@ -530,6 +568,10 @@ bookings it created remain readable.
   (bookings, conflicts, reports, authorisation).
 - **SC-009**: A fresh database reaches a working signed-in administrator through the
   documented bootstrap procedure, with no hand-written database write (FR-046).
+- **SC-010**: A scripted flood of either public write route is refused with `429` after
+  the configured allowance and leaves no booking or outbound message behind; a
+  submission with the decoy field filled is refused with `422`; and a public caller that
+  names a message `recipient` is refused with `403` (FR-048–FR-051).
 
 ---
 

@@ -41,6 +41,7 @@ const value = (overrides: Partial<IBookingFormValue> = {}): IBookingFormValue =>
   paymentMethod: 'TRANSFER',
   discount: '',
   rodoAcknowledgement: true,
+  website: '',
   ...overrides,
 });
 
@@ -304,5 +305,14 @@ describe('buildRequest', () => {
     ]);
 
     expect(request.selectedOptions).toHaveLength(1);
+  });
+
+  it('always sends the bot-mitigation decoy, empty for a real visitor (FR-049)', () => {
+    expect(buildRequest(value(), facility(), slots).website).toBe('');
+  });
+
+  it('carries a filled decoy through, so the server can refuse it (FR-049)', () => {
+    const request = buildRequest(value({website: 'http://spam.example'}), facility(), slots);
+    expect(request.website).toBe('http://spam.example');
   });
 });
