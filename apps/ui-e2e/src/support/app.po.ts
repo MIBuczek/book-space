@@ -8,11 +8,11 @@
 /** The top navigation, present on every page. */
 export const nav = {
   link: (label: string) => cy.contains('.bs-nav__links a', label),
-  signInLink: () => cy.get('.bs-nav__session').contains('a', 'Sign in'),
-  signOutButton: () => cy.get('.bs-nav__session').contains('button', 'Sign out'),
+  signInLink: () => cy.get('.bs-nav__session').contains('a', 'Zaloguj'),
+  signOutButton: () => cy.get('.bs-nav__session').contains('button', 'Wyloguj'),
   userEmail: () => cy.get('.bs-nav__user'),
   /** Whether the Admin link is offered; the API's capability decides it. */
-  adminLink: () => cy.get('.bs-nav__links').contains('a', 'Admin'),
+  adminLink: () => cy.get('.bs-nav__links').contains('a', 'Administracja'),
 };
 
 /** The public calendar (`/`). */
@@ -39,14 +39,14 @@ export const bookingRequest = {
 export const signIn = {
   heading: () => cy.get('h1'),
   error: () => cy.get('.bs-sign-in__error'),
-  submit: () => cy.contains('button', 'Sign in'),
+  submit: () => cy.contains('button', 'Zaloguj się'),
 };
 
 /** The admin frame and its tabs. */
 export const admin = {
   tabs: () => cy.get('.bs-admin__tabs a'),
   tab: (label: string) => cy.get('.bs-admin__tabs').contains('a', label),
-  signOut: () => cy.contains('.bs-admin__tabs button', 'Sign out'),
+  signOut: () => cy.contains('.bs-admin__tabs button', 'Wyloguj'),
 };
 
 /** The bookings table tab. */

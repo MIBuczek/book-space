@@ -943,6 +943,15 @@ Three things that are easy to get wrong:
   status (`COPY.clients.deleteConflict`, `COPY.users.deactivateConflict`), not by its body. The
   server's sentence is never rendered — a Polish sentence must not travel in a response body, and
   the API must not be asked to produce Polish.
+- **The `ui-e2e` specs assert the rendered copy, so a catalogue rename is an E2E change.** The
+  page objects (`apps/ui-e2e/src/support/app.po.ts`) and the `signIn` command
+  (`apps/ui-e2e/src/support/commands.ts`) name the labels and button text the components render
+  (`Zaloguj`, `Wyloguj`, `Zaloguj się`, `Hasło`, the Polish tab names). T061 moved the nav,
+  sign-in and admin tabs from English literals to `@booking/copy`, so the specs that still said
+  `Sign in` / `Password` / `Calendar` failed with "Expected to find content … but never did" —
+  a green `nx test` says nothing about it, because `ui-e2e` is a separate project the unit run
+  does not touch. Change the catalogue and grep `apps/ui-e2e` for the old string in the same
+  commit.
 - **CSV column labels and notification subjects are server assets, not catalogue entries.** The
   CSV header is the export contract (FR-028) built by the server that writes the file
   (`reporting/csv/csv-columns.ts`); the e-mail subjects and bodies are versioned templates

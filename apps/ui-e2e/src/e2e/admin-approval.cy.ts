@@ -12,7 +12,7 @@ describe('US3 — an administrator approves, resolves and archives a booking', (
   beforeEach(() => {
     cy.resetBackend();
     cy.signIn('admin@example.com', 'password123');
-    admin.tab('Bookings').click();
+    admin.tab('Rezerwacje').click();
     cy.contains('h1', 'Lista rezerwacji').should('exist');
   });
 

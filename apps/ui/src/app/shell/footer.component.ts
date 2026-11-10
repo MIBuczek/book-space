@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { APP_VERSION } from '@booking/version';
 import { COPY } from '@booking/copy';
 
@@ -17,7 +16,6 @@ import { COPY } from '@booking/copy';
  */
 @Component({
   selector: 'book-space-footer',
-  imports: [RouterLink],
   template: `
     <footer class="bs-footer">
       <nav class="bs-footer__links" [attr.aria-label]="copy.ariaLabel">

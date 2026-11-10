@@ -19,38 +19,39 @@ describe('US2 — staff authentication and role-based navigation', () => {
 
     nav.userEmail().should('contain', 'employee@example.com');
     admin.tabs().should('have.length', 2);
-    admin.tab('Calendar').should('exist');
-    admin.tab('Bookings').should('exist');
-    admin.tab('Clients').should('not.exist');
-    admin.tab('Summary').should('not.exist');
+    admin.tab('Kalendarz').should('exist');
+    admin.tab('Rezerwacje').should('exist');
+    admin.tab('Najemcy').should('not.exist');
+    admin.tab('Podsumowanie').should('not.exist');
   });
 
   it('offers an office account the client, facility and summary tabs', () => {
     cy.signIn('office@example.com', 'password123');
 
-    admin.tab('Clients').should('exist');
-    admin.tab('Facilities').should('exist');
-    admin.tab('Summary').should('exist');
+    admin.tab('Najemcy').should('exist');
+    admin.tab('Obiekty').should('exist');
+    admin.tab('Podsumowanie').should('exist');
   });
 
   it('offers an administrator the summary tab and the approve controls', () => {
     cy.signIn('admin@example.com', 'password123');
 
-    admin.tab('Summary').should('exist');
+    admin.tab('Podsumowanie').should('exist');
 
-    admin.tab('Bookings').click();
+    admin.tab('Rezerwacje').click();
     cy.contains('h1', 'Lista rezerwacji').should('exist');
     // The approve control is administrator-only; the capability, not the role, decides it.
     cy.contains('button', 'Zatwierdź').should('exist');
   });
 
-  it('rejects a wrong password with the server single message and stays on the form', () => {
+  it('rejects a wrong password with the single message and stays on the form', () => {
     cy.visit('/sign-in');
     cy.typeByLabel('E-mail', 'admin@example.com');
-    cy.typeByLabel('Password', 'wrong-password');
+    cy.typeByLabel('Hasło', 'wrong-password');
     signIn.submit().click();
 
-    signIn.error().should('contain', 'Invalid e-mail or password');
+    // The UI renders its own Polish, not the server's English `message` (NFR-005, T061).
+    signIn.error().should('contain', 'Nieprawidłowy e-mail lub hasło');
     cy.location('pathname').should('include', '/sign-in');
   });
 
