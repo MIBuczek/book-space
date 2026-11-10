@@ -20,14 +20,25 @@ import { ButtonComponent } from '../shared/ui';
       <a class="bs-nav__brand" routerLink="/">Book Space</a>
       <ul class="bs-nav__links">
         <li>
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <a
+            routerLink="/"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
             Calendar
           </a>
         </li>
-        <li><a routerLink="/booking-request" routerLinkActive="active">Rezerwacja</a></li>
-        <li><a routerLink="/contact" routerLinkActive="active">Contact</a></li>
+        <li>
+          <a routerLink="/booking-request" routerLinkActive="active" ariaCurrentWhenActive="page">
+            Rezerwacja
+          </a>
+        </li>
+        <li><a routerLink="/contact" routerLinkActive="active" ariaCurrentWhenActive="page">Contact</a></li>
         @if (session.capabilities()?.staff) {
-          <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
+          <li>
+            <a routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">Admin</a>
+          </li>
         }
       </ul>
       <div class="bs-nav__session">

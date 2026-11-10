@@ -1,26 +1,37 @@
 import { Component, ElementRef, effect, input, output, viewChild } from '@angular/core';
-import { ButtonComponent } from './button.component';
+
+let nextModalId = 0;
 
 /**
  * A modal dialog built on the native `<dialog>` element.
  *
- * `showModal()` gives focus trapping, `Esc` to close, inert background content
- * and a `::backdrop` for free — all of which FR-039 requires and all of which a
- * `<div role="dialog">` would have to re-implement. Opening and closing are
- * driven by an `effect` on the `open` input so the caller owns the state and the
- * element follows it, rather than the DOM being the source of truth.
+ * `showModal()` gives focus trapping, `Esc` to close, inert background content, focus
+ * returned to the trigger on close and a `::backdrop` for free — all of which FR-039 and
+ * NFR-006 require and all of which a `<div role="dialog">` would have to re-implement.
+ * Opening and closing are driven by an `effect` on the `open` input so the caller owns the
+ * state and the element follows it, rather than the DOM being the source of truth.
+ *
+ * The body is projected, so the caller supplies its own fields and action buttons; the
+ * dialog renders only the chrome (the backdrop and the accessible name). The heading is
+ * rendered only while open, so a closed dialog contributes no text to the document — a
+ * mounted-but-closed modal must not leak its title into the page.
  */
 @Component({
   selector: 'book-space-modal',
-  imports: [ButtonComponent],
   template: `
-    <dialog #dialog class="bs-modal" (close)="closed.emit()">
-      <h2 class="bs-modal__title">{{ title() }}</h2>
+    <dialog
+      #dialog
+      class="bs-modal"
+      [attr.role]="role()"
+      aria-modal="true"
+      [attr.aria-labelledby]="open() ? titleId : null"
+      (close)="closed.emit()"
+    >
+      @if (open()) {
+        <h2 class="bs-modal__title" [id]="titleId">{{ title() }}</h2>
+      }
       <div class="bs-modal__body">
         <ng-content />
-      </div>
-      <div class="bs-modal__actions">
-        <book-space-button variant="secondary" (pressed)="close()">Close</book-space-button>
       </div>
     </dialog>
   `,
@@ -38,10 +49,10 @@ import { ButtonComponent } from './button.component';
       .bs-modal__title {
         margin-top: 0;
       }
-      .bs-modal__actions {
+      .bs-modal__body {
         display: flex;
-        justify-content: flex-end;
-        margin-top: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
       }
     `,
   ],
@@ -49,7 +60,13 @@ import { ButtonComponent } from './button.component';
 export class ModalComponent {
   readonly open = input(false);
   readonly title = input('');
+  /** `alertdialog` for a confirmation the user must answer, `dialog` otherwise. */
+  readonly role = input<'dialog' | 'alertdialog'>('dialog');
+  /** Fires when the element closes, including on `Esc`, so the caller can clear its state. */
   readonly closed = output<void>();
+
+  /** Ties the dialog to its heading for the accessible name; unique per instance. */
+  readonly titleId = `bs-modal-${nextModalId++}`;
 
   private readonly dialogRef = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
@@ -59,12 +76,10 @@ export class ModalComponent {
       if (this.open() && !dialog.open) {
         dialog.showModal();
       } else if (!this.open() && dialog.open) {
+        // `close()` restores focus to the element that was focused before `showModal()`,
+        // which is the trigger. Removing the element instead would drop focus to the body.
         dialog.close();
       }
     });
-  }
-
-  close(): void {
-    this.dialogRef().nativeElement.close();
   }
 }

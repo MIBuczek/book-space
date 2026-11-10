@@ -8,6 +8,7 @@ import { ISelectOption, SelectComponent } from './select.component';
     label="City"
     [options]="options"
     [placeholder]="placeholder"
+    [error]="error"
     (valueChange)="onChange($event)"
   />`,
 })
@@ -18,6 +19,7 @@ class HostComponent {
   ];
   placeholder = 'Pick one';
   value = '';
+  error: string | null = null;
   onChange(value: string): void {
     this.value = value;
   }
@@ -49,5 +51,17 @@ describe('SelectComponent', () => {
     select.dispatchEvent(new Event('change'));
 
     expect(fixture.componentInstance.value).toBe('KAMIENIEC');
+  });
+
+  it('announces an error and marks the control invalid (NFR-006)', async () => {
+    const fixture = await create();
+    fixture.componentInstance.error = 'Pick a city';
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+
+    expect(select.getAttribute('aria-invalid')).toBe('true');
+    expect(select.getAttribute('aria-describedby')).toBe(`${select.id}-error`);
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('Pick a city');
   });
 });

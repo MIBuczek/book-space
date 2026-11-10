@@ -1,6 +1,28 @@
 /* Global styles. */
 
 /*
+ * A visible focus indicator for every keyboard-reachable control (NFR-006, ui-conventions
+ * "visible focus"). `:focus-visible` rather than `:focus` so a mouse click on a button does
+ * not leave a ring behind, while a Tab into the same control does.
+ */
+:focus-visible {
+  outline: 2px solid #2f6f3e;
+  outline-offset: 2px;
+}
+
+/*
+ * The action row a dialog caller projects into `book-space-modal`. It is the caller's node,
+ * so the modal's view-scoped styles cannot reach it; the rule lives here for the same reason
+ * the focus ring does.
+ */
+.bs-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/*
  * The printable report (FR-030).
  *
  * The Summary tab marks its report element `bs-printable` and calls `window.print()`; this

@@ -20,7 +20,13 @@ let nextSelectId = 0;
   template: `
     <label class="bs-field">
       <span class="bs-field__label">{{ label() }}</span>
-      <select [id]="id" [value]="value()" (change)="handleChange($event)">
+      <select
+        [id]="id"
+        [value]="value()"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [attr.aria-describedby]="error() ? id + '-error' : null"
+        (change)="handleChange($event)"
+      >
         @if (placeholder()) {
           <option value="">{{ placeholder() }}</option>
         }

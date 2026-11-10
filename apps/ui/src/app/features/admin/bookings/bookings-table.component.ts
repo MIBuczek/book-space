@@ -12,6 +12,7 @@ import {
   DatePickerComponent,
   ISelectOption,
   InputComponent,
+  ModalComponent,
   PaginationComponent,
   SelectComponent,
   TableComponent,
@@ -63,6 +64,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
     CheckboxComponent,
     DatePickerComponent,
     InputComponent,
+    ModalComponent,
     PaginationComponent,
     SelectComponent,
     TableComponent,
@@ -225,9 +227,12 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         </section>
       }
 
-      @if (rescheduleTarget(); as target) {
-        <section class="bs-bookings__reschedule" role="dialog" aria-label="Przenieś slot">
-          <h2>Przenieś slot</h2>
+      <book-space-modal
+        [open]="rescheduleTarget() !== null"
+        title="Przenieś slot"
+        (closed)="cancelReschedule()"
+      >
+        @if (rescheduleTarget()) {
           <book-space-date-picker
             label="Dzień"
             [value]="rescheduleDay()"
@@ -245,14 +250,19 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
             [value]="rescheduleEnd()"
             (valueChange)="rescheduleEnd.set($event)"
           />
-          <book-space-button variant="primary" (pressed)="confirmReschedule()">Zapisz</book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelReschedule()">Anuluj</book-space-button>
-        </section>
-      }
+          <div class="bs-modal__actions">
+            <book-space-button variant="primary" (pressed)="confirmReschedule()">Zapisz</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelReschedule()">Anuluj</book-space-button>
+          </div>
+        }
+      </book-space-modal>
 
-      @if (resolveTarget(); as target) {
-        <section class="bs-bookings__resolve" role="dialog" aria-label="Rozlicz slot">
-          <h2>Rozlicz slot</h2>
+      <book-space-modal
+        [open]="resolveTarget() !== null"
+        title="Rozlicz slot"
+        (closed)="cancelResolve()"
+      >
+        @if (resolveTarget()) {
           <book-space-select
             label="Status"
             [options]="statusOptions"
@@ -270,14 +280,19 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
             [value]="resolveComments()"
             (valueChange)="onResolveComments($event)"
           />
-          <book-space-button variant="primary" (pressed)="confirmResolve()">Zapisz</book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelResolve()">Anuluj</book-space-button>
-        </section>
-      }
+          <div class="bs-modal__actions">
+            <book-space-button variant="primary" (pressed)="confirmResolve()">Zapisz</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelResolve()">Anuluj</book-space-button>
+          </div>
+        }
+      </book-space-modal>
 
-      @if (editTarget(); as target) {
-        <section class="bs-bookings__edit" role="dialog" aria-label="Edytuj rezerwację">
-          <h2>Edytuj rezerwację</h2>
+      <book-space-modal
+        [open]="editTarget() !== null"
+        title="Edytuj rezerwację"
+        (closed)="cancelEdit()"
+      >
+        @if (editTarget()) {
           <book-space-input
             label="Nazwa w kalendarzu"
             [value]="editNick()"
@@ -293,18 +308,27 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
             [value]="editPhone()"
             (valueChange)="editPhone.set($event)"
           />
-          <book-space-button variant="primary" (pressed)="confirmEdit()">Zapisz</book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
-        </section>
-      }
+          <div class="bs-modal__actions">
+            <book-space-button variant="primary" (pressed)="confirmEdit()">Zapisz</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
+          </div>
+        }
+      </book-space-modal>
 
-      @if (deleteTarget(); as target) {
-        <section class="bs-bookings__delete" role="alertdialog" aria-label="Usuń rezerwację">
+      <book-space-modal
+        [open]="deleteTarget() !== null"
+        title="Usuń rezerwację"
+        role="alertdialog"
+        (closed)="cancelDelete()"
+      >
+        @if (deleteTarget()) {
           <p>Czy na pewno chcesz usunąć tą rezerwację?</p>
-          <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
-        </section>
-      }
+          <div class="bs-modal__actions">
+            <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
+          </div>
+        }
+      </book-space-modal>
     </section>
   `,
   styles: [
@@ -339,11 +363,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         color: #a4262c;
         font-weight: 600;
       }
-      .bs-bookings__warning,
-      .bs-bookings__reschedule,
-      .bs-bookings__resolve,
-      .bs-bookings__edit,
-      .bs-bookings__delete {
+      .bs-bookings__warning {
         border: 1px solid #d9d9d9;
         border-radius: 6px;
         padding: 1rem;
