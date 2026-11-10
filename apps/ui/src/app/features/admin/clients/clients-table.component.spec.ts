@@ -345,8 +345,9 @@ describe('ClientsTableComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.fieldErrors().city).toMatch(/city/);
-    expect(openPanel(fixture).textContent).toContain('city must be longer');
+    // The field is located from the server's message; the text is the UI's own Polish.
+    expect(fixture.componentInstance.fieldErrors().city).toBe('Nieprawidłowa wartość.');
+    expect(openPanel(fixture).textContent).toContain('Nieprawidłowa wartość.');
   });
 
   it('shows a message that names no field as a general error', async () => {
@@ -362,8 +363,8 @@ describe('ClientsTableComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.generalError()).toBe('property nonsense should not exist');
-    expect(openPanel(fixture).textContent).toContain('property nonsense should not exist');
+    expect(fixture.componentInstance.generalError()).toBe('Popraw dane i spróbuj ponownie.');
+    expect(openPanel(fixture).textContent).toContain('Popraw dane i spróbuj ponownie.');
   });
 
   it('shows a general message for a non-validation failure', async () => {
@@ -456,7 +457,8 @@ describe('ClientsTableComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(element(fixture).textContent).toContain('referenced by a booking');
+    // The UI shows its own Polish message for the 409; the server's English is not rendered.
+    expect(element(fixture).textContent).toContain('dezaktywuj klienta');
     // The modal stays open so the operator can read the message and cancel.
     expect(fixture.componentInstance.deleteTarget()).not.toBeNull();
   });

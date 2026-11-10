@@ -1,6 +1,7 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {IUser, TUserRole} from '@models/user.model';
 import {IBuilding, CITY_LABELS} from '@models/building.model';
 import {IValidationError} from '@models/validation-error.model';
@@ -67,32 +68,32 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
   ],
   template: `
     <section class="bs-page">
-      <h1>Użytkownicy</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-users__controls">
         <book-space-button variant="primary" (pressed)="openCreate()">
-          Dodaj użytkownika
+          {{ copy.add }}
         </book-space-button>
       </div>
 
       @if (usersResource.isLoading()) {
-        <p role="status">Wczytywanie użytkowników…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (usersResource.status() === 'error') {
-        <p role="alert">Nie udało się wczytać użytkowników.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else {
         <book-space-table
-          caption="Użytkownicy"
+          [caption]="copy.caption"
           [columns]="columns"
           [rows]="rows()"
-          emptyMessage="Nie ma żadnego użytkownika w bazie danych."
+          [emptyMessage]="copy.empty"
         >
           <ng-template #rowActions let-row>
             <book-space-button variant="secondary" (pressed)="openEdit(row.user)">
-              Edytuj
+              {{ common.edit }}
             </book-space-button>
             @if (row.user.active) {
               <book-space-button variant="danger" (pressed)="askDeactivate(row.user)">
-                Dezaktywuj
+                {{ copy.deactivate }}
               </book-space-button>
             }
           </ng-template>
@@ -101,53 +102,53 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
 
       <book-space-modal
         [open]="editing()"
-        [title]="editTarget() ? 'Edytuj użytkownika' : 'Dodaj użytkownika'"
+        [title]="editTarget() ? copy.editTitle : copy.createTitle"
         (closed)="cancelEdit()"
       >
         @if (editing()) {
           <book-space-input
-            label="Imię"
+            [label]="copy.fields.firstName"
             [value]="form().firstName"
             [error]="fieldErrors().firstName ?? null"
             (valueChange)="update({firstName: $event})"
           />
           <book-space-input
-            label="Nazwisko"
+            [label]="copy.fields.lastName"
             [value]="form().lastName"
             [error]="fieldErrors().lastName ?? null"
             (valueChange)="update({lastName: $event})"
           />
           <book-space-input
-            label="E-mail"
+            [label]="copy.fields.email"
             type="email"
             [value]="form().email"
             [error]="fieldErrors().email ?? null"
             (valueChange)="update({email: $event})"
           />
           <book-space-input
-            label="Hasło"
+            [label]="copy.fields.password"
             type="password"
-            [placeholder]="editTarget() ? 'Zostaw puste, aby nie zmieniać' : ''"
+            [placeholder]="editTarget() ? copy.passwordPlaceholderEdit : ''"
             [value]="form().password"
             [error]="fieldErrors().password ?? null"
             (valueChange)="update({password: $event})"
           />
           <book-space-input
-            label="Powtórz hasło"
+            [label]="copy.fields.recheckPassword"
             type="password"
             [value]="form().recheckPassword"
             [error]="fieldErrors().recheckPassword ?? null"
             (valueChange)="update({recheckPassword: $event})"
           />
           <book-space-select
-            label="Rola"
+            [label]="copy.fields.role"
             [options]="roleOptions"
             [value]="form().role"
             (valueChange)="onRole($event)"
           />
           @if (cityRequired()) {
             <book-space-select
-              label="Miasto"
+              [label]="copy.fields.city"
               [options]="citySelectOptions"
               [value]="form().city"
               [error]="fieldErrors().city ?? null"
@@ -156,7 +157,7 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
           }
           @if (facilities().length > 0) {
             <fieldset class="bs-users__assignment">
-              <legend>Przypisane obiekty</legend>
+              <legend>{{ copy.assignmentsLegend }}</legend>
               @for (facility of facilities(); track facility._id) {
                 <book-space-checkbox
                   [label]="facilityLabel(facility)"
@@ -167,7 +168,7 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
             </fieldset>
           }
           <book-space-checkbox
-            label="Konto aktywne"
+            [label]="copy.fields.active"
             [checked]="form().active"
             (checkedChange)="update({active: $event})"
           />
@@ -177,32 +178,29 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
           }
 
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmSave()">Zapisz</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmSave()">{{ common.save }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deactivateTarget() !== null"
-        title="Dezaktywuj użytkownika"
+        [title]="copy.deactivateTitle"
         role="alertdialog"
         (closed)="cancelDeactivate()"
       >
         @if (deactivateTarget(); as target) {
-          <p>
-            Czy na pewno chcesz dezaktywować konto {{ target.firstName }} {{ target.lastName }}?
-            Konto nie będzie mogło się zalogować, ale pozostanie widoczne w historii rezerwacji.
-          </p>
+          <p>{{ copy.deactivateConfirm(target.firstName, target.lastName) }}</p>
           @if (deactivateError(); as message) {
             <p class="bs-users__error" role="alert">{{ message }}</p>
           }
           <div class="bs-modal__actions">
             <book-space-button variant="danger" (pressed)="confirmDeactivate()">
-              Dezaktywuj
+              {{ copy.deactivate }}
             </book-space-button>
             <book-space-button variant="secondary" (pressed)="cancelDeactivate()">
-              Anuluj
+              {{ common.cancel }}
             </book-space-button>
           </div>
         }
@@ -240,6 +238,8 @@ export class UsersTableComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly session = inject(SessionStore);
 
+  readonly copy = COPY.users;
+  readonly common = COPY.common;
   readonly columns = USER_COLUMNS;
   readonly roleOptions = ROLE_SELECT_OPTIONS;
   readonly citySelectOptions = CITY_SELECT_OPTIONS;
@@ -395,19 +395,20 @@ export class UsersTableComponent {
       const messages = Array.isArray(body?.message) ? body.message : [];
       const {fields, general} = mapServerErrors(messages);
       this.serverErrors.set(fields);
-      this.generalError.set(general ?? 'Popraw dane i spróbuj ponownie.');
+      this.generalError.set(general ?? COPY.errors.generic);
       return;
     }
-    this.generalError.set('Nie udało się zapisać użytkownika. Spróbuj ponownie później.');
+    this.generalError.set(COPY.users.saveFailure);
   }
 
   private handleDeactivateError(error: unknown): void {
     if (error instanceof HttpErrorResponse && error.status === 409) {
-      const body = error.error as {message?: string} | undefined;
-      this.deactivateError.set(body?.message ?? 'Nie można dezaktywować tego konta.');
+      // The `409` body is English (the last-active-administrator rule); the UI shows its own
+      // Polish text, keyed by the status (NFR-005, T061).
+      this.deactivateError.set(COPY.users.deactivateConflict);
       return;
     }
-    this.deactivateError.set('Nie udało się dezaktywować konta. Spróbuj ponownie później.');
+    this.deactivateError.set(COPY.users.deactivateFailure);
   }
 
   private resetErrors(): void {

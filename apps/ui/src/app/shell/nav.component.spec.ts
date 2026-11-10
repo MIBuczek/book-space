@@ -45,8 +45,8 @@ describe('NavComponent', () => {
     const fixture = render();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('Sign in');
-    expect(text).not.toContain('Admin');
+    expect(text).toContain('Zaloguj');
+    expect(text).not.toContain('Administracja');
   });
 
   it('links the public booking request form', () => {
@@ -62,9 +62,9 @@ describe('NavComponent', () => {
     const fixture = render();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('Admin');
+    expect(text).toContain('Administracja');
     expect(text).toContain('admin@sisk.pl');
-    expect(text).toContain('Sign out');
+    expect(text).toContain('Wyloguj');
   });
 
   it('offers the admin link to a signed-in employee', () => {
@@ -74,8 +74,8 @@ describe('NavComponent', () => {
     const fixture = render();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('Admin');
-    expect(text).toContain('Sign out');
+    expect(text).toContain('Administracja');
+    expect(text).toContain('Wyloguj');
   });
 
   it('marks the current page with aria-current, not only colour (NFR-006)', async () => {
@@ -100,7 +100,7 @@ describe('NavComponent', () => {
 
     const signOut = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button')
-    ).find((b) => b.textContent?.includes('Sign out')) as HTMLButtonElement;
+    ).find((b) => b.textContent?.includes('Wyloguj')) as HTMLButtonElement;
     signOut.click();
 
     httpMock.expectOne('/api/auth/sign-out').flush({ message: 'Signed out' });

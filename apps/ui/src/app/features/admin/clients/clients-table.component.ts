@@ -1,6 +1,7 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {IClient} from '@models/client.model';
 import {IValidationError} from '@models/validation-error.model';
 import {TClientType} from '@models/booking.model';
@@ -64,39 +65,39 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
   ],
   template: `
     <section class="bs-page">
-      <h1>Lista klientów</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-clients__controls">
         <book-space-input
-          label="Wyszukaj klienta"
+          [label]="copy.search"
           [value]="search()"
           (valueChange)="onSearch($event)"
         />
         @if (canWrite()) {
           <book-space-button variant="primary" (pressed)="openCreate()">
-            Dodaj klienta
+            {{ copy.add }}
           </book-space-button>
         }
       </div>
 
       @if (clientsResource.isLoading()) {
-        <p role="status">Wczytywanie klientów…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (clientsResource.status() === 'error') {
-        <p role="alert">Nie udało się wczytać klientów.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else {
         <book-space-table
-          caption="Klienci"
+          [caption]="copy.caption"
           [columns]="columns"
           [rows]="rows()"
-          emptyMessage="Nie ma żadnego klienta w bazie danych."
+          [emptyMessage]="copy.empty"
         >
           @if (canWrite()) {
             <ng-template #rowActions let-row>
               <book-space-button variant="secondary" (pressed)="openEdit(row.client)">
-                Edytuj
+                {{ common.edit }}
               </book-space-button>
               <book-space-button variant="danger" (pressed)="askDelete(row.client)">
-                Usuń
+                {{ common.remove }}
               </book-space-button>
             </ng-template>
           }
@@ -109,7 +110,7 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
           (pageChange)="onPage($event)"
         />
         <book-space-select
-          label="Na stronę"
+          [label]="common.pageSize"
           [options]="pageSizeOptions"
           [value]="limitValue()"
           (valueChange)="onLimit($event)"
@@ -118,12 +119,12 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
 
       <book-space-modal
         [open]="editing()"
-        [title]="editTarget() ? 'Edytuj klienta' : 'Dodaj klienta'"
+        [title]="editTarget() ? copy.editTitle : copy.createTitle"
         (closed)="cancelEdit()"
       >
         @if (editing()) {
           <book-space-select
-            label="Typ"
+            [label]="copy.fields.type"
             [options]="clientOptions"
             [value]="form().type"
             (valueChange)="onType($event)"
@@ -135,58 +136,58 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
             (valueChange)="update({name: $event})"
           />
           <book-space-input
-            label="Nazwa w kalendarzu (opcjonalnie)"
+            [label]="copy.fields.nick"
             [value]="form().nick"
             [error]="fieldErrors().nick ?? null"
             (valueChange)="update({nick: $event})"
           />
           <book-space-input
-            label="Osoba kontaktowa"
+            [label]="copy.fields.contactPerson"
             [value]="form().contactPerson"
             [error]="fieldErrors().contactPerson ?? null"
             (valueChange)="update({contactPerson: $event})"
           />
           <book-space-input
-            label="Telefon"
+            [label]="copy.fields.phone"
             [value]="form().phone"
             [error]="fieldErrors().phone ?? null"
             (valueChange)="update({phone: $event})"
           />
           <book-space-input
-            label="E-mail"
+            [label]="copy.fields.email"
             type="email"
             [value]="form().email"
             [error]="fieldErrors().email ?? null"
             (valueChange)="update({email: $event})"
           />
           <book-space-input
-            label="Ulica"
+            [label]="copy.fields.street"
             [value]="form().street"
             [error]="fieldErrors().street ?? null"
             (valueChange)="update({street: $event})"
           />
           <book-space-input
-            label="Miasto"
+            [label]="copy.fields.city"
             [value]="form().city"
             [error]="fieldErrors().city ?? null"
             (valueChange)="update({city: $event})"
           />
           <book-space-input
-            label="Kod pocztowy"
+            [label]="copy.fields.zipCode"
             [value]="form().zipCode"
             [error]="fieldErrors().zipCode ?? null"
             (valueChange)="update({zipCode: $event})"
           />
           @if (nipRequired()) {
             <book-space-input
-              label="NIP"
+              [label]="copy.fields.nip"
               [value]="form().nip"
               [error]="fieldErrors().nip ?? null"
               (valueChange)="update({nip: $event})"
             />
           }
           <book-space-checkbox
-            label="Klient aktywny"
+            [label]="copy.fields.active"
             [checked]="form().active"
             (checkedChange)="update({active: $event})"
           />
@@ -196,26 +197,26 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
           }
 
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmSave()">Zapisz</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmSave()">{{ common.save }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deleteTarget() !== null"
-        title="Usuń klienta"
+        [title]="copy.deleteTitle"
         role="alertdialog"
         (closed)="cancelDelete()"
       >
         @if (deleteTarget(); as target) {
-          <p>Czy na pewno chcesz usunąć klienta {{ target.name }}?</p>
+          <p>{{ copy.deleteConfirm(target.name) }}</p>
           @if (deleteError(); as message) {
             <p class="bs-clients__error" role="alert">{{ message }}</p>
           }
           <div class="bs-modal__actions">
-            <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
+            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ common.remove }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
@@ -243,6 +244,8 @@ export class ClientsTableComponent {
   private readonly clientsApi = inject(ClientsApi);
   private readonly session = inject(SessionStore);
 
+  readonly copy = COPY.clients;
+  readonly common = COPY.common;
   readonly columns = CLIENT_COLUMNS;
   readonly clientOptions = CLIENT_OPTIONS;
   readonly pageSizeOptions: ISelectOption[] = PAGE_SIZES.map((size) => ({
@@ -402,10 +405,10 @@ export class ClientsTableComponent {
       const messages = Array.isArray(body?.message) ? body.message : [];
       const {fields, general} = mapServerErrors(messages);
       this.serverErrors.set(fields);
-      this.generalError.set(general ?? 'Popraw dane i spróbuj ponownie.');
+      this.generalError.set(general ?? COPY.errors.generic);
       return;
     }
-    this.generalError.set('Nie udało się zapisać klienta. Spróbuj ponownie później.');
+    this.generalError.set(COPY.clients.saveFailure);
   }
 
   private resetErrors(): void {

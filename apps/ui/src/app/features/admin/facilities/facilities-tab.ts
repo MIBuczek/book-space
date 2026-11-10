@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {CITY_LABELS, IBuilding} from '@models/building.model';
 import {IMessageRequest} from '@models/notification.model';
 
@@ -54,8 +55,8 @@ type TEmployeeMessageErrors = Partial<Record<keyof IEmployeeMessageValue, string
  */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The Polish yes/no labels for the boolean flags (legacy showed these as "Tak"/"Nie"). */
-const yesNo = (value: boolean): string => (value ? 'Tak' : 'Nie');
+/** The yes/no labels for the boolean flags, from the shared copy catalogue (NFR-005, T061). */
+const yesNo = (value: boolean): string => (value ? COPY.common.yes : COPY.common.no);
 
 /**
  * The facility detail rows (FR-009).
@@ -70,16 +71,16 @@ const facilityDetails = (facility: IBuilding | null): IDetailRow[] => {
     return [];
   }
   return [
-    {label: 'Miejscowość', value: CITY_LABELS[facility.city]},
-    {label: 'Nazwa obiektu', value: facility.name},
-    {label: 'Telefon kontaktowy', value: facility.phone},
-    {label: 'E-mail', value: facility.email},
-    {label: 'Powierzchnie', value: facility.sizes.join(', ')},
-    {label: 'Oświetlenie', value: yesNo(facility.lighting)},
-    {label: 'Toalety', value: yesNo(facility.toilets)},
+    {label: COPY.facilities.details.city, value: CITY_LABELS[facility.city]},
+    {label: COPY.facilities.details.name, value: facility.name},
+    {label: COPY.facilities.details.phone, value: facility.phone},
+    {label: COPY.facilities.details.email, value: facility.email},
+    {label: COPY.facilities.details.sizes, value: facility.sizes.join(', ')},
+    {label: COPY.facilities.details.lighting, value: yesNo(facility.lighting)},
+    {label: COPY.facilities.details.toilets, value: yesNo(facility.toilets)},
     // The tab receives retired facilities too (T059), so the status is what tells an
     // administrator the facility is deactivated rather than simply in use.
-    {label: 'Status', value: facility.active !== false ? 'Aktywny' : 'Nieaktywny'},
+    {label: COPY.facilities.details.status, value: facility.active !== false ? COPY.facilities.active.yes : COPY.facilities.active.no},
   ];
 };
 
@@ -113,13 +114,13 @@ const validateEmployeeMessage = (value: IEmployeeMessageValue): TEmployeeMessage
   const errors: TEmployeeMessageErrors = {};
 
   if (value.person.trim() === '') {
-    errors.person = 'Wybierz pracownika';
+    errors.person = COPY.validation.personRequired;
   }
   if (!EMAIL_PATTERN.test(value.recipient)) {
-    errors.recipient = 'Podaj poprawny adres e-mail';
+    errors.recipient = COPY.validation.emailInvalid;
   }
   if (value.message.trim() === '') {
-    errors.message = 'Wiadomość nie może być pusta';
+    errors.message = COPY.validation.messageRequired;
   }
 
   return errors;
@@ -151,11 +152,14 @@ const buildMessageRequest = (
  * and any other status — a `502` provider failure in particular — shows a retry message. There
  * is no status that returns `null`.
  */
-const sendFailureMessage = (status: number, messages: readonly string[]): string => {
+const sendFailureMessage = (status: number): string => {
+  // A `422` is a field problem the form already validates in Polish; the server's English
+  // message list is not rendered (NFR-005, T061). Any other status is a provider failure
+  // (FR-036), which is a retry prompt.
   if (status === 422) {
-    return messages.length > 0 ? messages.join(' ') : 'Popraw dane i spróbuj ponownie.';
+    return COPY.facilities.sendValidation;
   }
-  return 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.';
+  return COPY.facilities.sendFailure;
 };
 
 export {

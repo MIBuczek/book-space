@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {IClient} from '@models/client.model';
 import {IBookedTimeSummary, IClientSummary, SUMMARY_CITIES, TSummaryCity} from '@models/reporting.model';
 import {facilityWallClock, formatFacilityDate, formatFacilityTime} from '@booking/date-time';
@@ -79,16 +80,16 @@ interface ICityReport extends ICityTotal {
  * business artefact and the enum is what the legacy report carried.
  */
 const CLIENT_DETAIL_FIELDS: Array<{key: keyof IClient; label: string}> = [
-  {key: 'name', label: 'Imię i nazwisko'},
-  {key: 'type', label: 'Typ'},
-  {key: 'contactPerson', label: 'Osoba kontaktowa'},
-  {key: 'phone', label: 'Telefon'},
-  {key: 'email', label: 'E-mail'},
-  {key: 'street', label: 'Ulica'},
-  {key: 'city', label: 'Miasto'},
-  {key: 'zipCode', label: 'Kod pocztowy'},
-  {key: 'nip', label: 'NIP'},
-  {key: 'nick', label: 'Nick'},
+  {key: 'name', label: COPY.summary.clientDetail.name},
+  {key: 'type', label: COPY.summary.clientDetail.type},
+  {key: 'contactPerson', label: COPY.summary.clientDetail.contactPerson},
+  {key: 'phone', label: COPY.summary.clientDetail.phone},
+  {key: 'email', label: COPY.summary.clientDetail.email},
+  {key: 'street', label: COPY.summary.clientDetail.street},
+  {key: 'city', label: COPY.summary.clientDetail.city},
+  {key: 'zipCode', label: COPY.summary.clientDetail.zipCode},
+  {key: 'nip', label: COPY.summary.clientDetail.nip},
+  {key: 'nick', label: COPY.summary.clientDetail.nick},
 ];
 
 /**
@@ -101,7 +102,7 @@ const CLIENT_DETAIL_FIELDS: Array<{key: keyof IClient; label: string}> = [
  */
 const periodLabel = (period: IReportPeriod): string => {
   if (period.fromTheBeginning || period.fromMonth === null || period.toMonth === null) {
-    return 'od początku';
+    return COPY.summary.fromBeginningText;
   }
   const from = facilityWallClock(period.fromMonth).month;
   const to = facilityWallClock(period.toMonth);
@@ -118,9 +119,9 @@ const periodLabel = (period: IReportPeriod): string => {
  */
 const csvFilename = (clientName: string | null, period: IReportPeriod, forAll: boolean): string => {
   if (!forAll && clientName === null) {
-    return 'Raport clienta.csv';
+    return COPY.summary.csvFilename.clientFallback;
   }
-  const base = forAll ? 'Wszyscy klienci' : clientName;
+  const base = forAll ? COPY.summary.csvFilename.all : clientName;
   return `${base} (${periodLabel(period)}).csv`.toLowerCase();
 };
 
@@ -143,10 +144,10 @@ const rangeError = (
     return null;
   }
   if (fromMonth === null || toMonth === null) {
-    return 'Wybierz miesiąc początkowy i końcowy.';
+    return COPY.summary.rangeError.missing;
   }
   if (fromMonth.getTime() > toMonth.getTime()) {
-    return 'Miesiąc początkowy nie może być późniejszy niż końcowy.';
+    return COPY.summary.rangeError.inverted;
   }
   return null;
 };
@@ -159,7 +160,7 @@ const rangeError = (
  */
 const periodText = (period: IReportPeriod): string => {
   if (period.fromTheBeginning || period.fromMonth === null || period.toMonth === null) {
-    return 'od początku';
+    return COPY.summary.fromBeginningText;
   }
   return `${monthLabel(period.fromMonth)} – ${monthLabel(period.toMonth)}`;
 };
@@ -199,9 +200,9 @@ const reportSlots = (booking: IBookedTimeSummary): IReportSlot[] =>
   booking.bookingTimeDetails.map((slot) => ({
     day: formatFacilityDate(new Date(slot.day)),
     hours: `${formatFacilityTime(new Date(slot.startHours))}–${formatFacilityTime(new Date(slot.endHours))}`,
-    participants: slot.participants === undefined ? '[Brak]' : String(slot.participants),
+    participants: slot.participants === undefined ? COPY.common.noValue : String(slot.participants),
     status: displayValue(slot.status),
-    comments: slot.comments && slot.comments !== '' ? slot.comments : '[Brak]',
+    comments: slot.comments && slot.comments !== '' ? slot.comments : COPY.common.noValue,
   }));
 
 /** One booking's details, as the printable report renders them. */
@@ -217,7 +218,7 @@ const reportEntry = (booking: IBookedTimeSummary): IReportEntry => {
     comments:
       generalBookingDetails.comments && generalBookingDetails.comments !== ''
         ? generalBookingDetails.comments
-        : '[Brak]',
+        : COPY.common.noValue,
     slots: reportSlots(booking),
   };
 };

@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ServerErrorComponent } from './server-error.component';
 import { ErrorStore } from '../../core/error.store';
-import { OFFICE_CONTACT } from './contact-details';
+import { COPY } from '@booking/copy';
+
+const OFFICE_CONTACT = COPY.contact.office;
 
 describe('ServerErrorComponent', () => {
   beforeEach(async () => {

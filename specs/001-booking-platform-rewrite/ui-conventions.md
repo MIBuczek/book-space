@@ -329,6 +329,58 @@ Required, not optional — `spec.md` FR-039 and NFR-006:
 - Interactive elements are real `<button>`/`<a>`, keyboard reachable, visible focus.
 - Modal focus is trapped and returns to the trigger on close.
 
+## Copy catalogue (T061, NFR-005)
+
+NFR-005 requires all user-facing copy to be Polish and centralised so it can be translated
+later. The single source is `libs/copy` (`@booking/copy`), a `COPY` object of literal strings
+and a few interpolation functions (`COPY.footer.meta(version)`, `COPY.validation.nameRange(3,125)`).
+A component imports `COPY` and binds it; it never types a Polish literal into a template.
+
+- **The catalogue is the only source of Polish in `apps/ui`.** `no-hardcoded-copy.spec.ts`
+  walks `apps/ui/src`, skips specs and the catalogue, and fails on any Polish character outside
+  a comment. It is a *Polish-character* check, not a "looks like a sentence" check: it is exact
+  and cannot be argued with.
+- **A display vocabulary that a screen labels lives in the catalogue too** (`COPY.labels`,
+  `COPY.users.roleLabels`, the tab labels). `CITY_LABELS` is the one exception: it labels the
+  selectors and lives in `libs/models/building.model.ts` beside `CITIES`, because the server's
+  reporting vocabulary is a different audience (see `reporting/`).
+- **English is not caught by the guard**, but the rendered-component specs pin the strings that
+  matter; a stray `Previous` is a copy defect, not a localisation one.
+
+### API error localisation: the UI owns the wording
+
+The API is English (NFR-005). A validation failure answers `{message: string[]}` in English, and
+a `409` answers a single English sentence. The UI must not render either.
+
+- **A `422` message is used to locate the field, not to render it.** `mapServerErrors` matches
+  the English message to the field it names (`city must be longer...` → `city`) and shows the
+  UI's own Polish (`COPY.errors.fieldInvalid`); a message that names no field becomes the
+  generic prompt (`COPY.errors.generic`). The server's sentence is discarded.
+- **A `409` is keyed by its status, not its body.** The clients delete conflict and the
+  last-administrator rule both show a Polish message chosen from the status; the English body is
+  ignored.
+- **The server-error page shows the HTTP status text, never a cause.** That is deliberate: a
+  `5xx` is opaque by contract (`ErrorExceptionFilter`), and the page's own prompt and fallback
+  are Polish.
+
+So the strategy is: **the API returns English and a status code; the UI maps the status (or the
+named field) to Polish copy.** The API is never asked to produce Polish, and a Polish sentence
+never travels in a response body.
+
+### CSV labels and e-mail subjects live server-side, on purpose
+
+Both are Polish, and neither is UI copy:
+
+- **The CSV column labels** (`apps/server/src/app/reporting/csv/csv-columns.ts`) are the export
+  contract (FR-028): the header is the columns' `label`s joined, and a spreadsheet reads them by
+  position. They are produced by the server that writes the file, not rendered by a screen.
+- **The notification subject lines and bodies** (`apps/server/src/app/notification/templates/`)
+  are versioned assets with the legacy EmailJS ids; `contracts/notification-templates.md` is
+  their contract. The server composes the e-mail, so the wording is a server asset.
+
+The shared *report vocabulary* (statuses, cities, payments) that both the CSV and the printable
+report print lives in `libs/reporting`, so the export and the report cannot disagree.
+
 ## Shared UI kit (T032)
 
 Built once in `apps/ui/src/app/shared`, then used everywhere. No feature reimplements a

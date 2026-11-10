@@ -224,9 +224,11 @@ describe('mapServerErrors', () => {
       'Zip code may only contain digits, dots, slashes and dashes',
     ]);
 
-    expect(fields.city).toMatch(/city/);
-    expect(fields.nip).toMatch(/NIP/);
-    expect(fields.zipCode).toMatch(/Zip code/);
+    // The field is located from the server's message; the text shown is the UI's own Polish
+    // (NFR-005, T061), so the server's English is never rendered.
+    expect(fields.city).toBe('Nieprawidłowa wartość.');
+    expect(fields.nip).toBe('Nieprawidłowa wartość.');
+    expect(fields.zipCode).toBe('Nieprawidłowa wartość.');
     expect(general).toBeNull();
   });
 
@@ -240,17 +242,17 @@ describe('mapServerErrors', () => {
     expect(fields.name).toBeDefined();
   });
 
-  it('returns a message that names no field as general rather than dropping it', () => {
+  it('returns the generic prompt for a message that names no field rather than dropping it', () => {
     const {fields, general} = mapServerErrors(['property nonsense should not exist']);
 
     expect(fields).toEqual({});
-    expect(general).toBe('property nonsense should not exist');
+    expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
-  it('joins several unmatched messages so both are shown', () => {
+  it('shows one generic prompt for several unmatched messages', () => {
     const {general} = mapServerErrors(['first unknown', 'second unknown']);
 
-    expect(general).toBe('first unknown second unknown');
+    expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
   it('returns no general message for an empty list', () => {
@@ -292,9 +294,11 @@ describe('deleteFailureMessage', () => {
   const conflict = (message: unknown) =>
     new HttpErrorResponse({status: 409, statusText: 'Conflict', error: {statusCode: 409, message}});
 
-  it('shows the server message for a 409 (T059)', () => {
-    expect(deleteFailureMessage(conflict('This client is referenced by a booking.'))).toBe(
-      'This client is referenced by a booking.'
+  it('shows the UI own Polish message for a 409, not the server English (T061)', () => {
+    // The status is what identifies the reason; the API's sentence is English and is not
+    // rendered (NFR-005).
+    expect(deleteFailureMessage(conflict('This client is referenced by a booking.'))).toContain(
+      'dezaktywuj klienta'
     );
   });
 

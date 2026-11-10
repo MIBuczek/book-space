@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { APP_VERSION } from '@booking/version';
-import { PRIVACY_POLICY_URL, SISK_WEBSITE_URL } from '../features/informational/contact-details';
+import { COPY } from '@booking/copy';
 
 /**
  * The footer shared by every page (FR-039, issue #44).
@@ -10,19 +10,21 @@ import { PRIVACY_POLICY_URL, SISK_WEBSITE_URL } from '../features/informational/
  * version, as the legacy `Footer.tsx` did. The version is the same value the
  * server reports on `GET /api` (`@booking/version`), so an operator can match a
  * running UI to a deployed API build.
+ *
+ * The copy is read from the shared catalogue (`@booking/copy`), which is the only
+ * source of user-facing Polish text (NFR-005, T061); the version is interpolated
+ * by `COPY.footer.meta`.
  */
 @Component({
   selector: 'book-space-footer',
   imports: [RouterLink],
   template: `
     <footer class="bs-footer">
-      <nav class="bs-footer__links" aria-label="Informacje">
-        <a [href]="privacyUrl" target="_blank" rel="noopener">Polityka prywatności</a>
-        <a [href]="siskUrl" target="_blank" rel="noopener">Strona SISK</a>
+      <nav class="bs-footer__links" [attr.aria-label]="copy.ariaLabel">
+        <a [href]="privacyUrl" target="_blank" rel="noopener">{{ copy.privacy }}</a>
+        <a [href]="siskUrl" target="_blank" rel="noopener">{{ copy.site }}</a>
       </nav>
-      <p class="bs-footer__meta">
-        SISK Siechnice — system rezerwacji · Wersja aplikacji {{ version }}
-      </p>
+      <p class="bs-footer__meta">{{ meta }}</p>
     </footer>
   `,
   styles: [
@@ -50,7 +52,8 @@ import { PRIVACY_POLICY_URL, SISK_WEBSITE_URL } from '../features/informational/
   ],
 })
 export class FooterComponent {
-  readonly version = APP_VERSION;
-  readonly privacyUrl = PRIVACY_POLICY_URL;
-  readonly siskUrl = SISK_WEBSITE_URL;
+  readonly copy = COPY.footer;
+  readonly meta = COPY.footer.meta(APP_VERSION);
+  readonly privacyUrl = COPY.contact.privacyPolicyUrl;
+  readonly siskUrl = COPY.contact.siskWebsiteUrl;
 }

@@ -607,7 +607,12 @@ bookings it created remain readable.
    request is approved or rejected?
 6. **[NEEDS CLARIFICATION]** Which e-mail provider replaces EmailJS, and who owns the
    sending domain?
-7. **[NEEDS CLARIFICATION]** What is the retention policy for archived bookings?
+7. **[RESOLVED — T060]** What is the retention policy for archived bookings?
+   Archived bookings are retained for **five years after the last day they occupy a
+   slot**, then purged; active bookings are never purged. The anchor is the last slot
+   day rather than `modifiedAt`, which every write stamps (FR-016), so a re-saved old
+   booking cannot outlive its window. Implemented by `tools/backup`'s `purge`
+   subcommand and documented in `docs/operations.md`.
 8. **[NEEDS CLARIFICATION]** Should the PDF report become a server-generated document
    instead of a browser print view?
 9. **[NEEDS CLARIFICATION]** Is a self-service password reset needed for staff?

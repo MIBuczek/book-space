@@ -171,7 +171,7 @@ loudly rather than stamping a wrong build number.
 
 ```bash
 yarn lint                                      # ESLint across every project (flat config)
-yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy --configuration=ci
 yarn build:all                                 # production build of every affected project
 yarn nx e2e server-e2e                         # API end-to-end tests
 yarn nx e2e ui-e2e                             # UI end-to-end tests (Cypress)
@@ -239,9 +239,12 @@ default.
 | `libs/date-time`                     | Facility-time conversion (`@booking/date-time`)               |
 | `libs/booking-rules`                 | Slot overlap and cyclical expansion (`@booking/rules`)        |
 | `libs/reporting`                     | Report and CSV vocabulary (`@booking/reporting`)              |
+| `libs/copy`                          | The user-facing Polish copy catalogue (`@booking/copy`)       |
 | `libs/version`                       | The build number and application version (`@booking/version`) |
 | `tools/migration`                    | The one-off Firebase → MongoDB migration tool                 |
 | `tools/bootstrap-admin`              | Creates the first administrator in a fresh database (FR-046)  |
+| `tools/backup`                       | Backup, restore and archived-booking retention (T060)         |
+| `docs/operations.md`                 | Backup cadence, retention, RPO/RTO and the legacy cut-over    |
 | `specs/001-booking-platform-rewrite` | Specification, plan and task backlog for the rewrite          |
 | `specs/002-dependency-modernization` | Specification and plan for the toolchain upgrade              |
 
@@ -255,6 +258,8 @@ default.
   the API contract.
 - [`specs/001-booking-platform-rewrite/data-model.md`](specs/001-booking-platform-rewrite/data-model.md) —
   the MongoDB collections and indexes.
+- [`docs/operations.md`](docs/operations.md) — the operations runbook: backup cadence, restore
+  procedure, archived-booking retention, RPO/RTO and the cut-over that retires the legacy system.
 - [`AGENTS.md`](AGENTS.md) — the repository's load-bearing constraints and the traps that cost
   time during the dependency upgrade. Read it before making non-trivial changes.
 

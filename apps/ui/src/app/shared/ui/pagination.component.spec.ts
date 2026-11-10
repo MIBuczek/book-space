@@ -34,7 +34,7 @@ describe('PaginationComponent', () => {
     const fixture = await create();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Page 1 of 10');
+    expect(fixture.nativeElement.textContent).toContain('Strona 1 z 10');
     expect(buttons(fixture)[0].disabled).toBe(true);
     expect(buttons(fixture)[1].disabled).toBe(false);
   });
@@ -56,7 +56,7 @@ describe('PaginationComponent', () => {
     fixture.componentInstance.total = 101;
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Page 1 of 11');
+    expect(fixture.nativeElement.textContent).toContain('Strona 1 z 11');
   });
 
   it('never reports fewer than one page', async () => {
@@ -64,7 +64,7 @@ describe('PaginationComponent', () => {
     fixture.componentInstance.total = 0;
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Page 1 of 1');
+    expect(fixture.nativeElement.textContent).toContain('Strona 1 z 1');
   });
 
   it('ignores a page outside the valid range', async () => {

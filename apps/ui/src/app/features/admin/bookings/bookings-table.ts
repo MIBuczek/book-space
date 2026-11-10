@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
 import {CITY_LABELS} from '@models/building.model';
@@ -60,7 +61,7 @@ const PAGE_SIZES = [20, 50, 100];
 const periodOptions = (now: Date, firstYear = 2022): IPeriodOption[] => {
   const currentStart = academicYearStartYear(now);
   const options: IPeriodOption[] = [
-    {value: FROM_THE_BEGINNING, label: 'Od początku', startYear: null},
+    {value: FROM_THE_BEGINNING, label: COPY.bookings.fromBeginning, startYear: null},
   ];
 
   for (let year = currentStart; year >= firstYear; year -= 1) {
@@ -98,22 +99,18 @@ const resolvePeriod = (value: string, options: IPeriodOption[], now: Date): IRes
 
 /** The columns the table renders, in the legacy order (`RECORDS_BOOKINGS_HEADERS`). */
 const BOOKING_COLUMNS = [
-  {key: 'nick', label: 'Nazwa klienta'},
-  {key: 'personPhone', label: 'Telefon'},
-  {key: 'personEmail', label: 'E-mail'},
-  {key: 'acceptedLabel', label: 'Zakceptowana'},
-  {key: 'conflictLabel', label: 'Konflikty'},
+  {key: 'nick', label: COPY.bookings.columns.nick},
+  {key: 'personPhone', label: COPY.bookings.columns.personPhone},
+  {key: 'personEmail', label: COPY.bookings.columns.personEmail},
+  {key: 'acceptedLabel', label: COPY.bookings.columns.accepted},
+  {key: 'conflictLabel', label: COPY.bookings.columns.conflict},
 ];
 
 /** The labels for a slot's status, matching the legacy `BOOKING_STATUS_OPTIONS`. */
-const STATUS_LABELS: Record<TSingleBookingStatus, string> = {
-  INITIAL: 'Początkowa',
-  DONE: 'Zakończona',
-  CANCELED: 'Anulowana',
-};
+const STATUS_LABELS: Record<TSingleBookingStatus, string> = COPY.bookings.statusLabels;
 
 /** The label for the accepted flag, never colour alone (NFR-006, FR-037). */
-const acceptedLabel = (accepted: boolean): string => (accepted ? 'Tak' : 'Nie');
+const acceptedLabel = (accepted: boolean): string => (accepted ? COPY.common.yes : COPY.common.no);
 
 /**
  * Whether a booking is in the conflict set (FR-015).
@@ -128,7 +125,7 @@ const hasConflict = (booking: IBooking, conflicts: readonly string[]): boolean =
 
 /** The conflict cell: a word when there is a conflict, empty otherwise (never colour alone). */
 const conflictLabel = (booking: IBooking, conflicts: readonly string[]): string =>
-  hasConflict(booking, conflicts) ? 'Konflikt' : '';
+  hasConflict(booking, conflicts) ? COPY.bookings.conflict : '';
 
 /** One slot's facility-local day and hour range, `YYYY-MM-DD HH:MM–HH:MM`. */
 const slotLabel = (slot: IBookedTime): string =>

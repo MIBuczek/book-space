@@ -1,5 +1,6 @@
 import { Component, contentChild, input, TemplateRef } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { COPY } from '@booking/copy';
 
 interface ITableColumn {
   key: string;
@@ -94,11 +95,11 @@ export class TableComponent {
   readonly columns = input.required<ITableColumn[]>();
   readonly rows = input.required<Record<string, unknown>[]>();
   readonly caption = input('');
-  readonly emptyMessage = input('No records.');
+  readonly emptyMessage = input<string>(COPY.shared.table.empty);
   /** The row property whose value identifies the row, normally `_id`. */
   readonly trackKey = input('_id');
   /** The label for the projected action column; only rendered when `rowActions` is given. */
-  readonly actionsLabel = input('Actions');
+  readonly actionsLabel = input<string>(COPY.shared.table.actions);
   /** Whether every row's `rowDetails` template is rendered. */
   readonly expandAll = input(false);
 

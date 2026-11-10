@@ -13,32 +13,32 @@ describe('visibleAdminTabs', () => {
     visibleAdminTabs(capabilities).map((tab) => tab.label);
 
   it('shows an employee only Calendar and Bookings', () => {
-    expect(labels(employeeUser().capabilities)).toEqual(['Calendar', 'Bookings']);
+    expect(labels(employeeUser().capabilities)).toEqual(['Kalendarz', 'Rezerwacje']);
   });
 
   it('shows office Calendar, Bookings, Clients, Facilities and Summary', () => {
     expect(labels(officeUser().capabilities)).toEqual([
-      'Calendar',
-      'Bookings',
-      'Clients',
-      'Facilities',
-      'Summary',
+      'Kalendarz',
+      'Rezerwacje',
+      'Najemcy',
+      'Obiekty',
+      'Podsumowanie',
     ]);
   });
 
   it('shows an administrator all six tabs, including Users', () => {
     expect(labels(adminUser().capabilities)).toEqual([
-      'Calendar',
-      'Bookings',
-      'Clients',
-      'Facilities',
-      'Summary',
-      'Users',
+      'Kalendarz',
+      'Rezerwacje',
+      'Najemcy',
+      'Obiekty',
+      'Podsumowanie',
+      'Użytkownicy',
     ]);
   });
 
   it('shows office the tabs but not Users, which is administrator-only (FR-045)', () => {
-    expect(labels(officeUser().capabilities)).not.toContain('Users');
+    expect(labels(officeUser().capabilities)).not.toContain('Użytkownicy');
   });
 
   it('drops Summary for a deny-listed office account but keeps the other tabs', () => {
@@ -48,7 +48,7 @@ describe('visibleAdminTabs', () => {
       canSeeSummaryTab: false,
     });
 
-    expect(labels(capabilities)).toEqual(['Calendar', 'Bookings', 'Clients', 'Facilities']);
+    expect(labels(capabilities)).toEqual(['Kalendarz', 'Rezerwacje', 'Najemcy', 'Obiekty']);
   });
 
   it('shows nothing when the capabilities are absent', () => {

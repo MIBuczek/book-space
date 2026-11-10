@@ -50,7 +50,7 @@ describe('AdminShellComponent', () => {
       (render().nativeElement as HTMLElement).querySelectorAll('.bs-admin__tabs a')
     ).map((a) => a.textContent?.trim());
 
-    expect(links).toEqual(['Calendar', 'Bookings']);
+    expect(links).toEqual(['Kalendarz', 'Rezerwacje']);
   });
 
   it('renders all six tabs for an administrator', () => {
@@ -60,7 +60,14 @@ describe('AdminShellComponent', () => {
       (render().nativeElement as HTMLElement).querySelectorAll('.bs-admin__tabs a')
     ).map((a) => a.textContent?.trim());
 
-    expect(links).toEqual(['Calendar', 'Bookings', 'Clients', 'Facilities', 'Summary', 'Users']);
+    expect(links).toEqual([
+      'Kalendarz',
+      'Rezerwacje',
+      'Najemcy',
+      'Obiekty',
+      'Podsumowanie',
+      'Użytkownicy',
+    ]);
   });
 
   it('marks the active tab with aria-current, not only colour and weight (NFR-006)', async () => {
@@ -79,7 +86,7 @@ describe('AdminShellComponent', () => {
     // Exactly one tab is current, and it is the routed one: the `active` class alone is a
     // colour change, which is the "state conveyed by colour only" defect NFR-006 names.
     expect(active).toHaveLength(1);
-    expect(active[0].textContent?.trim()).toBe('Bookings');
+    expect(active[0].textContent?.trim()).toBe('Rezerwacje');
   });
 
   it('renders no tabs when the session has no capabilities', () => {
@@ -98,7 +105,7 @@ describe('AdminShellComponent', () => {
 
     const signOut = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button')
-    ).find((b) => b.textContent?.includes('Sign out')) as HTMLButtonElement;
+    ).find((b) => b.textContent?.includes('Wyloguj')) as HTMLButtonElement;
     signOut.click();
 
     httpMock.expectOne('/api/auth/sign-out').flush({ message: 'Signed out' });

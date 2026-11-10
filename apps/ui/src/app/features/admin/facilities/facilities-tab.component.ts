@@ -1,8 +1,8 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {CITIES, CITY_LABELS, IBuilding, TCity} from '@models/building.model';
-import {IValidationError} from '@models/validation-error.model';
 import {FacilitiesApi} from '../../../core/facilities.api';
 import {NotificationsApi} from '../../../core/notifications.api';
 import {SessionStore} from '../../../core/session.store';
@@ -25,7 +25,7 @@ import type {IEmployeeMessageValue, TEmployeeMessageErrors} from './facilities-t
 
 const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
 
-const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
+const EMPLOYEE_COLUMNS = [{key: 'name', label: COPY.facilities.employeeColumn}];
 
 /**
  * The admin facilities tab (FR-009, FR-041, issue #42).
@@ -52,17 +52,17 @@ const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
   imports: [ButtonComponent, InputComponent, SelectComponent, TableComponent],
   template: `
     <section class="bs-page">
-      <h1>Obiekty sportowe</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-facilities__controls">
         <book-space-select
-          label="Miejscowość"
+          [label]="copy.city"
           [options]="cityOptions"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
         <book-space-select
-          label="Obiekt"
+          [label]="copy.facility"
           [options]="facilityOptions()"
           [value]="selectedProperty()"
           (valueChange)="onFacility($event)"
@@ -70,12 +70,12 @@ const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
       </div>
 
       @if (facilitiesResource.isLoading()) {
-        <p role="status">Wczytywanie obiektów…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (facilitiesResource.status() === 'error') {
-        <p role="alert">Nie udało się wczytać obiektów.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else if (selectedFacility(); as facility) {
-        <section class="bs-facilities__details" aria-label="Dane o obiekcie">
-          <h2>Dane o obiekcie</h2>
+        <section class="bs-facilities__details" [attr.aria-label]="copy.detailsAria">
+          <h2>{{ copy.detailsHeading }}</h2>
           <dl>
             @for (row of details(); track row.label) {
               <dt>{{ row.label }}</dt>
@@ -84,19 +84,19 @@ const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
           </dl>
         </section>
 
-        <section class="bs-facilities__employees" aria-label="Pracownicy">
-          <h2>Pracownicy</h2>
+        <section class="bs-facilities__employees" [attr.aria-label]="copy.employeesAria">
+          <h2>{{ copy.employeesHeading }}</h2>
           <book-space-table
-            caption="Pracownicy"
+            [caption]="copy.employeesCaption"
             trackKey="name"
             [columns]="employeeColumns"
             [rows]="employeeRows()"
-            emptyMessage="Ten obiekt nie ma przypisanych pracowników."
+            [emptyMessage]="copy.employeesEmpty"
           >
             @if (canSend()) {
               <ng-template #rowActions let-row>
                 <book-space-button variant="secondary" (pressed)="startMessage(row.name)">
-                  Wiadomość
+                  {{ copy.messageAction }}
                 </book-space-button>
               </ng-template>
             }
@@ -104,25 +104,25 @@ const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
         </section>
 
         @if (canSend()) {
-          <section class="bs-facilities__message" aria-label="Wyślij wiadomość pracownikowi">
-            <h2>Wyślij wiadomość pracownikowi</h2>
+          <section class="bs-facilities__message" [attr.aria-label]="copy.messageAria">
+            <h2>{{ copy.messageHeading }}</h2>
 
             <book-space-select
-              label="Pracownik"
+              [label]="copy.messagePerson"
               [options]="employees()"
               [value]="form().person"
               [error]="fieldErrors().person ?? null"
               (valueChange)="updateMessage({person: $event})"
             />
             <book-space-input
-              label="E-mail"
+              [label]="copy.messageEmail"
               type="email"
               [value]="form().recipient"
               [error]="fieldErrors().recipient ?? null"
               (valueChange)="updateMessage({recipient: $event})"
             />
             <label class="bs-field">
-              <span class="bs-field__label">Wiadomość</span>
+              <span class="bs-field__label">{{ copy.messageBody }}</span>
               <textarea
                 [value]="form().message"
                 (input)="updateMessage({message: $any($event.target).value})"
@@ -141,13 +141,13 @@ const EMPLOYEE_COLUMNS = [{key: 'name', label: 'Pracownik'}];
 
             <div class="bs-facilities__message-actions">
               <book-space-button variant="primary" (pressed)="send()" [disabled]="sending()">
-                Wyślij
+                {{ copy.send }}
               </book-space-button>
             </div>
           </section>
         }
       } @else {
-        <p>Nie ma obiektów w tej miejscowości.</p>
+        <p>{{ copy.noFacilities }}</p>
       }
     </section>
   `,
@@ -203,6 +203,7 @@ export class FacilitiesTabComponent {
   private readonly notificationsApi = inject(NotificationsApi);
   private readonly session = inject(SessionStore);
 
+  readonly copy = COPY.facilities;
   readonly cityOptions = CITY_OPTIONS;
   readonly employeeColumns = EMPLOYEE_COLUMNS;
 
@@ -312,7 +313,7 @@ export class FacilitiesTabComponent {
     this.notificationsApi.sendMessage(buildMessageRequest(this.form(), this.selectedFacility())).subscribe({
       next: () => {
         this.sending.set(false);
-        this.sendSuccess.set('Wiadomość została wysłana pomyślnie');
+        this.sendSuccess.set(COPY.facilities.sent);
         this.form.set(emptyEmployeeMessage(this.selectedFacility()));
         this.submitted.set(false);
       },
@@ -326,11 +327,9 @@ export class FacilitiesTabComponent {
   /** The visible message for a failed send; every failure produces one (acceptance criterion 3). */
   private failureMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
-      const body = error.error as IValidationError | undefined;
-      const messages = Array.isArray(body?.message) ? body.message : [];
-      return sendFailureMessage(error.status, messages);
+      return sendFailureMessage(error.status);
     }
-    return sendFailureMessage(0, []);
+    return sendFailureMessage(0);
   }
 
   private resetStatus(): void {

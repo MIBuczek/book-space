@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
 import {
@@ -29,7 +30,7 @@ const EVENT_COLORS = {
 } as const;
 
 /** The public label when a booking carries no `nick` (legacy `booking.nick || 'Rezerwacja'`). */
-const DEFAULT_LABEL = 'Rezerwacja';
+const DEFAULT_LABEL = COPY.calendar.defaultLabel;
 
 /** Whether a slot is hidden from the calendar: the legacy `bt.status !== QUIT` check (T055: `QUIT` → `CANCELED`). */
 const isCancelled = (status: TSingleBookingStatus): boolean => status === 'CANCELED';
@@ -68,9 +69,9 @@ const eventLabel = (booking: IBooking, staff: boolean): string => {
  */
 const statusLabel = (accepted: boolean, status: TSingleBookingStatus): string => {
   if (status === 'DONE') {
-    return 'Zakończona';
+    return COPY.calendar.status.done;
   }
-  return accepted ? 'Zatwierdzona' : 'Oczekująca';
+  return accepted ? COPY.calendar.status.accepted : COPY.calendar.status.pending;
 };
 
 /** One slot rendered on the calendar. */
@@ -216,29 +217,13 @@ const shiftAnchor = (view: TCalendarView, anchor: Date, direction: 1 | -1): Date
 };
 
 /**
- * The Polish short weekday labels, Monday first (the legacy `locale="pl"` / `firstDay={1}`).
- *
- * The copy is Polish because NFR-005 makes every user-facing string Polish; centralising the
- * two arrays here keeps a future translation a single edit rather than a search through the
- * template.
+ * The short weekday labels, Monday first (the legacy `locale="pl"` / `firstDay={1}`), and the
+ * month names, January first. Both come from the shared copy catalogue (NFR-005, T061), so the
+ * calendar's Polish is one edit away from a translation rather than a search through the file.
  */
-const WEEKDAY_LABELS = ['pon', 'wt', 'śr', 'czw', 'pt', 'sob', 'nie'] as const;
+const WEEKDAY_LABELS = COPY.calendar.weekdays;
 
-/** The Polish month names, January first. */
-const MONTH_LABELS = [
-  'styczeń',
-  'luty',
-  'marzec',
-  'kwiecień',
-  'maj',
-  'czerwiec',
-  'lipiec',
-  'sierpień',
-  'wrzesień',
-  'październik',
-  'listopad',
-  'grudzień',
-] as const;
+const MONTH_LABELS = COPY.calendar.months;
 
 /** The seven day labels of the week containing `anchor`, paired with their weekday label. */
 const weekColumns = (anchor: Date): Array<{day: string; label: string}> =>

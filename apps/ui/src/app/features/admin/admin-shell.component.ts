@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { COPY } from '@booking/copy';
 import { AuthService } from '../../core/auth.service';
 import { SessionStore } from '../../core/session.store';
 import { ButtonComponent } from '../../shared/ui';
@@ -21,7 +22,7 @@ import { visibleAdminTabs } from '../../shell/navigation';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent],
   template: `
     <div class="bs-admin">
-      <nav class="bs-admin__tabs" aria-label="Admin sections">
+      <nav class="bs-admin__tabs" [attr.aria-label]="copy.sectionsAria">
         <ul>
           @for (tab of tabs(); track tab.path) {
             <li>
@@ -36,7 +37,9 @@ import { visibleAdminTabs } from '../../shell/navigation';
             </li>
           }
         </ul>
-        <book-space-button variant="secondary" (pressed)="signOut()">Sign out</book-space-button>
+        <book-space-button variant="secondary" (pressed)="signOut()">
+          {{ copy.signOut }}
+        </book-space-button>
       </nav>
       <section class="bs-admin__content">
         <router-outlet />
@@ -74,6 +77,7 @@ import { visibleAdminTabs } from '../../shell/navigation';
   ],
 })
 export class AdminShellComponent {
+  readonly copy = COPY.admin;
   private readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

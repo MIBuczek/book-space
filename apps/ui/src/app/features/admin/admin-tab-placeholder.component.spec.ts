@@ -14,6 +14,6 @@ describe('AdminTabPlaceholderComponent', () => {
     const fixture = TestBed.createComponent(AdminTabPlaceholderComponent);
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Administration');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Administracja');
   });
 });

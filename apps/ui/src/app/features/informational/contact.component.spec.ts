@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { COPY } from '@booking/copy';
 import { ContactComponent } from './contact.component';
-import {
-  BOOKING_CONTACT,
-  OFFICE_CONTACT,
-  OFFICE_HOURS,
-  REGISTERED_OFFICE,
-} from './contact-details';
+
+const BOOKING_CONTACT = COPY.contact.bookingContact;
+const OFFICE_CONTACT = COPY.contact.office;
+const OFFICE_HOURS = COPY.contact.hours;
+const REGISTERED_OFFICE = COPY.contact.registeredOffice;
 
 describe('ContactComponent', () => {
   beforeEach(async () => {

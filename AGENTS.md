@@ -929,7 +929,26 @@ Three things that are easy to get wrong:
   duplicated in the public calendar, the booking form and the bookings tab; the Facilities tab
   was the fourth copy. Four copies of a display label is the drift the shared model exists to
   prevent — a renamed city would render correctly on one screen and not another, with nothing to
-  catch it. Import it; do not re-declare it.
+  catch it. Import it; do not re-declare it. (It is *not* in `@booking/copy`: it labels the
+  screen selectors and answers to the UI, while the reporting vocabulary is a separate audience.)
+- **All user-facing Polish copy lives in `libs/copy` (`@booking/copy`), and a guard test enforces
+  it (T061, NFR-005).** A component imports `COPY` and binds it; it does not type a Polish
+  literal into a template. `apps/ui/src/app/no-hardcoded-copy.spec.ts` walks `apps/ui/src`, skips
+  specs and the catalogue, and fails on a Polish character outside a comment — a *character*
+  check, not a "looks like a sentence" one, so it cannot be argued with. English is not caught;
+  the rendered-component specs cover the strings that matter.
+- **The API is English and the UI owns the Polish wording (T061, NFR-005).** A `422` body's
+  `message` list is used to *locate* the field it names, and the form shows `COPY.errors.fieldInvalid`
+  against it; a message that names no field becomes `COPY.errors.generic`. A `409` is keyed by its
+  status (`COPY.clients.deleteConflict`, `COPY.users.deactivateConflict`), not by its body. The
+  server's sentence is never rendered — a Polish sentence must not travel in a response body, and
+  the API must not be asked to produce Polish.
+- **CSV column labels and notification subjects are server assets, not catalogue entries.** The
+  CSV header is the export contract (FR-028) built by the server that writes the file
+  (`reporting/csv/csv-columns.ts`); the e-mail subjects and bodies are versioned templates
+  (`notification/templates/`) with the legacy EmailJS ids. Both are Polish and both are produced
+  by the server, so they are documented in `ui-conventions.md` rather than moved into the UI
+  catalogue. The report vocabulary both artefacts print is shared in `libs/reporting`.
 - **A `linkedSignal` is the right tool for a form that must re-fill when its subject changes.**
   The Facilities tab's message form is `linkedSignal({source: selectedFacility, computation:
   emptyEmployeeMessage})`, so switching facility cannot leave the previous facility's address in
@@ -1075,6 +1094,52 @@ Three things that are easy to get wrong:
   retired facilities for the same reason: withholding them would make a deactivation invisible in
   the admin area.
 
+## Operations, backup and retention (T060)
+
+- **`docs/operations.md` is the runbook; `tools/backup` is the tool.** The cadence (daily full
+  dump), the disaster-recovery targets (RPO 24 h, RTO 4 h), the restore procedure and the
+  legacy cut-over live in the runbook; the `backup`/`restore`/`verify-restore`/`purge`
+  subcommands are the tool. A change to one without the other is a runbook that names a command
+  that does not exist.
+- **The archive is Extended JSON, and the round trip is what proves it.** `EJSON.stringify(…,
+  {relaxed: false})` renders an `ObjectId` as `{"$oid": …}` and a `Date` as `{"$date": …}`, so
+  the matching `EJSON.parse` reconstructs the BSON value. A plain `JSON.stringify` dump turns
+  every id into a hex string and every date into an ISO string, and the restore then writes
+  documents the API cannot query by `_id`. `archive.spec.ts` asserts the types survive, because a
+  count-only check would pass a restore that coerced every one of them.
+- **`verify-restore` reconciles by count *and* by a canonical rendering of every document.** A
+  count alone passes a restore that wrote the right number of documents with the wrong types —
+  which is the exact failure the Extended-JSON round trip exists to prevent.
+- **A restore replaces the target collections, it does not merge.** A leftover document the
+  archive does not contain is a record the backup does not cover, so `restore` deletes each
+  collection before inserting. The destructive target is one the operator named on the command
+  line, and the verification step is what proves the restore worked.
+- **The retention anchor is the last slot day, never `modifiedAt`.** `modifiedAt` is stamped by
+  every write path (approval, slot replacement, archive — FR-016), so an archived booking
+  re-saved once would have its retention clock reset and outlive its window. The last slot day is
+  immutable once the booking is done. The predicate lives in `retention.ts` and the tool re-checks
+  every candidate against it, so the database filter is an optimisation and can only make the tool
+  read more, never delete a record the rule rejects.
+- **A retention cutoff is a calendar subtraction, not a millisecond offset.** `now - years * 365
+  * 24 * 3600 * 1000` drifts a day or two per leap year and moves the boundary;
+  `setFullYear(getFullYear() - years)` is what a retention policy means. The boundary is strict
+  (`<`), so a booking exactly on the cutoff is kept — a record kept a moment past its window is
+  recoverable, one deleted a moment early is not. The leap-day case (29 Feb minus five years
+  rolls to 1 Mar in JavaScript) is pinned by a named test rather than left to be discovered.
+- **A purge exports before it deletes.** `--export` writes the removed documents to an archive so
+  a purged booking can still be produced if a question is asked; that export is the difference
+  between retention and data loss. The `skipped` counter (filter matches the predicate refused)
+  is the signal that the filter and the rule have drifted apart.
+- **A new tool is an Nx project, and it must be added to CI's `run-many` list *and* the coverage
+  summary table.** `tools/backup` declares `run`/`test`/`lint` targets like `tools/migration`, and
+  `ci.yml` now names it in both the `--projects=` list and the coverage `projects` array. A tool
+  added to one and not the other either never runs in CI or never reports its coverage.
+- **The tool's `connect` seam is injected, and a spec supplies `runtimeAdapters: {os}`.** The
+  production `connect` (`mongoose.createConnection(uri)`) cannot run under Jest's `vm` sandbox —
+  the driver's dynamic `import('os')` is rejected and the handshake hangs rather than erroring
+  (the same trap `apps/server/src/testing/` documents). The spec's injected `connect` passes the
+  escape hatch; `main.ts` uses the plain one.
+
 ## Logging
 
 `LoggingModule` is registered once in `AppModule` and applies to every route, so a new
@@ -1211,7 +1276,9 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `coverage/libs/booking-rules/coverage-summary.json` row) — a new library has to be added to
   *both* the run-many list and the summary-merge table or its coverage never reaches the gate.
   `libs/version` (`@booking/version`, T040) is the third: `ci.yml` now runs
-  `--projects=server,ui,date-time,booking-rules,reporting,version` and prints its summary row.
+  `--projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy`
+  and prints each summary row. `libs/copy` (`@booking/copy`, T061) is the fourth of the
+  `libs/*` ones and the copy catalogue (below).
 - **The build number is a task input, not just a task dependency.** `libs/version` stamps
   `git rev-list --count HEAD` into a gitignored `generated/build-number.ts`, and both apps swap
   it in through `fileReplacements`. Depending on `version:build` is *not* enough: Nx keys a
