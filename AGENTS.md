@@ -1050,6 +1050,30 @@ Three things that are easy to get wrong:
   it, so `.github/workflows/ci.yml`'s unit-test and coverage-report steps name it explicitly or its
   coverage never reaches the gate (the same trap `migration`, `date-time`, `booking-rules`,
   `reporting` and `version` document).
+- **A cross-module reference check registers the model it counts, rather than importing the other
+  module.** `ClientService.deleteClient` needs `Booking` and `BuildingService.deleteBuilding` needs
+  `Booking` and `User`, and neither module owns those schemas. Importing the owning module would
+  drag its controllers and guards into a second module; instead `MongooseModule.forFeature` in
+  `client.module.ts`/`building.module.ts` registers the extra schema and the service injects it by
+  token (T059). This is the shape `ReportingModule` already used to read bookings.
+- **`BuildingService.deleteBuilding` matches a booking on `{place.place, place.city}`, not on
+  `property` alone.** `property` is unique only *per city* (`hala-sportowa` exists in all four), so
+  a count on `property` alone would refuse a delete in one city because a booking exists in
+  another. The staff-assignment half *is* over-approximate — `User.buildings` carries the property
+  key with no city — and that is deliberate: refusing in the safe direction leaves the facility
+  deactivatable, whereas an orphaned booking cannot be un-orphaned (T059).
+- **A "soft delete" flag is read as `active !== false`, never `active === true`.** `clients` and
+  `buildings` gained an `active` field in T059 with `default: true`, but the filter is
+  `{active: {$ne: false}}` and the write test is `active === false`, so a document written before
+  the field existed (or by a direct driver call that omitted it) reads as active rather than
+  silently vanishing from the calendar. A `=== true` test would retire every legacy document the
+  moment the field was added.
+- **A retire-the-record rule has a UI half or it is a dead end.** The delete routes refuse with
+  `409` and point at `PUT ... {active: false}`, so the clients tab gained an "active" checkbox in
+  its form and a Status column, and the facilities tab a Status row — otherwise the message names
+  an action the operator cannot take. The staff `GET /buildings` read deliberately still returns
+  retired facilities for the same reason: withholding them would make a deactivation invisible in
+  the admin area.
 
 ## Logging
 

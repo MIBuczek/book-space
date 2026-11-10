@@ -36,6 +36,7 @@ describe('ClientService', () => {
     deleteOne: jest.Mock;
     countDocuments: jest.Mock;
   };
+  let bookingModelMock: {countDocuments: jest.Mock};
 
   beforeEach(async () => {
     modelMock = {
@@ -46,11 +47,15 @@ describe('ClientService', () => {
       deleteOne: jest.fn(),
       countDocuments: jest.fn(),
     };
+    // Default: no booking references the client, so a delete proceeds. A test that wants
+    // the refused path sets this to a positive count.
+    bookingModelMock = {countDocuments: jest.fn().mockResolvedValue(0)};
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientService,
         {provide: getModelToken('Client'), useValue: modelMock},
+        {provide: getModelToken('Booking'), useValue: bookingModelMock},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}},
       ],
     }).compile();
@@ -133,10 +138,37 @@ describe('ClientService', () => {
     expect(modelMock.findOne).toHaveBeenCalledWith({_id: 'abc'});
   });
 
-  it('deletes one client', async () => {
+  it('deletes one client when no booking references it', async () => {
     modelMock.deleteOne.mockResolvedValue({deletedCount: 1});
 
     await expect(service.deleteClient('abc')).resolves.toEqual({deletedCount: 1});
+    expect(bookingModelMock.countDocuments).toHaveBeenCalledWith({clientId: 'abc'});
+    expect(modelMock.deleteOne).toHaveBeenCalledWith({_id: 'abc'});
+  });
+
+  it('refuses to delete a client a booking still references, with 409', async () => {
+    bookingModelMock.countDocuments.mockResolvedValue(2);
+
+    await expect(service.deleteClient('abc')).rejects.toMatchObject({status: 409});
+    expect(modelMock.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('wraps a failure of the booking reference count as a 500', async () => {
+    bookingModelMock.countDocuments.mockRejectedValue(new Error('cast error'));
+
+    const error = await service.deleteClient('abc').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HttpException);
+    expect((error as HttpException).getStatus()).toBe(500);
+    expect(modelMock.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('writes the active flag through the update allow-list', async () => {
+    modelMock.findOne.mockResolvedValue(storedCompany());
+
+    await service.updateClient('abc', {active: false});
+
+    expect(modelMock.updateOne).toHaveBeenCalledWith({_id: 'abc'}, {active: false});
   });
 
   describe('updateClient', () => {

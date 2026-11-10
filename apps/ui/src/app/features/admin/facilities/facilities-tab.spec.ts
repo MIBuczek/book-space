@@ -44,7 +44,19 @@ describe('facilities tab logic', () => {
         {label: 'Powierzchnie', value: '1/1, 1/2'},
         {label: 'Oświetlenie', value: 'Tak'},
         {label: 'Toalety', value: 'Nie'},
+        {label: 'Status', value: 'Aktywny'},
       ]);
+    });
+
+    it('marks a retired facility and reads an absent flag as active (T059)', () => {
+      expect(facilityDetails(facility({active: false}))).toContainEqual({
+        label: 'Status',
+        value: 'Nieaktywny',
+      });
+      expect(facilityDetails(facility({active: undefined}))).toContainEqual({
+        label: 'Status',
+        value: 'Aktywny',
+      });
     });
   });
 

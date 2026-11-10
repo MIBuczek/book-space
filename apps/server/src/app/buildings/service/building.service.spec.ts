@@ -20,13 +20,21 @@ describe('BuildingService', () => {
     updateOne: jest.fn(),
     deleteOne: jest.fn(),
   };
+  const bookingModelMock = {countDocuments: jest.fn()};
+  const userModelMock = {countDocuments: jest.fn()};
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    // Default: the facility resolves, and nothing references it, so a delete proceeds.
+    // `jest.resetAllMocks()` clears the implementations, so both counts are set here.
+    bookingModelMock.countDocuments.mockResolvedValue(0);
+    userModelMock.countDocuments.mockResolvedValue(0);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BuildingService,
         {provide: getModelToken('Building'), useValue: modelMock},
+        {provide: getModelToken('Booking'), useValue: bookingModelMock},
+        {provide: getModelToken('User'), useValue: userModelMock},
         {provide: JwtService, useValue: {sign: jest.fn(), verify: jest.fn()}},
       ],
     }).compile();
@@ -54,11 +62,44 @@ describe('BuildingService', () => {
     expect(modelMock.updateOne).toHaveBeenCalledWith({_id: 'b1'}, update);
   });
 
-  it('deletes a facility by id', async () => {
+  it('deletes an unreferenced facility by id', async () => {
+    modelMock.findOne.mockResolvedValue({_id: 'b1', property: 'hala-sportowa', city: 'siechnice'});
     modelMock.deleteOne.mockResolvedValue({deletedCount: 1});
 
     await expect(service.deleteBuilding('b1')).resolves.toEqual({deletedCount: 1});
+    expect(bookingModelMock.countDocuments).toHaveBeenCalledWith({
+      'place.place': 'hala-sportowa',
+      'place.city': 'siechnice',
+    });
+    expect(userModelMock.countDocuments).toHaveBeenCalledWith({buildings: 'hala-sportowa'});
     expect(modelMock.deleteOne).toHaveBeenCalledWith({_id: 'b1'});
+  });
+
+  it('refuses to delete a facility a booking references, with 409', async () => {
+    modelMock.findOne.mockResolvedValue({_id: 'b1', property: 'hala-sportowa', city: 'siechnice'});
+    bookingModelMock.countDocuments.mockResolvedValue(1);
+
+    await expect(service.deleteBuilding('b1')).rejects.toMatchObject({status: 409});
+    expect(modelMock.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete a facility a staff user is assigned to, with 409', async () => {
+    modelMock.findOne.mockResolvedValue({_id: 'b1', property: 'hala-sportowa', city: 'siechnice'});
+    userModelMock.countDocuments.mockResolvedValue(1);
+
+    await expect(service.deleteBuilding('b1')).rejects.toMatchObject({status: 409});
+    expect(modelMock.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('deletes by id even when the facility does not resolve', async () => {
+    // `findOne` returning null skips the reference checks; the delete still runs and
+    // reports `deletedCount: 0`, matching the other delete routes' behaviour for a
+    // missing id rather than inventing a 404 here.
+    modelMock.findOne.mockResolvedValue(null);
+    modelMock.deleteOne.mockResolvedValue({deletedCount: 0});
+
+    await expect(service.deleteBuilding('b1')).resolves.toEqual({deletedCount: 0});
+    expect(bookingModelMock.countDocuments).not.toHaveBeenCalled();
   });
 
   it('finds a single facility by id', async () => {
@@ -68,10 +109,17 @@ describe('BuildingService', () => {
     expect(modelMock.findOne).toHaveBeenCalledWith({_id: 'b1'});
   });
 
-  it('lists every facility', async () => {
+  it('lists every active facility, excluding retired ones', async () => {
     modelMock.find.mockResolvedValue([{_id: 'b1'}]);
 
     await expect(service.findAllBuildings()).resolves.toEqual([{_id: 'b1'}]);
+    expect(modelMock.find).toHaveBeenCalledWith({active: {$ne: false}});
+  });
+
+  it('includes retired facilities when the caller asks for them (staff, T059)', async () => {
+    modelMock.find.mockResolvedValue([{_id: 'b1'}]);
+
+    await expect(service.findAllBuildings(true)).resolves.toEqual([{_id: 'b1'}]);
     expect(modelMock.find).toHaveBeenCalledWith({});
   });
 

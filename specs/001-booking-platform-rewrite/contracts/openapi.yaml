@@ -5,6 +5,8 @@ info:
     REST API for the municipal sports facility booking platform. Global prefix `/api`.
     Existing endpoints reflect `MIBuczek/book-space`; endpoints marked
     `x-status: to-build` do not exist yet and are required by the specification.
+    Endpoints marked `x-status: fix-route` exist but the documented method/path differed
+    from the implementation and the contract now reflects the real route.
     Staff accounts are managed through `/users` by an administrator (FR-045); there is no
     public registration. The first administrator of a fresh database is created out of band
     by the `bootstrap-admin` tool (FR-046), not by a route, so it has no path here.
@@ -262,10 +264,18 @@ paths:
     delete:
       tags: [clients]
       x-status: fix-route
-      summary: Delete a client (administrator). Current route is `@Delete('_id')` and never matches.
+      summary: Delete a client (administrator)
+      description: >
+        Refused with `409` while a booking references the client (FR-024): a booking is a
+        historical record and the client is a party to it, so removing the client would
+        orphan the booking and drop it from the reports built from `clientId`. Deactivate
+        the client instead (`PUT /clients/{_id} {active: false}`), which keeps the record
+        for the bookings and reports that point at it.
       security: [{bearerAuth: []}]
       responses:
         '200': {description: Deleted}
+        '409':
+          description: A booking still references this client.
 
   /buildings:
     get:
@@ -279,7 +289,10 @@ paths:
         `employees`, `street` and `zipCode` are removed for a public caller and are
         staff-only (the Facilities tab, FR-009). An invalid credential is refused with
         `401` rather than downgraded to an anonymous request. The Facilities tab reads
-        this route as staff to show the contact details and the employee list (T038).
+        this route as staff to show the contact details and the employee list (T038). A
+        retired facility (`active: false`, FR-010) is withheld from the public read — the
+        calendar and booking form must not offer it — but is still returned to a staff
+        caller, which keeps it visible in the admin area.
       security: []
       responses:
         '200':
@@ -326,10 +339,18 @@ paths:
     delete:
       tags: [buildings]
       x-status: fix-route
-      summary: Delete a facility (administrator). Current route is `@Delete('_id')`.
+      summary: Delete a facility (administrator)
+      description: >
+        Refused with `409` while a booking references the facility or a staff user is
+        assigned to it (FR-010). A booking names the facility by `{place.city,
+        place.place}`, so removing it would orphan every booking that points at it.
+        Deactivate the facility instead (`PUT /buildings/{_id} {active: false}`), which
+        withholds it from the public `GET /buildings` read and from `POST /bookings`.
       security: [{bearerAuth: []}]
       responses:
         '200': {description: Deleted}
+        '409':
+          description: A booking or a staff assignment still references this facility.
 
   /bookings:
     get:
@@ -401,7 +422,9 @@ paths:
         Public: an anonymous visitor may submit a request. `accepted` and `archive` are not
         part of the body and are stored as `false`; the flags are set by the approve/archive
         routes. A public submission (no credential) must carry `rodoAcknowledgement: true` or
-        is refused with `422`; staff entering a booking on a tenant's behalf are exempt.
+        is refused with `422`; staff entering a booking on a tenant's behalf are exempt. A
+        booking against a retired facility (`active: false`, FR-010) or in a size the facility
+        does not offer is refused with `422`.
       security: []
       requestBody:
         required: true
@@ -931,6 +954,14 @@ components:
           description: >-
             Required when type is COMPANY (10–15 characters); refused when type is
             INDIVIDUAL. A company without it is 422.
+        active:
+          type: boolean
+          default: true
+          description: >-
+            Whether the client is still in use (FR-024). Optional on create, defaulting to
+            true. A hard delete is refused with 409 while a booking references the client, so
+            retiring one is a deactivation (`PUT /clients/{_id} {active: false}`) that keeps the
+            record for the bookings and reports that point at it.
 
     UpdateClientDto:
       type: object
@@ -950,6 +981,9 @@ components:
           minLength: 10
           maxLength: 15
           pattern: '^[\\d./-]+$'
+        active:
+          type: boolean
+          description: Deactivates (`false`) or reactivates (`true`) a client (FR-024).
 
     Client:
       allOf:
@@ -979,6 +1013,15 @@ components:
         employees:
           type: array
           items: {type: string}
+        active:
+          type: boolean
+          default: true
+          description: >-
+            Whether the facility is still rentable (FR-010). Optional on create, defaulting to
+            true. A hard delete is refused with 409 while a booking or a staff assignment
+            references it, so retiring a facility is a deactivation
+            (`PUT /buildings/{_id} {active: false}`). A retired facility is withheld from the
+            public `GET /buildings` read and refused on `POST /bookings`.
 
     Building:
       allOf:

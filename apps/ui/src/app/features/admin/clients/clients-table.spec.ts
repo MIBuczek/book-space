@@ -1,9 +1,11 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {IClient} from '@models/client.model';
 import {
   CLIENT_COLUMNS,
   CLIENT_TYPE_LABELS,
   PAGE_SIZES,
   buildClientRequest,
+  deleteFailureMessage,
   emptyClientForm,
   formFromClient,
   isNipRequired,
@@ -25,6 +27,7 @@ const validForm = (overrides: Partial<IClientFormValue> = {}): IClientFormValue 
   city: 'siechnice',
   zipCode: '55-010',
   nip: '8991234567',
+  active: true,
   ...overrides,
 });
 
@@ -70,6 +73,7 @@ describe('CLIENT_COLUMNS', () => {
       'Telefon',
       'E-mail',
       'Miasto',
+      'Status',
     ]);
   });
 });
@@ -103,6 +107,7 @@ describe('formFromClient', () => {
       city: 'siechnice',
       zipCode: '55-010',
       nip: '8991234567',
+      active: true,
     });
   });
 
@@ -118,6 +123,12 @@ describe('formFromClient', () => {
 
     expect(form.nick).toBe('');
     expect(form.nip).toBe('');
+  });
+
+  it('reads an absent active flag as active (T059)', () => {
+    // A legacy record predates the field, and an absent value must not read as retired.
+    expect(formFromClient(client({active: undefined})).active).toBe(true);
+    expect(formFromClient(client({active: false})).active).toBe(false);
   });
 });
 
@@ -198,6 +209,11 @@ describe('buildClientRequest', () => {
     expect(request.nick).toBe('Kowalski');
     expect(request.nip).toBe('8991234567');
   });
+
+  it('carries the active flag so an edit can deactivate or reactivate (T059)', () => {
+    expect(buildClientRequest(validForm({active: false})).active).toBe(false);
+    expect(buildClientRequest(validForm({active: true})).active).toBe(true);
+  });
 });
 
 describe('mapServerErrors', () => {
@@ -255,6 +271,7 @@ describe('toRow', () => {
       city: 'siechnice',
       typeLabel: 'Firma',
       nipLabel: '8991234567',
+      activeLabel: 'Aktywny',
     });
   });
 
@@ -263,5 +280,43 @@ describe('toRow', () => {
 
     expect(row['typeLabel']).toBe('Osoba prywatna');
     expect(row['nipLabel']).toBe('—');
+  });
+
+  it('labels a retired client and reads an absent flag as active (T059)', () => {
+    expect(toRow(client({active: false}))['activeLabel']).toBe('Nieaktywny');
+    expect(toRow(client({active: undefined}))['activeLabel']).toBe('Aktywny');
+  });
+});
+
+describe('deleteFailureMessage', () => {
+  const conflict = (message: unknown) =>
+    new HttpErrorResponse({status: 409, statusText: 'Conflict', error: {statusCode: 409, message}});
+
+  it('shows the server message for a 409 (T059)', () => {
+    expect(deleteFailureMessage(conflict('This client is referenced by a booking.'))).toBe(
+      'This client is referenced by a booking.'
+    );
+  });
+
+  it('falls back to a Polish message when the 409 body carries no message', () => {
+    expect(deleteFailureMessage(conflict(undefined))).toContain('dezaktywuj klienta');
+  });
+
+  it('falls back to a Polish message when a 409 carries no body at all', () => {
+    const error = new HttpErrorResponse({status: 409, statusText: 'Conflict', error: undefined});
+
+    expect(deleteFailureMessage(error)).toContain('dezaktywuj klienta');
+  });
+
+  it('shows a generic message for any other failure', () => {
+    const error = new HttpErrorResponse({status: 500, statusText: 'Server Error'});
+
+    expect(deleteFailureMessage(error)).toBe('Nie udało się usunąć klienta. Spróbuj ponownie później.');
+  });
+
+  it('shows a generic message for a non-HTTP error', () => {
+    expect(deleteFailureMessage(new Error('boom'))).toBe(
+      'Nie udało się usunąć klienta. Spróbuj ponownie później.'
+    );
   });
 });

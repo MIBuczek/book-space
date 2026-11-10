@@ -114,6 +114,25 @@ export class Building {
     default: () => []
   })
   employees!: string[];
+
+  /**
+   * Whether the facility is still rentable (T059, FR-010).
+   *
+   * A hard delete is refused with `409` while a booking references the facility or a staff
+   * user is assigned to it, so the supported way to retire one is a deactivation:
+   * `PUT /buildings/{_id} {active: false}`. An inactive facility is withheld from the public
+   * `GET /buildings` read, so the calendar and booking form stop offering it — the
+   * referential-integrity fix for the legacy `deleteBuilding`, which removed the document and
+   * left every booking that referenced it orphaned.
+   *
+   * `default: true` so a document written before this field reads as active; the reads treat
+   * an absent value as active too (`active !== false`).
+   */
+  @Prop({
+    type: Boolean,
+    default: true
+  })
+  active!: boolean;
 }
 
 export const BuildingSchema = SchemaFactory.createForClass(Building);

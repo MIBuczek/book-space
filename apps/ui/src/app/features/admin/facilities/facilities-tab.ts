@@ -77,6 +77,9 @@ const facilityDetails = (facility: IBuilding | null): IDetailRow[] => {
     {label: 'Powierzchnie', value: facility.sizes.join(', ')},
     {label: 'Oświetlenie', value: yesNo(facility.lighting)},
     {label: 'Toalety', value: yesNo(facility.toilets)},
+    // The tab receives retired facilities too (T059), so the status is what tells an
+    // administrator the facility is deactivated rather than simply in use.
+    {label: 'Status', value: facility.active !== false ? 'Aktywny' : 'Nieaktywny'},
   ];
 };
 

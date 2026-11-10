@@ -59,6 +59,7 @@ Current schema: `apps/server/src/app/clients/schemas/client.schema.ts`
 | `city` | string | required, 3–125 |
 | `zipCode` | string | required, 6 characters, `^[\d./-]+$` |
 | `nip` | string | optional; required when `type = COMPANY`, refused for `INDIVIDUAL`; 10–15 chars, `^[\d./-]+$` (enforced in the DTO **and** the schema) |
+| `active` | boolean | **[new]** default `true`; a deactivated client is retained for the bookings and reports that reference it (T059, FR-024) |
 | `createdAt` / `updatedAt` | Date | **[new]** audit fields (`@Schema({timestamps: true})`) |
 
 **Resolved (T008)**:
@@ -103,6 +104,7 @@ Reference data: legacy `building-data-const.ts`
 | `street` | string | optional (see below) |
 | `zipCode` | string | optional, 6 characters, `^[\d./-]+$` |
 | `employees` | string[] | **[new]** names or user references for the Facilities tab |
+| `active` | boolean | **[new]** default `true`; a deactivated facility is withheld from the public read and refused on booking (T059, FR-010) |
 
 **Changes needed**:
 - The current schema has no `property`, `sizes`, `lighting`, `toilets`; it cannot identify a
@@ -242,6 +244,52 @@ Only facilities with `lighting` or `toilets` set to `true` may carry these optio
 
 ---
 
+## Delete policy and referential integrity — [new] (T059, #126)
+
+The data model carries references (a booking names a client and a facility; a user names the
+facilities it is assigned to) but the legacy code deleted the referenced document and left the
+referrer dangling. The policy below is **restrict**, not cascade: a booking is a historical
+record and every reference to it is a party to that record, so removing a party silently drops
+the booking from the reports built from it.
+
+| Referenced entity | Referenced by | Hard delete | Supported alternative |
+|-------------------|---------------|-------------|-----------------------|
+| Client | `Booking.clientId` | refused `409` while any booking references it | `PUT /clients/{_id} {active: false}` |
+| Facility | `Booking.place.{city,place}`, `User.buildings` | refused `409` while a booking or a staff assignment references it | `PUT /buildings/{_id} {active: false}` |
+| User | `Booking.createdBy` / `modifiedBy` (audit) | refused `409` for the last active administrator; other accounts are deactivated | `PUT /users/{_id} {active: false}` (FR-047) |
+
+**Why a deactivation flag rather than a hard delete.** The legacy `deleteClient` removed the
+client document; because the combined summary is built by iterating stored clients and joining
+their bookings through `clientId`, every booking of the deleted client then vanished from the
+report — a data-loss defect that no error surfaced. The legacy `deleteBuilding` removed the
+facility and left the bookings that named it orphaned, so the calendar and the reports named a
+facility that no longer existed. A flag keeps the referent for the records that point at it and
+lets the *reads* decide what to show, which is where the decision belongs.
+
+**Read behaviour of a deactivated record.**
+- A retired facility (`active: false`) is **withheld** from the public `GET /buildings` read
+  (the calendar and booking form) and refused on `POST /bookings` with `422`. The read filter is
+  `active: {$ne: false}` and the write test is `active === false`, so a legacy document with no
+  `active` field reads as active rather than silently disappearing.
+- A retired client (`active: false`) is **retained** in the client reads: staff still need to
+  find it to look at its history, and it is the booking's counterparty.
+
+**Reference checks.** `ClientService.deleteClient` counts `{clientId: _id}`. `BuildingService.
+deleteBuilding` resolves the facility's `{property, city}` and counts bookings on
+`{place.place, place.city}` (the pair the booking stores) plus users on `{buildings: property}`.
+The staff check is a conservative over-approximation — `User.buildings` carries the property key
+with no city — so it may refuse a delete when the same `property` exists in another city.
+Refusing in the safe direction is deliberate: the facility can still be deactivated, whereas an
+orphaned booking cannot be un-orphaned. A *missing* facility is not an error here: the delete
+still runs and reports `deletedCount: 0`, matching the other delete routes.
+
+**What is deliberately not checked.** A booking whose facility name does not resolve is left
+alone — the fixtures and the legacy data use placeholder facility names, and the write rule
+"must the facility exist?" is a separate decision from "must the client exist?" that this task
+does not take.
+
+---
+
 ## Relationship summary
 
 ```text
@@ -260,6 +308,6 @@ User                n ── 1 City           (via User.city)
 |--------|-----------|
 | User | e-mail format and uniqueness, password 6–30, names ≥3, role required, city required unless `ADMIN` |
 | Client | type enum, e-mail format, phone 3–15, zip `^[\d./-]+$` and length 6, NIP required for `COMPANY` |
-| Facility | `property` unique per city, `sizes` non-empty and from the allowed set, valid contact e-mail |
+| Facility | `property` unique per city, `sizes` non-empty and from the allowed set, valid contact e-mail, delete refused while referenced (T059) |
 | Booking | at least one `bookedTimes` entry, `month` 0–11, `size` matches the facility's allowed sizes (enforced on create and update, T052), payment enum, discount 0–100 % |
 | BookedTime | `endHours` after `startHours`, `status` enum, `participants` 0–50 |

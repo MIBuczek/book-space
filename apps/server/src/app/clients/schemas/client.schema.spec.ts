@@ -98,4 +98,16 @@ describe('ClientSchema validation', () => {
     expect(ClientSchema.path('createdAt')).toBeDefined();
     expect(ClientSchema.path('updatedAt')).toBeDefined();
   });
+
+  it('defaults a new client to active (T059)', () => {
+    const doc = new ClientModel(client({}));
+
+    expect(doc.active).toBe(true);
+  });
+
+  it('stores a deactivated client as active: false', () => {
+    const doc = new ClientModel(client({active: false}));
+
+    expect(doc.active).toBe(false);
+  });
 });

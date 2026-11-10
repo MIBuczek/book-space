@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {IClient, IClientRequest} from '@models/client.model';
 import {TClientType} from '@models/booking.model';
 
@@ -67,6 +68,7 @@ const CLIENT_COLUMNS = [
   {key: 'phone', label: 'Telefon'},
   {key: 'email', label: 'E-mail'},
   {key: 'city', label: 'Miasto'},
+  {key: 'activeLabel', label: 'Status'},
 ];
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -81,6 +83,7 @@ interface IClientFormValue {
   city: string;
   zipCode: string;
   nip: string;
+  active: boolean;
 }
 
 /** The field errors the form shows, keyed by the field they belong to. */
@@ -104,6 +107,7 @@ const emptyClientForm = (): IClientFormValue => ({
   city: '',
   zipCode: '',
   nip: '',
+  active: true,
 });
 
 /** The form value for an existing client, so an edit starts from what is stored. */
@@ -118,6 +122,8 @@ const formFromClient = (client: IClient): IClientFormValue => ({
   city: client.city,
   zipCode: client.zipCode,
   nip: client.nip ?? '',
+  // Absent on a legacy record, which reads as active (T059).
+  active: client.active !== false,
 });
 
 /** Whether a NIP is required for this type (legacy `ClientForm` required it for a company). */
@@ -189,6 +195,7 @@ const buildClientRequest = (value: IClientFormValue): IClientRequest => {
     street: value.street,
     city: value.city,
     zipCode: value.zipCode,
+    active: value.active,
   };
   if (value.nick !== '') {
     request.nick = value.nick;
@@ -264,8 +271,28 @@ const toRow = (client: IClient): Record<string, unknown> => ({
   city: client.city,
   typeLabel: CLIENT_TYPE_LABELS[client.type],
   nipLabel: client.nip ?? '—',
+  activeLabel: client.active !== false ? 'Aktywny' : 'Nieaktywny',
   client,
 });
+
+/**
+ * The message shown when a delete is refused (T059).
+ *
+ * A client a booking still references is refused with `409` and the server's message names the
+ * situation and the supported alternative (deactivation). That message is shown rather than a
+ * generic one: a delete that silently does nothing looks like a broken button. The `409` body
+ * is the global filter's `{statusCode, message, error}` shape, so `message` is a string.
+ */
+const deleteFailureMessage = (error: unknown): string => {
+  if (error instanceof HttpErrorResponse && error.status === 409) {
+    const body = error.error as {message?: unknown} | undefined;
+    if (typeof body?.message === 'string') {
+      return body.message;
+    }
+    return 'Nie można usunąć tego klienta, ponieważ odwołuje się do niego rezerwacja. Zamiast tego dezaktywuj klienta.';
+  }
+  return 'Nie udało się usunąć klienta. Spróbuj ponownie później.';
+};
 
 export {
   CLIENT_COLUMNS,
@@ -299,5 +326,6 @@ export {
   buildClientRequest,
   mapServerErrors,
   toRow,
+  deleteFailureMessage,
 };
 export type {IClientFormValue, TClientFieldErrors, IClientWriteErrors};

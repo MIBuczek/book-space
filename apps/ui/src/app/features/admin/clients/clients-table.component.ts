@@ -8,6 +8,7 @@ import {ClientsApi} from '../../../core/clients.api';
 import {SessionStore} from '../../../core/session.store';
 import {
   ButtonComponent,
+  CheckboxComponent,
   ISelectOption,
   InputComponent,
   ModalComponent,
@@ -20,6 +21,7 @@ import {
   CLIENT_TYPE_LABELS,
   PAGE_SIZES,
   buildClientRequest,
+  deleteFailureMessage,
   emptyClientForm,
   formFromClient,
   mapServerErrors,
@@ -53,6 +55,7 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
   selector: 'book-space-clients-table',
   imports: [
     ButtonComponent,
+    CheckboxComponent,
     InputComponent,
     ModalComponent,
     PaginationComponent,
@@ -182,6 +185,11 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
               (valueChange)="update({nip: $event})"
             />
           }
+          <book-space-checkbox
+            label="Klient aktywny"
+            [checked]="form().active"
+            (checkedChange)="update({active: $event})"
+          />
 
           @if (generalError(); as message) {
             <p class="bs-clients__error" role="alert">{{ message }}</p>
@@ -202,6 +210,9 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
       >
         @if (deleteTarget(); as target) {
           <p>Czy na pewno chcesz usunąć klienta {{ target.name }}?</p>
+          @if (deleteError(); as message) {
+            <p class="bs-clients__error" role="alert">{{ message }}</p>
+          }
           <div class="bs-modal__actions">
             <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
             <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
@@ -254,6 +265,13 @@ export class ClientsTableComponent {
   readonly serverErrors = signal<TClientFieldErrors>({});
   readonly generalError = signal<string | null>(null);
   readonly deleteTarget = signal<IClient | null>(null);
+  /**
+   * The message shown in the delete modal when the server refuses the delete (T059). A client
+   * a booking still references is refused with `409`, and the modal has to say so: a delete
+   * that silently does nothing looks like a broken button, and the operator would retry it
+   * rather than deactivate the client.
+   */
+  readonly deleteError = signal<string | null>(null);
 
   readonly nameLabel = computed(() => nameLabelFor(this.form().type));
   readonly nipRequired = computed(() => this.form().type === 'COMPANY');
@@ -352,6 +370,7 @@ export class ClientsTableComponent {
   }
 
   askDelete(client: IClient): void {
+    this.deleteError.set(null);
     this.deleteTarget.set(client);
   }
 
@@ -360,13 +379,19 @@ export class ClientsTableComponent {
     if (target === null) {
       return;
     }
-    this.clientsApi.remove(target._id).subscribe(() => {
-      this.cancelDelete();
-      this.clientsResource.reload();
+    this.clientsApi.remove(target._id).subscribe({
+      next: () => {
+        this.cancelDelete();
+        this.clientsResource.reload();
+      },
+      // A `409` names the situation (a booking still references the client) and points at the
+      // supported alternative; the modal shows the server's message rather than inventing one.
+      error: (error: unknown) => this.deleteError.set(deleteFailureMessage(error)),
     });
   }
 
   cancelDelete(): void {
+    this.deleteError.set(null);
     this.deleteTarget.set(null);
   }
 

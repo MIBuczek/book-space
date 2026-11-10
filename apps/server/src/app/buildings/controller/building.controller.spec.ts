@@ -62,6 +62,14 @@ describe('BuildingController', () => {
     expect(service.findAllBuildings).toHaveBeenCalledTimes(1);
   });
 
+  it('asks for retired facilities only for a staff caller (T059)', async () => {
+    await controller.getAllBuildings(request(true), undefined);
+    expect(service.findAllBuildings).toHaveBeenLastCalledWith(false);
+
+    await controller.getAllBuildings(request(false), {role: 'ADMIN'});
+    expect(service.findAllBuildings).toHaveBeenLastCalledWith(true);
+  });
+
   it('returns the full record to a staff caller', async () => {
     service.findAllBuildings.mockResolvedValue([{_id: 'b1', email: 'a@b.pl', employees: ['Ada']}]);
 

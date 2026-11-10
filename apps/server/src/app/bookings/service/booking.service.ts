@@ -15,7 +15,7 @@ import {currentActorId} from '../../logging/request-context';
 import {bookedDays, findConflictingBookingIds, findConflictsWith} from '../conflicts/conflicts';
 import {findIntraBookingOverlap} from '@booking/rules';
 import {StructuredHttpException} from '../../config/structured-http-exception';
-import {isSizeOffered, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
+import {isSizeOffered, FACILITY_INACTIVE_MESSAGE, SIZE_NOT_OFFERED_MESSAGE} from '../size/size-rule';
 
 @Injectable()
 export class BookingService {
@@ -26,14 +26,21 @@ export class BookingService {
   ) {}
 
   /**
-   * Refuses a size the referenced facility does not offer (FR-031, T052).
+   * Refuses a size the referenced facility does not offer (FR-031, T052), and refuses a
+   * booking against a retired facility (T059, FR-010).
    *
-   * The rule only applies when the facility resolves. `place.place` is the facility
+   * The size rule only applies when the facility resolves. `place.place` is the facility
    * `property` key and `place.city` scopes it, matching the `{city, property}` unique
-   * index the buildings schema declares. A booking whose facility is missing is left to
-   * T059 (#126), which owns referential integrity: refusing it here would reject
-   * legacy-shaped data and every fixture that uses a placeholder facility name, and would
-   * report a missing facility as a size error.
+   * index the buildings schema declares. A booking whose facility is *missing* is still
+   * left alone: "must the facility exist?" is a separate question, and refusing a missing
+   * facility here would reject legacy-shaped data and every fixture that uses a placeholder
+   * facility name, and would report a missing facility as a size error.
+   *
+   * A facility that resolves but is **deactivated** (`active: false`) is refused, though:
+   * the public `GET /buildings` read already withholds it, so this is the server-side half
+   * of the same rule — otherwise a crafted `POST /api/bookings` could book a facility the
+   * form no longer offers. The deactivation check is a positive `active === false` test, so
+   * a legacy document with no `active` field stays bookable.
    */
   private async assertSizeOffered(size: string, place: {place: string; city: string} | undefined): Promise<void> {
     if (!place?.place) {
@@ -46,7 +53,10 @@ export class BookingService {
     if (place.city !== undefined) {
       filter.city = place.city;
     }
-    const facility = await this.buildingModel.findOne(filter, {sizes: 1});
+    const facility = await this.buildingModel.findOne(filter, {sizes: 1, active: 1});
+    if (facility && facility.active === false) {
+      throw new UnprocessableEntityException(FACILITY_INACTIVE_MESSAGE);
+    }
     if (!isSizeOffered(size, facility)) {
       throw new UnprocessableEntityException(SIZE_NOT_OFFERED_MESSAGE);
     }

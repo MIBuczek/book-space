@@ -48,6 +48,18 @@ describe('BuildingSchema validation', () => {
     expect(doc.employees).toEqual([]);
   });
 
+  it('defaults a new facility to active (T059)', () => {
+    const doc = new BuildingModel(facility({}));
+
+    expect(doc.active).toBe(true);
+  });
+
+  it('stores a deactivated facility as active: false', () => {
+    const doc = new BuildingModel(facility({active: false}));
+
+    expect(doc.active).toBe(false);
+  });
+
   it('rejects an empty size list', () => {
     expect(errorsFor({sizes: []})).toHaveProperty('sizes');
   });
