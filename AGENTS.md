@@ -831,6 +831,16 @@ Three things that are easy to get wrong:
   in slices", and the check is whether the *later* slices exist in the tree. Here they do
   (T007 `role`, T015 users, T016 public read, T017 ownership, T025 client/facility writes),
   so the task is genuinely complete and only its bookkeeping lagged.
+- **A task identifier is an issue title, so two artefacts can collide on one.** `tasks.md`
+  defined `T061` as "notify the applicant on approve/reject" while issue #128 held `T061` for
+  the Polish copy catalogue, and `contracts/notification-templates.md` called the same
+  notify-applicant work `T060` while `tasks.md` gave `T060` to backup and retention — so the
+  two documents disagreed with each other as well as with the issue. The notify-applicant task
+  is now `T062`, `T060` is backup and retention and `T061` is the copy catalogue, matching the
+  issue titles. Before adding a task, grep the whole repo (`tasks.md`, `contracts/`, `README`,
+  `quickstart.md`, `research.md`, `data-model.md`) for the identifier, not just `tasks.md`;
+  several `T05x` tasks were referenced in prose before they had an entry. The issue title is
+  the authority, because that is what a `Closes #N` line resolves to.
 
 ## Angular UI conventions that are easy to break
 
