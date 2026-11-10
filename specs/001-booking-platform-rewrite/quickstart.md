@@ -99,12 +99,14 @@ yarn nx e2e ui-e2e
 ### Security verification (SC-007)
 
 ```bash
-yarn build:all
-grep -rInE 'mongodb\+srv|AIza[0-9A-Za-z_-]{35}|service_[a-z0-9]{7}|JWT_SECRET' dist/apps/ui
+yarn nx build ui --configuration=production
+node tools/scan-bundle.js dist/apps/ui
 ```
 
-The command must produce no matches: no database URI, Firebase key, mail-service identifier or
-JWT secret may appear in the built client assets.
+The script exits non-zero if the built client assets contain a database URI, a Firebase key,
+an EmailJS service or template id, a JWT-secret reference, a bearer-token literal, the mail
+provider key, or a Gmail address. CI runs the same script on every PR, so the pattern list
+cannot drift between the local check and the gate. It must report no findings.
 
 ## Migration dry run
 

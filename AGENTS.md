@@ -769,6 +769,21 @@ client-bundle secret scan on every PR, then a `gate` job that fails unless all o
 The e2e job (`xvfb-run -a yarn nx e2e ui-e2e --configuration=ci`) boots its own `mongod` and
 the built server, so it needs the same `MONGOMS_DOWNLOAD_DIR` cache as the unit-test job.
 
+- **The client-bundle secret scan is `tools/scan-bundle.js`, and the pattern list lives there.**
+  It was inlined in the `secrets` job and in `quickstart.md`, two copies that had already
+  drifted: both omitted the EmailJS `template_` ids and the Gmail rule SC-007's issue names.
+  The script is the single copy now and both places call it. `scan-secrets.js` is a different
+  check — it scans *source* for a real credential and allows placeholders; `scan-bundle.js`
+  scans a *build* and allows nothing, because a public bundle has no legitimate reason to carry
+  any of these strings. Do not merge them: the placeholder exception is what makes the source
+  scan usable and would make the bundle scan useless.
+- **The list read is proved index-served, not just fast.** `performance.integration.spec.ts`
+  (T050) seeds a year of bookings and asserts the query plan contains `IXSCAN` and no
+  `COLLSCAN`. Walk the whole `inputStage` chain to find it — `LIMIT`→`FETCH`→`IXSCAN` is three
+  levels, so reading only the top two stages reports no index and the assertion fails on a
+  correct plan. The wall-clock bounds are the specification's own 2 s/3 s targets, an order of
+  magnitude above the measured value, so a failure is structural rather than a slow runner.
+
 ## Branch ruleset
 
 `main` is protected by the `OpenHandsBookSpace` ruleset (id 26131068): deletion and

@@ -183,13 +183,9 @@ jobs:
       - name: Build ui for scanning
         run: yarn nx build ui --configuration=production
       - name: Fail if a credential reached the client bundle
-        run: |
-          pattern='mongodb\+srv|AIza[0-9A-Za-z_-]{35}|service_[a-z0-9]{7}|JWT_SECRET|accessToken'
-          if grep -rInE "$pattern" dist/apps/ui; then
-            echo "::error::A credential or service identifier was found in the built client assets."
-            exit 1
-          fi
-          echo "No credential found in dist/apps/ui."
+        # The pattern list lives in the script, not here, so the CI gate and the local run
+        # cannot drift apart — a pattern added in one place used to leave the other blind.
+        run: node tools/scan-bundle.js dist/apps/ui
       # The client-bundle scan above cannot see a committed .env, which is exactly
       # how a live MongoDB password and JWT secret leaked into this repo's history.
       - name: Fail if a credential is committed to the working tree
