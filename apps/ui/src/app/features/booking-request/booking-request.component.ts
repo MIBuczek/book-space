@@ -1,6 +1,7 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
 import {TClientType, TPayment} from '@models/booking.model';
 import {BookingRequestsApi} from '../../core/booking-requests.api';
@@ -44,8 +45,7 @@ const PAYMENT_OPTIONS: ISelectOption[] = (Object.keys(PAYMENT_LABELS) as TPaymen
 const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
   hours.map((hour) => ({value: String(hour), label: `${String(hour).padStart(2, '0')}:00`}));
 
-const RODO_CLAUSE_URL =
-  'https://www.sisk-siechnice.pl/wp-content/uploads/2019/09/Klauzula-informacyjna-do-formularza-kontaktowego-SISK.pdf';
+const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
 
 /**
  * The public booking request form (FR-011, FR-012, FR-013, issue #39).
@@ -65,6 +65,9 @@ const RODO_CLAUSE_URL =
  * update the view. The city and facility selectors mirror the calendar's: the facility list is
  * fetched once and filtered in the browser, and the facility resets to the city's first when
  * the city changes.
+ *
+ * Every label, legend and message comes from the shared copy catalogue (NFR-005, T061), so no
+ * Polish text is hardcoded in the template.
  */
 @Component({
   selector: 'book-space-booking-request',
@@ -77,32 +80,30 @@ const RODO_CLAUSE_URL =
   ],
   template: `
     <section class="bs-page">
-      <h1>Prośba o rezerwację</h1>
+      <h1>{{ copy.title }}</h1>
 
       @if (submitted()) {
-        <p class="bs-request__success" role="status">
-          Dziękujemy. Twoja prośba o rezerwację została wysłana i oczekuje na zatwierdzenie.
-        </p>
+        <p class="bs-request__success" role="status">{{ copy.success }}</p>
       } @else {
         <form (submit)="submit($event)" novalidate>
           <fieldset>
-            <legend>Obiekt</legend>
+            <legend>{{ copy.legends.facility }}</legend>
             <book-space-select
-              label="Miasto"
+              [label]="copy.city"
               [options]="cityOptions"
               [value]="city()"
               (valueChange)="onCity($event)"
             />
             <book-space-select
-              label="Obiekt"
+              [label]="copy.facility"
               [options]="buildingOptions()"
               [value]="facilityProperty()"
-              placeholder="Wybierz obiekt"
+              [placeholder]="copy.facilityPlaceholder"
               (valueChange)="onFacility($event)"
             />
             @if (selectedFacility(); as facility) {
               <book-space-select
-                label="Rozmiar"
+                [label]="copy.size"
                 [options]="sizeSelectOptions()"
                 [value]="value().size"
                 (valueChange)="update({size: $event})"
@@ -111,60 +112,60 @@ const RODO_CLAUSE_URL =
           </fieldset>
 
           <fieldset>
-            <legend>Rezerwujący</legend>
+            <legend>{{ copy.legends.requester }}</legend>
             <book-space-select
-              label="Typ"
+              [label]="copy.type"
               [options]="clientOptions"
               [value]="value().type"
               (valueChange)="onType($event)"
             />
             <book-space-input
-              label="Nazwa w kalendarzu"
+              [label]="copy.nick"
               [value]="value().nick"
               [error]="errors().nick ?? null"
               (valueChange)="update({nick: $event})"
             />
             <book-space-input
-              label="Imię i nazwisko"
+              [label]="copy.personName"
               [value]="value().personName"
               [error]="errors().personName ?? null"
               (valueChange)="update({personName: $event})"
             />
             @if (value().type === 'COMPANY') {
               <book-space-input
-                label="Nazwa firmy"
+                [label]="copy.personCompany"
                 [value]="value().personCompany"
                 [error]="errors().personCompany ?? null"
                 (valueChange)="update({personCompany: $event})"
               />
             }
             <book-space-input
-              label="E-mail"
+              [label]="copy.email"
               type="email"
               [value]="value().personEmail"
               [error]="errors().personEmail ?? null"
               (valueChange)="update({personEmail: $event})"
             />
             <book-space-input
-              label="Telefon"
+              [label]="copy.phone"
               [value]="value().personPhone"
               [error]="errors().personPhone ?? null"
               (valueChange)="update({personPhone: $event})"
             />
             <book-space-select
-              label="Płatność"
+              [label]="copy.payment"
               [options]="paymentOptions"
               [value]="value().paymentMethod"
               (valueChange)="onPayment($event)"
             />
             <book-space-input
-              label="Rabat (opcjonalnie)"
+              [label]="copy.discount"
               [value]="value().discount"
               [error]="errors().discount ?? null"
               (valueChange)="update({discount: $event})"
             />
             <label class="bs-field">
-              <span class="bs-field__label">Dodatkowe informacje</span>
+              <span class="bs-field__label">{{ copy.comments }}</span>
               <textarea
                 [value]="value().comments"
                 (input)="update({comments: $any($event.target).value})"
@@ -173,36 +174,36 @@ const RODO_CLAUSE_URL =
           </fieldset>
 
           <fieldset>
-            <legend>Terminy</legend>
+            <legend>{{ copy.legends.slots }}</legend>
             <book-space-date-picker
-              label="Dzień"
+              [label]="copy.day"
               [value]="draftDay()"
               [min]="minDay()"
               [max]="maxDay()"
               (valueChange)="draftDay.set($event)"
             />
             <book-space-select
-              label="Od godziny"
+              [label]="copy.fromHour"
               [options]="startHourOptions"
               [value]="hourValue(draftStartHour())"
               (valueChange)="draftStartHour.set(parseHour($event))"
             />
             <book-space-select
-              label="Do godziny"
+              [label]="copy.toHour"
               [options]="endHourOptions"
               [value]="hourValue(draftEndHour())"
               (valueChange)="draftEndHour.set(parseHour($event))"
             />
-            <book-space-button variant="secondary" (pressed)="addSlot()">Dodaj termin</book-space-button>
+            <book-space-button variant="secondary" (pressed)="addSlot()">{{ copy.addSlot }}</book-space-button>
 
             <book-space-checkbox
-              label="Rezerwacja cykliczna"
+              [label]="copy.cyclical"
               [checked]="cyclical()"
               (checkedChange)="cyclical.set($event)"
             />
             @if (cyclical()) {
               <book-space-date-picker
-                label="Do dnia"
+                [label]="copy.untilDay"
                 [value]="cyclicalEndDay()"
                 [min]="minDay()"
                 [max]="maxDay()"
@@ -216,54 +217,54 @@ const RODO_CLAUSE_URL =
                   {{ formatDay(slot.day) }} {{ formatHour(slot.startHours) }}–{{ formatHour(slot.endHours) }}
                 </li>
               } @empty {
-                <li>Nie dodano jeszcze żadnego terminu.</li>
+                <li>{{ copy.noSlots }}</li>
               }
             </ul>
             @if (plainSlots().length > 0) {
               <book-space-button variant="secondary" (pressed)="removeSlot(plainSlots().length - 1)">
-                Usuń ostatni termin
+                {{ copy.removeLastSlot }}
               </book-space-button>
             }
             @if (overlapWarning(); as day) {
               <p class="bs-request__warning" role="alert">
-                Niektóre godziny rezerwacji konfliktują ze sobą ({{ formatDay(day) }}).
+                {{ copy.overlapWarning(formatDay(day)) }}
               </p>
             }
           </fieldset>
 
           @if (supportsExtras()) {
             <fieldset>
-              <legend>Dodatkowe opcje wynajmu</legend>
+              <legend>{{ copy.legends.extras }}</legend>
               <book-space-checkbox
-                label="Oświetlenie"
+                [label]="copy.lights"
                 [checked]="extraLights()"
                 (checkedChange)="extraLights.set($event)"
               />
               <book-space-checkbox
-                label="Zaplecze sanitarne"
+                [label]="copy.toilets"
                 [checked]="extraToilets()"
                 (checkedChange)="extraToilets.set($event)"
               />
               <book-space-select
-                label="Od godziny"
+                [label]="copy.fromHour"
                 [options]="startHourOptions"
                 [value]="hourValue(extraFromHour())"
                 (valueChange)="extraFromHour.set(parseHour($event))"
               />
               <book-space-select
-                label="Do godziny"
+                [label]="copy.toHour"
                 [options]="endHourOptions"
                 [value]="hourValue(extraToHour())"
                 (valueChange)="extraToHour.set(parseHour($event))"
               />
               <book-space-button variant="secondary" (pressed)="addExtraOption()">
-                Dodaj opcję
+                {{ copy.addExtra }}
               </book-space-button>
               <ul class="bs-request__slots">
                 @for (option of extraOptions(); track $index) {
                   <li>{{ describeExtraOption(option) }}</li>
                 } @empty {
-                  <li>Nie dodano żadnych dodatkowych opcji.</li>
+                  <li>{{ copy.noExtras }}</li>
                 }
               </ul>
             </fieldset>
@@ -271,13 +272,11 @@ const RODO_CLAUSE_URL =
 
           <div class="bs-request__rodo">
             <book-space-checkbox
-              label="Akceptuję klauzulę informacyjną RODO"
+              [label]="copy.rodo"
               [checked]="value().rodoAcknowledgement"
               (checkedChange)="update({rodoAcknowledgement: $event})"
             />
-            <a [href]="rodoClauseUrl" target="_blank" rel="noopener">
-              Klauzula informacyjna o przetwarzaniu danych osobowych.
-            </a>
+            <a [href]="rodoClauseUrl" target="_blank" rel="noopener">{{ copy.rodoLink }}</a>
           </div>
 
           @if (formError(); as message) {
@@ -291,7 +290,7 @@ const RODO_CLAUSE_URL =
             keyboard order, which is what keeps the mitigation accessible (NFR-006).
           -->
           <label class="bs-request__decoy" aria-hidden="true">
-            <span>Strona internetowa</span>
+            <span>{{ copy.website }}</span>
             <input
               type="text"
               name="website"
@@ -302,9 +301,7 @@ const RODO_CLAUSE_URL =
             />
           </label>
 
-          <book-space-button type="submit" [disabled]="!canSubmit()">
-            Wyślij prośbę o rezerwację
-          </book-space-button>
+          <book-space-button type="submit" [disabled]="!canSubmit()">{{ copy.submit }}</book-space-button>
         </form>
       }
     </section>
@@ -363,6 +360,7 @@ export class BookingRequestComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly requestsApi = inject(BookingRequestsApi);
 
+  readonly copy = COPY.bookingRequest;
   readonly cityOptions = CITY_OPTIONS;
   readonly clientOptions = CLIENT_OPTIONS;
   readonly paymentOptions = PAYMENT_OPTIONS;
@@ -480,13 +478,13 @@ export class BookingRequestComponent {
   /** Adds the draft slot: a plain slot, or a cyclical series when the box is ticked. */
   addSlot(): void {
     if (!slotHoursValid(this.draftStartHour(), this.draftEndHour())) {
-      this.formError.set('Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia.');
+      this.formError.set(COPY.bookingRequest.endBeforeStart);
       return;
     }
     if (this.cyclical() && this.cyclicalEndDay().getTime() < this.draftDay().getTime()) {
       // The shared expansion refuses a backwards series with a `RangeError`; refusing it here
       // turns that into a message rather than a broken submit.
-      this.formError.set('Data zakończenia serii nie może być wcześniejsza niż jej początek.');
+      this.formError.set(COPY.bookingRequest.seriesBackwards);
       return;
     }
     this.formError.set(null);
@@ -533,10 +531,10 @@ export class BookingRequestComponent {
   describeExtraOption(option: IExtraOptionEntry): string {
     const parts: string[] = [];
     if (option.lights) {
-      parts.push('Oświetlenie');
+      parts.push(COPY.bookingRequest.lights);
     }
     if (option.toilets) {
-      parts.push('Zaplecze sanitarne');
+      parts.push(COPY.bookingRequest.toilets);
     }
     const hours = `${String(option.fromHour).padStart(2, '0')}:00–${String(option.toHour).padStart(2, '0')}:00`;
     return `${parts.join(', ')} (${hours})`;
@@ -567,7 +565,7 @@ export class BookingRequestComponent {
 
     const facility = this.selectedFacility();
     if (!facility) {
-      this.formError.set('Wybierz obiekt.');
+      this.formError.set(COPY.bookingRequest.chooseFacility);
       return;
     }
     if (Object.keys(validateForm(this.value())).length > 0 || this.slots().length === 0) {
@@ -586,8 +584,8 @@ export class BookingRequestComponent {
           this.submitting.set(false);
           this.formError.set(
             error instanceof HttpErrorResponse && error.status === 422
-              ? 'Nie udało się wysłać prośby. Sprawdź dane i spróbuj ponownie.'
-              : 'Nie udało się wysłać prośby. Spróbuj ponownie później.'
+              ? COPY.bookingRequest.sendValidation
+              : COPY.bookingRequest.sendGeneric
           );
         },
       });

@@ -1,4 +1,5 @@
 import { IUserCapabilities } from '@models/user.model';
+import { COPY } from '@booking/copy';
 
 /**
  * The admin area's tabs and the capability each one needs.
@@ -8,6 +9,10 @@ import { IUserCapabilities } from '@models/user.model';
  * with Summary additionally subject to the deny-list. Those gates are the capability flags the
  * API resolves, so the tab list is derived from the capabilities rather than from the role —
  * a deny-listed office account loses Summary here without the client knowing why.
+ *
+ * The labels are read from the shared copy catalogue (NFR-005, T061): the tab list is the
+ * single declaration of a tab's path and capability, and its label comes from the catalogue
+ * rather than a literal here.
  */
 export interface IAdminTab {
   /** The child route path, relative to `/admin`. */
@@ -23,12 +28,12 @@ export interface IAdminTab {
  * that is hidden and the route behind it cannot disagree.
  */
 export const ADMIN_TABS: readonly IAdminTab[] = [
-  { path: 'calendar', label: 'Calendar', capability: 'staff' },
-  { path: 'bookings', label: 'Bookings', capability: 'staff' },
-  { path: 'clients', label: 'Clients', capability: 'canSeeClientsTab' },
-  { path: 'facilities', label: 'Facilities', capability: 'canSeeFacilitiesTab' },
-  { path: 'summary', label: 'Summary', capability: 'canSeeSummaryTab' },
-  { path: 'users', label: 'Users', capability: 'canManageUsers' },
+  { path: 'calendar', label: COPY.admin.tabs.calendar, capability: 'staff' },
+  { path: 'bookings', label: COPY.admin.tabs.bookings, capability: 'staff' },
+  { path: 'clients', label: COPY.admin.tabs.clients, capability: 'canSeeClientsTab' },
+  { path: 'facilities', label: COPY.admin.tabs.facilities, capability: 'canSeeFacilitiesTab' },
+  { path: 'summary', label: COPY.admin.tabs.summary, capability: 'canSeeSummaryTab' },
+  { path: 'users', label: COPY.admin.tabs.users, capability: 'canManageUsers' },
 ];
 
 /**

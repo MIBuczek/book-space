@@ -72,7 +72,7 @@ describe('SignInComponent', () => {
     fixture.detectChanges();
 
     const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Invalid e-mail or password');
+    expect(alert?.textContent).toContain('Nieprawidłowy e-mail lub hasło');
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -86,7 +86,7 @@ describe('SignInComponent', () => {
     fixture.detectChanges();
 
     const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain('Sign-in failed');
+    expect(alert?.textContent).toContain('Logowanie nie powiodło się');
   });
 
   it('rejects an address without @ before making a request', () => {
@@ -97,7 +97,7 @@ describe('SignInComponent', () => {
 
     httpMock.expectNone('/api/auth/sign-in');
     const errors = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(errors).toContain('E-mail must contain @');
+    expect(errors).toContain('E-mail musi zawierać @');
   });
 
   it('rejects a too-short password before making a request', () => {
@@ -108,7 +108,7 @@ describe('SignInComponent', () => {
 
     httpMock.expectNone('/api/auth/sign-in');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Password must be 6–30 characters'
+      'Hasło musi mieć od 6 do 30 znaków'
     );
   });
 
@@ -119,8 +119,8 @@ describe('SignInComponent', () => {
 
     httpMock.expectNone('/api/auth/sign-in');
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('E-mail is required');
-    expect(text).toContain('Password is required');
+    expect(text).toContain('E-mail jest wymagany');
+    expect(text).toContain('Hasło jest wymagane');
   });
 
   it('rejects an over-long password', () => {
@@ -131,7 +131,7 @@ describe('SignInComponent', () => {
 
     httpMock.expectNone('/api/auth/sign-in');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Password must be 6–30 characters'
+      'Hasło musi mieć od 6 do 30 znaków'
     );
   });
 
@@ -143,7 +143,7 @@ describe('SignInComponent', () => {
 
     httpMock.expectNone('/api/auth/sign-in');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'E-mail must be 3–125 characters'
+      'E-mail musi mieć od 3 do 125 znaków'
     );
   });
 
@@ -151,7 +151,7 @@ describe('SignInComponent', () => {
     const fixture = render();
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('required');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('wymagan');
   });
 
   it('clears a previous failure message when a new attempt is submitted', () => {
@@ -160,13 +160,13 @@ describe('SignInComponent', () => {
     submit(fixture);
     httpMock.expectOne('/api/auth/sign-in').flush({}, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Invalid');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Nieprawidłowy');
 
     submit(fixture);
     fixture.detectChanges();
 
     // The new attempt is in flight, so the stale message is gone and the form is disabled.
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Invalid');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Nieprawidłowy');
     httpMock.expectOne('/api/auth/sign-in').flush({ user, token: 'token-2' });
   });
 });

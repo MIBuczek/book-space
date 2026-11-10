@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { APP_VERSION } from '@booking/version';
 import { FooterComponent } from './footer.component';
-import { PRIVACY_POLICY_URL, SISK_WEBSITE_URL } from '../features/informational/contact-details';
+import { COPY } from '@booking/copy';
+
+const PRIVACY_POLICY_URL = COPY.contact.privacyPolicyUrl;
+const SISK_WEBSITE_URL = COPY.contact.siskWebsiteUrl;
 
 describe('FooterComponent', () => {
   beforeEach(async () => {

@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {IUserRequest, IUserUpdateRequest, TUserRole} from '@models/user.model';
 import {TCity} from '@models/building.model';
 
@@ -28,23 +29,19 @@ const PASSWORD_MAX = 30;
  * domain after it, because `@IsEmail` requires a dotted domain and the two must agree. */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The Polish labels for the roles, matching the legacy user form's vocabulary. */
-const ROLE_LABELS: Record<TUserRole, string> = {
-  ADMIN: 'Administrator',
-  OFFICE: 'Biuro',
-  EMPLOYEE: 'Pracownik',
-};
+/** The role labels, from the shared copy catalogue (NFR-005, T061). */
+const ROLE_LABELS: Record<TUserRole, string> = COPY.users.roleLabels;
 
 /** The roles a caller may choose, in the order the legacy form offered them. */
 const ROLE_OPTIONS: readonly TUserRole[] = ['ADMIN', 'OFFICE', 'EMPLOYEE'];
 
 /** The columns the table renders. */
 const USER_COLUMNS = [
-  {key: 'name', label: 'Imię i nazwisko'},
-  {key: 'email', label: 'E-mail'},
-  {key: 'roleLabel', label: 'Rola'},
-  {key: 'cityLabel', label: 'Miasto'},
-  {key: 'activeLabel', label: 'Status'},
+  {key: 'name', label: COPY.users.columns.name},
+  {key: 'email', label: COPY.users.columns.email},
+  {key: 'roleLabel', label: COPY.users.columns.role},
+  {key: 'cityLabel', label: COPY.users.columns.city},
+  {key: 'activeLabel', label: COPY.users.columns.status},
 ];
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -120,31 +117,31 @@ const validateUserForm = (value: IUserFormValue, editing: boolean): TUserFieldEr
   const errors: TUserFieldErrors = {};
 
   if (value.firstName.length < NAME_MIN || value.firstName.length > NAME_MAX) {
-    errors.firstName = `Imię musi mieć od ${NAME_MIN} do ${NAME_MAX} znaków`;
+    errors.firstName = COPY.validation.firstNameRange(NAME_MIN, NAME_MAX);
   }
   if (value.lastName.length < NAME_MIN || value.lastName.length > NAME_MAX) {
-    errors.lastName = `Nazwisko musi mieć od ${NAME_MIN} do ${NAME_MAX} znaków`;
+    errors.lastName = COPY.validation.lastNameRange(NAME_MIN, NAME_MAX);
   }
   if (
     !EMAIL_PATTERN.test(value.email) ||
     value.email.length < EMAIL_MIN ||
     value.email.length > EMAIL_MAX
   ) {
-    errors.email = 'Podaj poprawny adres e-mail';
+    errors.email = COPY.validation.emailInvalid;
   }
 
   const passwordSupplied = value.password !== '';
   if (!editing || passwordSupplied) {
     if (value.password.length < PASSWORD_MIN || value.password.length > PASSWORD_MAX) {
-      errors.password = `Hasło musi mieć od ${PASSWORD_MIN} do ${PASSWORD_MAX} znaków`;
+      errors.password = COPY.validation.passwordRange(PASSWORD_MIN, PASSWORD_MAX);
     }
   }
   if (passwordSupplied && value.password !== value.recheckPassword) {
-    errors.recheckPassword = 'Hasła muszą być identyczne';
+    errors.recheckPassword = COPY.validation.passwordsMismatch;
   }
 
   if (isCityRequired(value.role) && value.city.trim() === '') {
-    errors.city = 'Miasto jest wymagane dla każdej roli poza administratorem';
+    errors.city = COPY.validation.cityRequired;
   }
 
   return errors;
@@ -237,18 +234,18 @@ const fieldForMessage = (message: string): keyof IUserFormValue | null => {
  */
 const mapServerErrors = (messages: readonly string[]): IUserWriteErrors => {
   const fields: TUserFieldErrors = {};
-  const general: string[] = [];
+  let unmatched = false;
 
   for (const message of messages) {
     const field = fieldForMessage(message);
     if (field === null) {
-      general.push(message);
+      unmatched = true;
     } else {
-      fields[field] = message;
+      fields[field] = COPY.errors.fieldInvalid;
     }
   }
 
-  return {fields, general: general.length > 0 ? general.join(' ') : null};
+  return {fields, general: unmatched ? COPY.errors.generic : null};
 };
 
 /** Shapes an account into the row the table renders. */
@@ -265,8 +262,8 @@ const toRow = (user: {
   name: `${user.firstName} ${user.lastName}`,
   email: user.email,
   roleLabel: ROLE_LABELS[user.role],
-  cityLabel: user.city ?? '—',
-  activeLabel: user.active ? 'Aktywne' : 'Nieaktywne',
+  cityLabel: user.city ?? COPY.common.dash,
+  activeLabel: user.active ? COPY.users.active.yes : COPY.users.active.no,
   user,
 });
 

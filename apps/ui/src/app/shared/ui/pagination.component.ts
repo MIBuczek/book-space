@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { COPY } from '@booking/copy';
 import { ButtonComponent } from './button.component';
 
 /**
@@ -13,21 +14,21 @@ import { ButtonComponent } from './button.component';
   selector: 'book-space-pagination',
   imports: [ButtonComponent],
   template: `
-    <nav class="bs-pagination" aria-label="Pagination">
+    <nav class="bs-pagination" [attr.aria-label]="copy.ariaLabel">
       <book-space-button
         variant="secondary"
         [disabled]="page() <= 1"
         (pressed)="goTo(page() - 1)"
       >
-        Previous
+        {{ copy.previous }}
       </book-space-button>
-      <span class="bs-pagination__status">Page {{ page() }} of {{ pageCount() }}</span>
+      <span class="bs-pagination__status">{{ status() }}</span>
       <book-space-button
         variant="secondary"
         [disabled]="page() >= pageCount()"
         (pressed)="goTo(page() + 1)"
       >
-        Next
+        {{ copy.next }}
       </book-space-button>
     </nav>
   `,
@@ -42,12 +43,14 @@ import { ButtonComponent } from './button.component';
   ],
 })
 export class PaginationComponent {
+  readonly copy = COPY.shared.pagination;
   readonly page = input.required<number>();
   readonly total = input.required<number>();
   readonly limit = input.required<number>();
   readonly pageChange = output<number>();
 
   readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.limit())));
+  readonly status = computed(() => this.copy.status(this.page(), this.pageCount()));
 
   goTo(page: number): void {
     if (page >= 1 && page <= this.pageCount()) {

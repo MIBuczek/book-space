@@ -311,7 +311,9 @@ describe('UsersTableComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(openPanel(fixture).textContent).toContain('The last active administrator');
+    // The UI shows its own Polish message for the 409; the server's English is not rendered
+    // (NFR-005, T061).
+    expect(openPanel(fixture).textContent).toContain('Nie można dezaktywować tego konta.');
   });
 
   it('surfaces a server validation error against the field it names', async () => {
@@ -327,8 +329,9 @@ describe('UsersTableComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.fieldErrors().email).toMatch(/E-mail/);
-    expect(openPanel(fixture).textContent).toContain('E-mail address need');
+    // The field is located from the server's message; the text is the UI's own Polish.
+    expect(fixture.componentInstance.fieldErrors().email).toBe('Nieprawidłowa wartość.');
+    expect(openPanel(fixture).textContent).toContain('Nieprawidłowa wartość.');
   });
 
   it('shows an unmatched 422 message as a general error', async () => {
@@ -345,7 +348,9 @@ describe('UsersTableComponent', () => {
       );
     fixture.detectChanges();
 
-    expect(openPanel(fixture).textContent).toContain('Role must be one of');
+    // The message names no field, so it becomes the generic prompt; the server's English is
+    // never rendered (NFR-005, T061).
+    expect(openPanel(fixture).textContent).toContain('Popraw dane i spróbuj ponownie.');
   });
 
   it('falls back to a general message when a 422 carries no field list', async () => {

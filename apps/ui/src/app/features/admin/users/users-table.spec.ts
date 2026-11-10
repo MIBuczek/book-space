@@ -209,15 +209,15 @@ describe('mapServerErrors', () => {
     expect(fields.password).toBeUndefined();
   });
 
-  it('returns a message that names no field as general', () => {
+  it('returns the generic prompt for a message that names no field', () => {
     const {fields, general} = mapServerErrors(['Role must be one of ADMIN, OFFICE, EMPLOYEE.']);
     expect(fields).toEqual({});
-    expect(general).toBe('Role must be one of ADMIN, OFFICE, EMPLOYEE.');
+    expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
-  it('joins several unmatched messages', () => {
+  it('shows one generic prompt for several unmatched messages', () => {
     const {general} = mapServerErrors(['Role is not allowed', 'Please try again']);
-    expect(general).toBe('Role is not allowed Please try again');
+    expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 });
 

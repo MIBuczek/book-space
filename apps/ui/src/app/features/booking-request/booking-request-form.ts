@@ -1,3 +1,4 @@
+import {COPY} from '@booking/copy';
 import {IPublicBuilding} from '@models/building.model';
 import {IBookingRequest, TClientType, TPayment} from '@models/booking.model';
 import {IBookedTime} from '@models/booked-time.model';
@@ -46,18 +47,11 @@ const CLOSING_HOUR = 23;
 /** The exclusive end of the day, allowed as a slot's end hour (local midnight). */
 const END_OF_DAY_HOUR = 24;
 
-/** The Polish labels for the client types, matching the legacy `CLIENT_OPTIONS`. */
-const CLIENT_TYPE_LABELS: Record<TClientType, string> = {
-  INDIVIDUAL: 'Osoba prywatna',
-  COMPANY: 'Firma',
-};
+/** The client-type labels, from the shared copy catalogue (NFR-005, T061). */
+const CLIENT_TYPE_LABELS: Record<TClientType, string> = COPY.labels.clientType;
 
-/** The Polish labels for the payment methods, matching the legacy `PAYMENTS_OPTIONS`. */
-const PAYMENT_LABELS: Record<TPayment, string> = {
-  TRANSFER: 'Przelew',
-  CASH: 'Gotówka',
-  FREE: 'Bezpłatne',
-};
+/** The payment-method labels, from the shared copy catalogue. */
+const PAYMENT_LABELS: Record<TPayment, string> = COPY.labels.payment;
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
 interface IBookingFormValue {
@@ -178,29 +172,29 @@ const validateForm = (value: IBookingFormValue): TFieldErrors => {
   const errors: TFieldErrors = {};
 
   if (value.nick.length < NICK_MIN || value.nick.length > NICK_MAX) {
-    errors.nick = `Nazwa musi mieć od ${NICK_MIN} do ${NICK_MAX} znaków`;
+    errors.nick = COPY.validation.nickRange(NICK_MIN, NICK_MAX);
   }
   if (value.personName.length < PERSON_NAME_MIN || value.personName.length > PERSON_NAME_MAX) {
-    errors.personName = `Imię i nazwisko musi mieć od ${PERSON_NAME_MIN} do ${PERSON_NAME_MAX} znaków`;
+    errors.personName = COPY.validation.personNameRange(PERSON_NAME_MIN, PERSON_NAME_MAX);
   }
   if (value.personCompany.length > PERSON_COMPANY_MAX) {
-    errors.personCompany = `Nazwa firmy może mieć maksymalnie ${PERSON_COMPANY_MAX} znaków`;
+    errors.personCompany = COPY.validation.personCompanyMax(PERSON_COMPANY_MAX);
   }
   if (
     !EMAIL_PATTERN.test(value.personEmail) ||
     value.personEmail.length < PERSON_EMAIL_MIN ||
     value.personEmail.length > PERSON_EMAIL_MAX
   ) {
-    errors.personEmail = 'Podaj poprawny adres e-mail';
+    errors.personEmail = COPY.validation.emailInvalid;
   }
   if (value.personPhone.length < PERSON_PHONE_MIN || value.personPhone.length > PERSON_PHONE_MAX) {
-    errors.personPhone = `Telefon musi mieć od ${PERSON_PHONE_MIN} do ${PERSON_PHONE_MAX} znaków`;
+    errors.personPhone = COPY.validation.phoneRange(PERSON_PHONE_MIN, PERSON_PHONE_MAX);
   }
   if (value.comments.length > COMMENTS_MAX) {
-    errors.comments = `Uwagi mogą mieć maksymalnie ${COMMENTS_MAX} znaków`;
+    errors.comments = COPY.validation.commentsMax(COMMENTS_MAX);
   }
   if (value.discount !== '' && !DISCOUNT_PATTERN.test(value.discount)) {
-    errors.discount = 'Rabat musi być wartością procentową, np. 10%';
+    errors.discount = COPY.validation.discountInvalid;
   }
 
   return errors;

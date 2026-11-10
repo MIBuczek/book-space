@@ -141,22 +141,12 @@ describe('facilities tab logic', () => {
   });
 
   describe('sendFailureMessage', () => {
-    it('shows the server field messages for a 422', () => {
-      expect(sendFailureMessage(422, ['recipient must be an email'])).toBe(
-        'recipient must be an email'
-      );
-    });
-
-    it('joins several 422 messages', () => {
-      expect(sendFailureMessage(422, ['a', 'b'])).toBe('a b');
-    });
-
-    it('falls back to a generic prompt for a 422 with no message list', () => {
-      expect(sendFailureMessage(422, [])).toBe('Popraw dane i spróbuj ponownie.');
+    it('shows a Polish prompt for a 422, not the server\'s English field message (T061)', () => {
+      expect(sendFailureMessage(422)).toBe('Popraw dane i spróbuj ponownie.');
     });
 
     it('shows a retry message for a provider failure (FR-036)', () => {
-      expect(sendFailureMessage(502, [])).toBe(
+      expect(sendFailureMessage(502)).toBe(
         'Nie udało się wysłać wiadomości. Spróbuj ponownie później.'
       );
     });

@@ -34,8 +34,8 @@ Cypress.Commands.add('resetBackend', () => {
 Cypress.Commands.add('signIn', (email: string, password: string) => {
   cy.visit('/sign-in');
   cy.typeByLabel('E-mail', email);
-  cy.typeByLabel('Password', password);
-  cy.contains('button', 'Sign in').click();
+  cy.typeByLabel('Hasło', password);
+  cy.contains('button', 'Zaloguj się').click();
   cy.location('pathname').should('include', '/admin');
 });
 

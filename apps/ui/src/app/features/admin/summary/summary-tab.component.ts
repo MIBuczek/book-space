@@ -1,5 +1,6 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {IClientSummary} from '@models/reporting.model';
 import {ClientsApi} from '../../../core/clients.api';
 import {ReportingApi} from '../../../core/reporting.api';
@@ -51,32 +52,32 @@ const thisMonth = (): Date => {
   imports: [ButtonComponent, CheckboxComponent, MonthPickerComponent, SelectComponent],
   template: `
     <section class="bs-page">
-      <h1>Podsumowanie najmów</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-summary__controls">
         <book-space-select
-          label="Wybrany klient"
-          placeholder="Wybierz"
+          [label]="copy.client"
+          [placeholder]="copy.clientPlaceholder"
           [options]="clientOptions()"
           [value]="clientId()"
           (valueChange)="onClient($event)"
         />
 
         <book-space-month-picker
-          label="Od miesiąca"
+          [label]="copy.fromMonth"
           [value]="fromMonth()"
           [disabled]="fromTheBeginning()"
           (valueChange)="onFromMonth($event)"
         />
         <book-space-month-picker
-          label="Do miesiąca"
+          [label]="copy.toMonth"
           [value]="toMonth()"
           [disabled]="fromTheBeginning()"
           (valueChange)="onToMonth($event)"
         />
 
         <book-space-checkbox
-          label="Podsumowanie od początku"
+          [label]="copy.fromBeginning"
           [checked]="fromTheBeginning()"
           (checkedChange)="onFromTheBeginning($event)"
         />
@@ -88,21 +89,21 @@ const thisMonth = (): Date => {
 
       <div class="bs-summary__actions">
         <book-space-button [disabled]="!canGenerate()" (pressed)="generate()">
-          Generuj podsumowanie
+          {{ copy.generate }}
         </book-space-button>
-        <book-space-button variant="secondary" (pressed)="clear()">Wyczyść</book-space-button>
+        <book-space-button variant="secondary" (pressed)="clear()">{{ copy.clear }}</book-space-button>
         <book-space-button variant="secondary" [disabled]="!canGenerate()" (pressed)="downloadAllCsv()">
-          Pobierz raport wszystkich klientów [.csv]
+          {{ copy.downloadAll }}
         </book-space-button>
       </div>
 
       @if (summaryResource.isLoading()) {
-        <p role="status">Wczytywanie podsumowania…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (summaryResource.status() === 'error') {
-        <p role="alert">Nie udało się wygenerować podsumowania.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else if (summary(); as current) {
-        <section class="bs-printable" aria-label="Raport podsumowania">
-          <h2>Raport najmów za okres</h2>
+        <section class="bs-printable" [attr.aria-label]="copy.reportAria">
+          <h2>{{ copy.reportTitle }}</h2>
           <p>{{ periodText() }}</p>
 
           <dl class="bs-summary__client">
@@ -127,19 +128,20 @@ const thisMonth = (): Date => {
                 @for (entry of report.entries; track $index) {
                   <div class="bs-summary__booking">
                     <p>
-                      Budynek: {{ entry.building }} · Wynajmowana powierzchnia: {{ entry.size }} ·
-                      Udzielony rabat: {{ entry.discount }} · Metoda płatności: {{ entry.payment }} ·
-                      Dodatkowe opcje: {{ entry.extraOptions }}
+                      {{ copy.booking.building }}: {{ entry.building }} · {{ copy.booking.size }}: {{ entry.size }} ·
+                      {{ copy.booking.discount }}: {{ entry.discount }} · {{ copy.booking.payment }}: {{ entry.payment }} ·
+                      {{ copy.booking.extraOptions }}: {{ entry.extraOptions }}
                     </p>
                     @if (entry.selectedOptions) {
-                      <p>Wybrane opcje: {{ entry.selectedOptions }}</p>
+                      <p>{{ copy.booking.selectedOptions }}: {{ entry.selectedOptions }}</p>
                     }
-                    <p>Dodatkowe informacje: {{ entry.comments }}</p>
+                    <p>{{ copy.booking.comments }}: {{ entry.comments }}</p>
                     <ul>
                       @for (slot of entry.slots; track $index) {
                         <li>
-                          Dzień: {{ slot.day }} · Godziny: {{ slot.hours }} · Liczba uczestników:
-                          {{ slot.participants }} · Status: {{ slot.status }} · Uwagi: {{ slot.comments }}
+                          {{ copy.slot.day }}: {{ slot.day }} · {{ copy.slot.hours }}: {{ slot.hours }} ·
+                          {{ copy.slot.participants }}: {{ slot.participants }} · {{ copy.slot.status }}: {{ slot.status }} ·
+                          {{ copy.slot.comments }}: {{ slot.comments }}
                         </li>
                       }
                     </ul>
@@ -152,14 +154,14 @@ const thisMonth = (): Date => {
 
         <div class="bs-summary__downloads">
           <book-space-button [disabled]="!canGenerate()" (pressed)="downloadClientCsv()">
-            Pobierz plik [.csv]
+            {{ copy.downloadClient }}
           </book-space-button>
           <book-space-button variant="secondary" (pressed)="printReport()">
-            Wyświetl szczegóły [.pdf]
+            {{ copy.print }}
           </book-space-button>
         </div>
       } @else {
-        <p>Aby zobaczyć podsumowanie, wybierz klienta oraz miesiąc.</p>
+        <p>{{ copy.empty }}</p>
       }
     </section>
   `,
@@ -190,6 +192,7 @@ export class SummaryTabComponent {
   private readonly reportingApi = inject(ReportingApi);
   private readonly reportExport = inject(ReportExport);
 
+  readonly copy = COPY.summary;
   readonly clientId = signal('');
   readonly fromMonth = signal<Date>(thisMonth());
   readonly toMonth = signal<Date>(thisMonth());

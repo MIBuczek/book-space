@@ -1,4 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
+import {COPY} from '@booking/copy';
 import {IClient, IClientRequest} from '@models/client.model';
 import {TClientType} from '@models/booking.model';
 
@@ -48,27 +49,24 @@ const NIP_PATTERN = /^[\d./-]+$/;
  */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The Polish labels for the client types, matching the legacy `CLIENT_OPTIONS`. */
-const CLIENT_TYPE_LABELS: Record<TClientType, string> = {
-  INDIVIDUAL: 'Osoba prywatna',
-  COMPANY: 'Firma',
-};
+/** The client-type labels, from the shared copy catalogue (NFR-005, T061). */
+const CLIENT_TYPE_LABELS: Record<TClientType, string> = COPY.clients.typeLabels;
 
 /** The name field's label, which the legacy `ClientForm` switched by type. */
 const nameLabelFor = (type: TClientType): string =>
-  type === 'COMPANY' ? 'Nazwa firmy' : 'Imię i nazwisko';
+  type === 'COMPANY' ? COPY.clients.fields.nameCompany : COPY.clients.fields.namePerson;
 
 /** The page sizes the tab offers, matching the bookings table. */
 const PAGE_SIZES = [20, 50, 100];
 
 /** The columns the table renders, in the legacy `RECORDS_CLIENTS_HEADERS` order. */
 const CLIENT_COLUMNS = [
-  {key: 'name', label: 'Nazwa'},
-  {key: 'contactPerson', label: 'Osoba kontaktowa'},
-  {key: 'phone', label: 'Telefon'},
-  {key: 'email', label: 'E-mail'},
-  {key: 'city', label: 'Miasto'},
-  {key: 'activeLabel', label: 'Status'},
+  {key: 'name', label: COPY.clients.columns.name},
+  {key: 'contactPerson', label: COPY.clients.columns.contactPerson},
+  {key: 'phone', label: COPY.clients.columns.phone},
+  {key: 'email', label: COPY.clients.columns.email},
+  {key: 'city', label: COPY.clients.columns.city},
+  {key: 'activeLabel', label: COPY.clients.columns.status},
 ];
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -140,39 +138,39 @@ const validateClientForm = (value: IClientFormValue): TClientFieldErrors => {
   const errors: TClientFieldErrors = {};
 
   if (value.name.length < NAME_MIN || value.name.length > NAME_MAX) {
-    errors.name = `Nazwa musi mieć od ${NAME_MIN} do ${NAME_MAX} znaków`;
+    errors.name = COPY.validation.nameRange(NAME_MIN, NAME_MAX);
   }
   if (value.nick !== '' && (value.nick.length < NICK_MIN || value.nick.length > NICK_MAX)) {
-    errors.nick = `Nazwa w kalendarzu musi mieć od ${NICK_MIN} do ${NICK_MAX} znaków`;
+    errors.nick = COPY.validation.nickRange(NICK_MIN, NICK_MAX);
   }
   if (value.contactPerson.length < CONTACT_MIN || value.contactPerson.length > CONTACT_MAX) {
-    errors.contactPerson = `Osoba kontaktowa musi mieć od ${CONTACT_MIN} do ${CONTACT_MAX} znaków`;
+    errors.contactPerson = COPY.validation.contactPersonRange(CONTACT_MIN, CONTACT_MAX);
   }
   if (value.phone.length < PHONE_MIN || value.phone.length > PHONE_MAX) {
-    errors.phone = `Telefon musi mieć od ${PHONE_MIN} do ${PHONE_MAX} znaków`;
+    errors.phone = COPY.validation.phoneRange(PHONE_MIN, PHONE_MAX);
   }
   if (
     !EMAIL_PATTERN.test(value.email) ||
     value.email.length < EMAIL_MIN ||
     value.email.length > EMAIL_MAX
   ) {
-    errors.email = 'Podaj poprawny adres e-mail';
+    errors.email = COPY.validation.emailInvalid;
   }
   if (value.street.length < STREET_MIN || value.street.length > STREET_MAX) {
-    errors.street = `Ulica musi mieć od ${STREET_MIN} do ${STREET_MAX} znaków`;
+    errors.street = COPY.validation.streetRange(STREET_MIN, STREET_MAX);
   }
   if (value.city.length < CITY_MIN || value.city.length > CITY_MAX) {
-    errors.city = `Miasto musi mieć od ${CITY_MIN} do ${CITY_MAX} znaków`;
+    errors.city = COPY.validation.cityRange(CITY_MIN, CITY_MAX);
   }
   if (value.zipCode.length !== ZIP_LENGTH || !ZIP_PATTERN.test(value.zipCode)) {
-    errors.zipCode = `Kod pocztowy musi mieć ${ZIP_LENGTH} znaków (cyfry, kropki, ukośniki, myślniki)`;
+    errors.zipCode = COPY.validation.zipCodeRule(ZIP_LENGTH);
   }
   if (isNipRequired(value.type)) {
     if (value.nip.length < NIP_MIN || value.nip.length > NIP_MAX || !NIP_PATTERN.test(value.nip)) {
-      errors.nip = `NIP jest wymagany dla firmy (${NIP_MIN}–${NIP_MAX} znaków, cyfry, kropki, ukośniki, myślniki)`;
+      errors.nip = COPY.validation.nipRequired(NIP_MIN, NIP_MAX);
     }
   } else if (value.nip !== '') {
-    errors.nip = 'NIP nie dotyczy osoby prywatnej';
+    errors.nip = COPY.validation.nipNotIndividual;
   }
 
   return errors;
@@ -240,25 +238,27 @@ const fieldForMessage = (message: string): keyof IClientFormValue | null => {
 /**
  * Turns the API's `422` message list into field errors (FR-026, acceptance criterion 3).
  *
- * The server answers `{message: string[]}` for a validation failure; each message is matched to
- * the field it names so the form shows it against that input. A message that names no field is
- * returned as `general` rather than dropped: an error the user cannot see is an error they
- * cannot act on. `general` joins them, so two unmatched messages are both shown.
+ * The server answers `{message: string[]}` for a validation failure; each message names the
+ * field it is about, so it is used to *locate* that field and the form shows its own Polish
+ * text against it. The server's English sentence is never rendered (NFR-005, T061): the API is
+ * English by convention, the UI is Polish, and the two are joined by the field, not the words.
+ * A message that names no field becomes the generic prompt, because an error the user cannot
+ * see is an error they cannot act on.
  */
 const mapServerErrors = (messages: readonly string[]): IClientWriteErrors => {
   const fields: TClientFieldErrors = {};
-  const general: string[] = [];
+  let unmatched = false;
 
   for (const message of messages) {
     const field = fieldForMessage(message);
     if (field === null) {
-      general.push(message);
+      unmatched = true;
     } else {
-      fields[field] = message;
+      fields[field] = COPY.errors.fieldInvalid;
     }
   }
 
-  return {fields, general: general.length > 0 ? general.join(' ') : null};
+  return {fields, general: unmatched ? COPY.errors.generic : null};
 };
 
 /** Shapes a client into the row the table renders. */
@@ -270,8 +270,8 @@ const toRow = (client: IClient): Record<string, unknown> => ({
   email: client.email,
   city: client.city,
   typeLabel: CLIENT_TYPE_LABELS[client.type],
-  nipLabel: client.nip ?? '—',
-  activeLabel: client.active !== false ? 'Aktywny' : 'Nieaktywny',
+  nipLabel: client.nip ?? COPY.common.dash,
+  activeLabel: client.active !== false ? COPY.clients.active.yes : COPY.clients.active.no,
   client,
 });
 
@@ -285,13 +285,12 @@ const toRow = (client: IClient): Record<string, unknown> => ({
  */
 const deleteFailureMessage = (error: unknown): string => {
   if (error instanceof HttpErrorResponse && error.status === 409) {
-    const body = error.error as {message?: unknown} | undefined;
-    if (typeof body?.message === 'string') {
-      return body.message;
-    }
-    return 'Nie można usunąć tego klienta, ponieważ odwołuje się do niego rezerwacja. Zamiast tego dezaktywuj klienta.';
+    // The `409` body carries the server's English reason, but the UI shows its own Polish
+    // text (NFR-005, T061): the status is what says "referenced by a booking", and the client
+    // must not render the API's sentence.
+    return COPY.clients.deleteConflict;
   }
-  return 'Nie udało się usunąć klienta. Spróbuj ponownie później.';
+  return COPY.clients.deleteFailure;
 };
 
 export {

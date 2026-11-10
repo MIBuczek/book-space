@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { COPY } from '@booking/copy';
 import { AuthService } from '../../core/auth.service';
 import { ButtonComponent, InputComponent } from '../../shared/ui';
 
@@ -23,26 +24,28 @@ const PASSWORD_MAX = 30;
  * form used 5–100; the server contract is narrower, and the client follows the contract so
  * it never sends a request the server will refuse.
  *
- * The failure message is the server's single "Invalid e-mail or password". The API does not
- * distinguish an unknown address from a wrong password (it answers one message for every
- * rejection), and the page must not invent a distinction the server refuses to make.
+ * The failure message is one string for every rejection. The API does not distinguish an
+ * unknown address from a wrong password (it answers one message for every rejection), and the
+ * page must not invent a distinction the server refuses to make. The text comes from the shared
+ * copy catalogue (NFR-005, T061): the API is English, so the UI maps the status to Polish copy
+ * rather than rendering the server's `message`.
  */
 @Component({
   selector: 'book-space-sign-in',
   imports: [ButtonComponent, InputComponent],
   template: `
     <section class="bs-page">
-      <h1>Sign in</h1>
+      <h1>{{ copy.title }}</h1>
       <form (submit)="submit($event)" novalidate>
         <book-space-input
-          label="E-mail"
+          [label]="copy.email"
           type="email"
           [value]="email()"
           [error]="emailError()"
           (valueChange)="onEmail($event)"
         />
         <book-space-input
-          label="Password"
+          [label]="copy.password"
           type="password"
           [value]="password()"
           [error]="passwordError()"
@@ -51,7 +54,7 @@ const PASSWORD_MAX = 30;
         @if (formError()) {
           <p class="bs-sign-in__error" role="alert">{{ formError() }}</p>
         }
-        <book-space-button type="submit" [disabled]="submitting()">Sign in</book-space-button>
+        <book-space-button type="submit" [disabled]="submitting()">{{ copy.submit }}</book-space-button>
       </form>
     </section>
   `,
@@ -73,6 +76,7 @@ const PASSWORD_MAX = 30;
   ],
 })
 export class SignInComponent {
+  readonly copy = COPY.signIn;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -91,23 +95,23 @@ export class SignInComponent {
 
   private validateEmail(value: string): string | null {
     if (value === '') {
-      return 'E-mail is required';
+      return COPY.validation.emailRequired;
     }
     if (!value.includes('@')) {
-      return 'E-mail must contain @';
+      return COPY.validation.emailAt;
     }
     if (value.length < EMAIL_MIN || value.length > EMAIL_MAX) {
-      return `E-mail must be ${EMAIL_MIN}–${EMAIL_MAX} characters`;
+      return COPY.validation.emailRange(EMAIL_MIN, EMAIL_MAX);
     }
     return null;
   }
 
   private validatePassword(value: string): string | null {
     if (value === '') {
-      return 'Password is required';
+      return COPY.validation.passwordRequired;
     }
     if (value.length < PASSWORD_MIN || value.length > PASSWORD_MAX) {
-      return `Password must be ${PASSWORD_MIN}–${PASSWORD_MAX} characters`;
+      return COPY.validation.passwordRange(PASSWORD_MIN, PASSWORD_MAX);
     }
     return null;
   }
@@ -136,8 +140,8 @@ export class SignInComponent {
         this.submitting.set(false);
         this.formError.set(
           error instanceof HttpErrorResponse && error.status === 401
-            ? 'Invalid e-mail or password'
-            : 'Sign-in failed. Please try again.'
+            ? COPY.signIn.invalid
+            : COPY.signIn.genericFailure
         );
       },
     });

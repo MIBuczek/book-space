@@ -2,6 +2,7 @@ import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
+import {COPY} from '@booking/copy';
 import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
 import {BookingsApi} from '../../../core/bookings.api';
 import {FacilitiesApi} from '../../../core/facilities.api';
@@ -71,75 +72,75 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
   ],
   template: `
     <section class="bs-page">
-      <h1>Lista rezerwacji</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-bookings__controls">
         <book-space-select
-          label="Miasto"
+          [label]="copy.city"
           [options]="cityOptions"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
         <book-space-select
-          label="Obiekt"
+          [label]="copy.facility"
           [options]="buildingOptions()"
           [value]="building()"
-          placeholder="Wybierz obiekt"
+          [placeholder]="copy.facilityPlaceholder"
           (valueChange)="onBuilding($event)"
         />
         <book-space-select
-          label="Okres"
+          [label]="copy.period"
           [options]="periodSelectOptions"
           [value]="period()"
           (valueChange)="onPeriod($event)"
         />
         <book-space-input
-          label="Wyszukaj rezerwację"
+          [label]="copy.search"
           [value]="search()"
           (valueChange)="onSearch($event)"
         />
         @if (canFilterUnapproved()) {
           <book-space-checkbox
-            label="Pokaż rezerwacje do zaakceptowania"
+            [label]="copy.unapproved"
             [checked]="unapprovedOnly()"
             (checkedChange)="onUnapprovedOnly($event)"
           />
         }
         <book-space-checkbox
-          label="Pokaż szczegóły rezerwacji"
+          [label]="copy.showDetails"
           [checked]="showDetails()"
           (checkedChange)="onShowDetails($event)"
         />
       </div>
 
       @if (building() === '') {
-        <p>Wybierz obiekt, aby zobaczyć rezerwacje.</p>
+        <p>{{ copy.chooseFacility }}</p>
       } @else if (bookingsResource.isLoading()) {
-        <p role="status">Wczytywanie rezerwacji…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (bookingsResource.status() === 'error') {
-        <p role="alert">Nie udało się wczytać rezerwacji.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else {
         <book-space-table
-          caption="Rezerwacje"
+          [caption]="copy.caption"
           [columns]="columns"
           [rows]="rows()"
           [expandAll]="showDetails()"
-          emptyMessage="Nie ma żadnej rezerwacji w bazie danych."
+          [emptyMessage]="copy.empty"
         >
           <ng-template #rowDetails let-row>
             <div class="bs-bookings__details">
-              <p><strong>Najemca:</strong> {{ row.personName }}</p>
-              <p><strong>Klub:</strong> {{ row.booking.personCompany || '—' }}</p>
-              <p><strong>Płatność:</strong> {{ row.booking.paymentMethod }}</p>
-              <p><strong>Wiadomość:</strong> {{ row.booking.comments || '—' }}</p>
+              <p><strong>{{ copy.details.tenant }}</strong> {{ row.personName }}</p>
+              <p><strong>{{ copy.details.club }}</strong> {{ row.booking.personCompany || common.dash }}</p>
+              <p><strong>{{ copy.details.payment }}</strong> {{ row.booking.paymentMethod }}</p>
+              <p><strong>{{ copy.details.message }}</strong> {{ row.booking.comments || common.dash }}</p>
               <table class="bs-slots">
                 <thead>
                   <tr>
-                    <th scope="col">Dzień</th>
-                    <th scope="col">Godziny</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Uczestnicy</th>
-                    <th scope="col">Akcje</th>
+                    <th scope="col">{{ copy.slotColumns.day }}</th>
+                    <th scope="col">{{ copy.slotColumns.hours }}</th>
+                    <th scope="col">{{ copy.slotColumns.status }}</th>
+                    <th scope="col">{{ copy.slotColumns.participants }}</th>
+                    <th scope="col">{{ copy.slotColumns.actions }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -148,22 +149,22 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
                       <td>{{ slot.dayLabel }}</td>
                       <td>{{ slot.hoursLabel }}</td>
                       <td>{{ slot.statusLabel }}</td>
-                      <td>{{ slot.participants ?? '—' }}</td>
+                      <td>{{ slot.participants ?? common.dash }}</td>
                       <td>
                         @if (slot.resolved) {
-                          <span>Slot rozliczony</span>
+                          <span>{{ copy.resolvedSlot }}</span>
                         } @else {
                           <book-space-button
                             variant="secondary"
                             (pressed)="openReschedule(row.booking, slot)"
                           >
-                            Przenieś
+                            {{ copy.reschedule }}
                           </book-space-button>
                           <book-space-button
                             variant="secondary"
                             (pressed)="openResolve(row.booking, slot)"
                           >
-                            Rozlicz
+                            {{ copy.resolve }}
                           </book-space-button>
                         }
                       </td>
@@ -180,19 +181,19 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
                 [variant]="row.accepted ? 'secondary' : 'primary'"
                 (pressed)="toggleApproval(row.booking)"
               >
-                {{ row.accepted ? 'Odwołaj' : 'Zatwierdź' }}
+                {{ row.accepted ? copy.unapprove : copy.approve }}
               </book-space-button>
             }
             @if (canArchiveBookings()) {
               <book-space-button variant="secondary" (pressed)="toggleArchive(row.booking)">
-                {{ row.archive ? 'Przywróć' : 'Archiwizuj' }}
+                {{ row.archive ? copy.unarchive : copy.archive }}
               </book-space-button>
             }
             <book-space-button variant="secondary" (pressed)="edit(row.booking)">
-              Edytuj
+              {{ common.edit }}
             </book-space-button>
             <book-space-button variant="danger" (pressed)="askDelete(row.booking)">
-              Usuń
+              {{ common.remove }}
             </book-space-button>
           </ng-template>
         </book-space-table>
@@ -204,7 +205,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
           (pageChange)="onPage($event)"
         />
         <book-space-select
-          label="Na stronę"
+          [label]="common.pageSize"
           [options]="pageSizeOptions"
           [value]="limitValue()"
           (valueChange)="onLimit($event)"
@@ -212,7 +213,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
 
         @if (canSeeConflicts()) {
           <p class="bs-bookings__conflicts" [class.bs-bookings__conflicts--active]="conflictCount() > 0">
-            Aktualna liczba konfliktów między rezerwacjami: {{ conflictCount() }}
+            {{ copy.conflicts(conflictCount()) }}
           </p>
         }
       }
@@ -221,111 +222,111 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         <section class="bs-bookings__warning" role="alert">
           <p>{{ warning }}</p>
           <book-space-button variant="primary" (pressed)="confirmApproval()">
-            Zatwierdź mimo konfliktu
+            {{ copy.approveAnyway }}
           </book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelApproval()">Anuluj</book-space-button>
+          <book-space-button variant="secondary" (pressed)="cancelApproval()">{{ common.cancel }}</book-space-button>
         </section>
       }
 
       <book-space-modal
         [open]="rescheduleTarget() !== null"
-        title="Przenieś slot"
+        [title]="copy.modals.reschedule"
         (closed)="cancelReschedule()"
       >
         @if (rescheduleTarget()) {
           <book-space-date-picker
-            label="Dzień"
+            [label]="copy.slotColumns.day"
             [value]="rescheduleDay()"
             (valueChange)="rescheduleDay.set($event)"
           />
           <book-space-select
-            label="Od"
+            [label]="copy.hours.from"
             [options]="startHourOptions"
             [value]="rescheduleStart()"
             (valueChange)="rescheduleStart.set($event)"
           />
           <book-space-select
-            label="Do"
+            [label]="copy.hours.to"
             [options]="endHourOptions"
             [value]="rescheduleEnd()"
             (valueChange)="rescheduleEnd.set($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmReschedule()">Zapisz</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelReschedule()">Anuluj</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmReschedule()">{{ common.save }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelReschedule()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="resolveTarget() !== null"
-        title="Rozlicz slot"
+        [title]="copy.modals.resolve"
         (closed)="cancelResolve()"
       >
         @if (resolveTarget()) {
           <book-space-select
-            label="Status"
+            [label]="copy.resolveFields.status"
             [options]="statusOptions"
             [value]="resolveStatus()"
             (valueChange)="onResolveStatus($event)"
           />
           <book-space-input
-            label="Uczestnicy"
+            [label]="copy.resolveFields.participants"
             type="number"
             [value]="resolveParticipants()"
             (valueChange)="onResolveParticipants($event)"
           />
           <book-space-input
-            label="Komentarz"
+            [label]="copy.resolveFields.comments"
             [value]="resolveComments()"
             (valueChange)="onResolveComments($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmResolve()">Zapisz</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelResolve()">Anuluj</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmResolve()">{{ common.save }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelResolve()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="editTarget() !== null"
-        title="Edytuj rezerwację"
+        [title]="copy.modals.edit"
         (closed)="cancelEdit()"
       >
         @if (editTarget()) {
           <book-space-input
-            label="Nazwa w kalendarzu"
+            [label]="copy.fields.nick"
             [value]="editNick()"
             (valueChange)="editNick.set($event)"
           />
           <book-space-input
-            label="Imię i nazwisko"
+            [label]="copy.fields.personName"
             [value]="editPersonName()"
             (valueChange)="editPersonName.set($event)"
           />
           <book-space-input
-            label="Telefon"
+            [label]="copy.fields.phone"
             [value]="editPhone()"
             (valueChange)="editPhone.set($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmEdit()">Zapisz</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">Anuluj</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmEdit()">{{ common.save }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deleteTarget() !== null"
-        title="Usuń rezerwację"
+        [title]="copy.modals.delete"
         role="alertdialog"
         (closed)="cancelDelete()"
       >
         @if (deleteTarget()) {
-          <p>Czy na pewno chcesz usunąć tą rezerwację?</p>
+          <p>{{ copy.deleteConfirm }}</p>
           <div class="bs-modal__actions">
-            <book-space-button variant="danger" (pressed)="confirmDelete()">Usuń</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelDelete()">Anuluj</book-space-button>
+            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ common.remove }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ common.cancel }}</book-space-button>
           </div>
         }
       </book-space-modal>
@@ -377,6 +378,8 @@ export class BookingsTableComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly session = inject(SessionStore);
 
+  readonly copy = COPY.bookings;
+  readonly common = COPY.common;
   readonly columns = BOOKING_COLUMNS;
   readonly cityOptions = CITY_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
@@ -556,9 +559,7 @@ export class BookingsTableComponent {
     const accepted = !booking.accepted;
     if (accepted && this.conflicts().includes(booking._id)) {
       this.pendingApprovalId.set(booking._id);
-      this.approvalWarning.set(
-        'Rezerwacja konfliktuje z innymi rezerwacjami. Czy chcesz ją zatwierdzić mimo to?'
-      );
+      this.approvalWarning.set(COPY.bookings.approveWarning);
       return;
     }
     this.sendApproval(booking._id, accepted, false);

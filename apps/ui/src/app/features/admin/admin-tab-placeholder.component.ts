@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core';
+import { COPY } from '@booking/copy';
 
 /**
  * A tab's placeholder body.
@@ -13,7 +14,7 @@ import { Component, input } from '@angular/core';
   template: `
     <section class="bs-page">
       <h1>{{ title() }}</h1>
-      <p>This section is being built (T036–T039).</p>
+      <p>{{ copy.placeholder.body }}</p>
     </section>
   `,
   styles: [
@@ -25,5 +26,6 @@ import { Component, input } from '@angular/core';
   ],
 })
 export class AdminTabPlaceholderComponent {
-  readonly title = input('Administration');
+  readonly copy = COPY.admin;
+  readonly title = input(COPY.admin.placeholder.title);
 }

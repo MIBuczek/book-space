@@ -1,5 +1,6 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
+import {COPY} from '@booking/copy';
 import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
 import {BookingsApi} from '../../core/bookings.api';
 import {FacilitiesApi} from '../../core/facilities.api';
@@ -21,10 +22,6 @@ import {
 
 const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
 
-/** The notice a public visitor sees (legacy `Calender.tsx`, verbatim). */
-const PUBLIC_NOTICE =
-  'W kalendarzu są widoczne tylko zatwierdzone przez administratora rezerwacje.';
-
 /**
  * The public calendar (FR-037, FR-038).
  *
@@ -43,29 +40,32 @@ const PUBLIC_NOTICE =
  * always has one. Staff see the same calendar with the tenant's name on each event — the
  * label rule is `eventLabel`, and the redaction is the API's, so the client cannot show what
  * it was not given.
+ *
+ * Every label, heading and notice comes from the shared copy catalogue (NFR-005, T061), so no
+ * Polish text is hardcoded in the template.
  */
 @Component({
   selector: 'book-space-public-calendar',
   imports: [SelectComponent, ButtonComponent],
   template: `
     <section class="bs-page">
-      <h1>Kalendarz rezerwacji obiektów</h1>
+      <h1>{{ copy.title }}</h1>
 
       <div class="bs-calendar__controls">
         <book-space-select
-          label="Miasto"
+          [label]="copy.city"
           [options]="cityOptions"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
         <book-space-select
-          label="Obiekt"
+          [label]="copy.facility"
           [options]="buildingOptions()"
           [value]="building()"
-          placeholder="Wybierz obiekt"
+          [placeholder]="copy.facilityPlaceholder"
           (valueChange)="onBuilding($event)"
         />
-        <div class="bs-calendar__views" role="group" aria-label="Widok">
+        <div class="bs-calendar__views" role="group" [attr.aria-label]="copy.viewAria">
           @for (option of views; track option.value) {
             <book-space-button
               [variant]="view() === option.value ? 'primary' : 'secondary'"
@@ -79,18 +79,18 @@ const PUBLIC_NOTICE =
       </div>
 
       <div class="bs-calendar__period">
-        <book-space-button variant="secondary" (pressed)="step(-1)">Poprzedni</book-space-button>
-        <book-space-button variant="secondary" (pressed)="today()">Dzisiaj</book-space-button>
-        <book-space-button variant="secondary" (pressed)="step(1)">Następny</book-space-button>
+        <book-space-button variant="secondary" (pressed)="step(-1)">{{ copy.previous }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="today()">{{ copy.today }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="step(1)">{{ copy.next }}</book-space-button>
         <span class="bs-calendar__title">{{ periodLabel() }}</span>
       </div>
 
       @if (building() === '') {
-        <p>Wybierz obiekt, aby zobaczyć kalendarz.</p>
+        <p>{{ copy.chooseFacility }}</p>
       } @else if (bookingsResource.isLoading()) {
-        <p role="status">Wczytywanie rezerwacji…</p>
+        <p role="status">{{ copy.loading }}</p>
       } @else if (bookingsResource.status() === 'error') {
-        <p role="alert">Nie udało się wczytać rezerwacji.</p>
+        <p role="alert">{{ copy.loadError }}</p>
       } @else if (view() === 'list' || view() === 'month') {
         <ul class="bs-calendar__list">
           @for (event of events(); track event.id) {
@@ -103,7 +103,7 @@ const PUBLIC_NOTICE =
               </button>
             </li>
           } @empty {
-            <li>Brak rezerwacji w wybranym okresie.</li>
+            <li>{{ copy.empty }}</li>
           }
         </ul>
       } @else {
@@ -139,33 +139,35 @@ const PUBLIC_NOTICE =
       }
 
       @if (!isStaff()) {
-        <p class="bs-calendar__notice">{{ publicNotice }}</p>
+        <p class="bs-calendar__notice">{{ copy.publicNotice }}</p>
       }
 
       @if (selected(); as event) {
-        <section class="bs-calendar__details" aria-label="Szczegóły rezerwacji">
-          <h2>Szczegóły rezerwacji</h2>
+        <section class="bs-calendar__details" [attr.aria-label]="copy.detailsAria">
+          <h2>{{ copy.detailsTitle }}</h2>
           <dl>
-            <dt>Nazwa</dt>
+            <dt>{{ copy.fields.name }}</dt>
             <dd>{{ event.title }}</dd>
-            <dt>Dzień</dt>
+            <dt>{{ copy.fields.day }}</dt>
             <dd>{{ event.day }}</dd>
-            <dt>Godziny</dt>
+            <dt>{{ copy.fields.hours }}</dt>
             <dd>{{ event.start }}–{{ event.end }}</dd>
-            <dt>Rozmiar</dt>
+            <dt>{{ copy.fields.size }}</dt>
             <dd>{{ event.size }}</dd>
-            <dt>Status</dt>
+            <dt>{{ copy.fields.status }}</dt>
             <dd>{{ statusText(event) }}</dd>
             @if (isStaff()) {
-              <dt>Klient</dt>
+              <dt>{{ copy.staffFields.client }}</dt>
               <dd>{{ event.booking.personName }}</dd>
-              <dt>E-mail</dt>
+              <dt>{{ copy.staffFields.email }}</dt>
               <dd>{{ event.booking.personEmail }}</dd>
-              <dt>Telefon</dt>
+              <dt>{{ copy.staffFields.phone }}</dt>
               <dd>{{ event.booking.personPhone }}</dd>
             }
           </dl>
-          <book-space-button variant="secondary" (pressed)="clearSelection()">Zamknij</book-space-button>
+          <book-space-button variant="secondary" (pressed)="clearSelection()">
+            {{ common.close }}
+          </book-space-button>
         </section>
       }
     </section>
@@ -250,14 +252,15 @@ export class PublicCalendarComponent {
   private readonly bookingsApi = inject(BookingsApi);
   private readonly session = inject(SessionStore);
 
+  readonly copy = COPY.calendar;
+  readonly common = COPY.common;
   readonly cityOptions = CITY_OPTIONS;
   readonly views: Array<{value: TCalendarView; label: string}> = [
-    {value: 'week', label: 'Tydzień'},
-    {value: 'day', label: 'Dzień'},
-    {value: 'list', label: 'Lista'},
-    {value: 'month', label: 'Miesiąc'},
+    {value: 'week', label: COPY.calendar.views.week},
+    {value: 'day', label: COPY.calendar.views.day},
+    {value: 'list', label: COPY.calendar.views.list},
+    {value: 'month', label: COPY.calendar.views.month},
   ];
-  readonly publicNotice = PUBLIC_NOTICE;
   readonly hours = gridHours();
 
   readonly city = signal<TCity>('siechnice');

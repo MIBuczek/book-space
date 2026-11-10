@@ -61,7 +61,7 @@ describe('TableComponent', () => {
     expect(Array.from(headers).map((h) => (h as HTMLElement).textContent?.trim())).toEqual([
       'Id',
       'Nick',
-      'Actions',
+      'Akcje',
     ]);
     expect(Array.from(cells).map((c) => (c as HTMLElement).textContent?.trim())).toEqual([
       '1',

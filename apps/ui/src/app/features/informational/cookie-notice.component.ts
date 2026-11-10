@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
+import { COPY } from '@booking/copy';
 import { CookieNoticeStore } from '../../core/cookie-notice.store';
-import { PRIVACY_POLICY_URL } from './contact-details';
 
 /**
  * The cookie notice (FR-039, FR-040, issue #44).
@@ -10,20 +10,21 @@ import { PRIVACY_POLICY_URL } from './contact-details';
  * `Cookies.tsx`, which was mounted once at the app root. The persistence lives in
  * `CookieNoticeStore`, which stores the acknowledgement as `'true'` rather than
  * the legacy `'false'`.
+ *
+ * The text comes from the shared copy catalogue (NFR-005, T061).
  */
 @Component({
   selector: 'book-space-cookie-notice',
   template: `
     @if (!cookies.acknowledged()) {
-      <aside class="bs-cookies" aria-label="Pliki cookies">
-        <h2 class="bs-cookies__header">Pliki Cookies</h2>
+      <aside class="bs-cookies" [attr.aria-label]="copy.ariaLabel">
+        <h2 class="bs-cookies__header">{{ copy.heading }}</h2>
         <p class="bs-cookies__text">
-          Serwis wykorzystuje pliki cookies. Korzystając ze strony wyrażasz zgodę na
-          wykorzystywanie plików cookies.
-          <a [href]="privacyUrl" target="_blank" rel="noopener">Dowiedz się więcej.</a>
+          {{ copy.text }}
+          <a [href]="privacyUrl" target="_blank" rel="noopener">{{ copy.learnMore }}</a>
         </p>
         <button type="button" class="bs-cookies__accept" (click)="cookies.acknowledge()">
-          Ok, rozumiem
+          {{ copy.accept }}
         </button>
       </aside>
     }
@@ -66,6 +67,7 @@ import { PRIVACY_POLICY_URL } from './contact-details';
   ],
 })
 export class CookieNoticeComponent {
+  readonly copy = COPY.cookieNotice;
   readonly cookies = inject(CookieNoticeStore);
-  readonly privacyUrl = PRIVACY_POLICY_URL;
+  readonly privacyUrl = COPY.contact.privacyPolicyUrl;
 }

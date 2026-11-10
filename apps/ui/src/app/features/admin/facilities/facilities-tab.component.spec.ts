@@ -252,7 +252,7 @@ describe('FacilitiesTabComponent', () => {
     expect(fixture.componentInstance.fieldErrors().recipient).toBe('Podaj poprawny adres e-mail');
   });
 
-  it('shows the server field messages for a 422', async () => {
+  it('shows a Polish prompt for a 422, not the server English field message (T061)', async () => {
     const fixture = await render();
 
     setText(fixture, 'Wiadomość', 'Dzień dobry');
@@ -264,8 +264,8 @@ describe('FacilitiesTabComponent', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.sendError()).toBe('recipient must be an email');
-    expect(element(fixture).textContent).toContain('recipient must be an email');
+    expect(fixture.componentInstance.sendError()).toBe('Popraw dane i spróbuj ponownie.');
+    expect(element(fixture).textContent).toContain('Popraw dane i spróbuj ponownie.');
   });
 
   it('shows a generic prompt for a 422 with no message list', async () => {
