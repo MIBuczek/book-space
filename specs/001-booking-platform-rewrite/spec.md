@@ -57,7 +57,7 @@ support for municipalities other than SISK, SMS notifications.
 | Public visitor (anonymous) | no account | Browse the calendar of **accepted** bookings, submit a booking request, send a contact message, read contact page |
 | Employee (`isEmployee`) | `isEmployee: true` | Everything a visitor can do, plus see all bookings for their facility, resolve booking status, edit requests |
 | Office (`isOffice`) | `isOffice: true` | Employee capabilities, plus the Clients, Facilities and Summary tabs |
-| Administrator (`isAdmin`) | `isAdmin: true` | All capabilities, plus approve/reject bookings, archive bookings, manage users, see the "show bookings awaiting approval" filter, see conflict counts |
+| Administrator (`isAdmin`) | `isAdmin: true` | All capabilities, plus approve/reject bookings, archive bookings, manage users (FR-045), see the "show bookings awaiting approval" filter, see conflict counts |
 
 Legacy derivation of rights (see `credentials-function.ts` in the source repo):
 
@@ -263,6 +263,39 @@ server failure; confirm the correct content and that the cookie notice is rememb
 
 ---
 
+### User Story 7 — Administrator manages staff accounts (Priority: P3)
+
+An administrator maintains the staff directory: creates accounts with a role and
+assignment, edits them, and deactivates accounts that should no longer sign in.
+
+**Why this priority**: the platform is usable for booking without it, but §8's "staff
+accounts are created by an administrator" is circular until this exists, and no
+account can be created at all without a first administrator.
+
+**Independent Test**: on a fresh database, run the documented bootstrap to create the
+first administrator, sign in, create an employee account through the UI, confirm the
+employee can sign in, then deactivate it and confirm sign-in is refused while the
+bookings it created remain readable.
+
+**Acceptance Scenarios**:
+
+1. **Given** a fresh database with no accounts, **When** the documented bootstrap is
+   run, **Then** an active administrator exists and can sign in.
+2. **Given** an authenticated administrator, **When** they open the Users tab,
+   **Then** the staff accounts are listed and a new account can be created with a role,
+   city and facility assignment.
+3. **Given** an authenticated employee or office user, **When** they call any `/users`
+   route, **Then** the API answers `403`.
+4. **Given** any `/users` response, **When** it is inspected, **Then** it contains no
+   password hash.
+5. **Given** an active account, **When** an administrator deactivates it, **Then** the
+   account can no longer sign in and the bookings it created remain readable.
+6. **Given** the only active administrator, **When** an administrator tries to
+   deactivate it or move it off the `ADMIN` role, **Then** the change is refused with
+   `409`.
+
+---
+
 ### Edge Cases
 
 - Booking spanning midnight or ending before it starts (legacy validation compares
@@ -417,6 +450,22 @@ server failure; confirm the correct content and that the cookie notice is rememb
 - **FR-044**: The system MUST audit creation and modification of bookings with user
   identity and timestamp.
 
+**Staff account management**
+
+- **FR-045**: The system MUST allow an administrator to list, create, read, update and
+  deactivate staff accounts, including each account's role (`ADMIN`, `OFFICE` or
+  `EMPLOYEE`), assigned city and assigned facility keys. Every route MUST be
+  administrator-only, enforced server-side (FR-003), and no response MUST ever
+  contain the password hash.
+- **FR-046**: The system MUST provide a documented, repeatable way to create the first
+  administrator in a fresh database, so an empty environment can reach a working
+  signed-in administrator without a hand-written database write.
+- **FR-047**: The system MUST deactivate rather than delete a staff account where
+  possible. A deactivated account MUST NOT be able to sign in, and bookings it created
+  MUST remain readable — the account reference on a booking is a value, not a foreign
+  key that removal cascades. The system MUST refuse any change that would leave no
+  active administrator.
+
 ### 6.2 Non-Functional Requirements
 
 - **NFR-001 (Security)**: No secrets in the client bundle. All credentials (database,
@@ -479,14 +528,18 @@ server failure; confirm the correct content and that the cookie notice is rememb
   built client assets.
 - **SC-008**: Automated test coverage is at least 80 % for the domain modules
   (bookings, conflicts, reports, authorisation).
+- **SC-009**: A fresh database reaches a working signed-in administrator through the
+  documented bootstrap procedure, with no hand-written database write (FR-046).
 
 ---
 
 ## 8. Assumptions
 
 - The four cities and their facilities listed in section 4 remain the operating scope.
-- Staff accounts continue to be created by an administrator; there is no public
-  registration.
+- Staff accounts are created by an administrator through the Users tab (FR-045); there
+  is no public registration. The first administrator is created out of band by the
+  documented bootstrap command (FR-046), because an empty database has no administrator
+  to create one.
 - The existing Firebase data set is the migration source and remains read-only after
   cut-over.
 - Payment is settled outside the application; the recorded payment method and discount

@@ -64,7 +64,21 @@ SEED_REFERENCE_DATA=true yarn nx serve server   # or set it in apps/server/.env
 
 Running it twice is safe: it matches on the key, so a second run leaves twelve documents
 rather than adding twelve more, and it completes a partially seeded database rather than
-skipping it. Then create one administrator account (T051).
+skipping it.
+
+Then create the first administrator, since a fresh database has no account and there is no
+public registration:
+
+```bash
+BOOTSTRAP_ADMIN_PASSWORD='<at least 6 characters>' \
+  yarn nx run bootstrap-admin:run -- --target "$DB_URI" --email admin@sisk.pl
+```
+
+The tool hashes the password through the users schema's `pre('save')` hook, the same path the
+API uses, so the stored value is a `bcrypt` hash. It exits `0` when an administrator now exists
+(including when one already did, reported as a refusal) and `1` on any other outcome. Sign in
+at `/sign-in`, then create further staff accounts from the Users tab (FR-045). See
+[README.md](../../README.md#create-the-first-administrator) for the full flag list.
 
 The four cities are a string enum, not a collection, so seeding the twelve facilities _is_
 seeding the four cities — there is no separate `/cities` resource.

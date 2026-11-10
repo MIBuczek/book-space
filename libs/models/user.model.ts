@@ -63,4 +63,48 @@ interface IAuthenticatedUser extends IUser {
   capabilities: IUserCapabilities;
 }
 
-export {USER_ROLES, TUserRole, IUser, IUserCapabilities, IAuthenticatedUser};
+/**
+ * The body for creating a staff account, mirroring the server's `UserDto` (FR-045).
+ *
+ * `recheckPassword` is part of the request and is never stored, which is why it is not on
+ * `IUser`: the request body and the stored document are deliberately different shapes.
+ */
+interface IUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  recheckPassword: string;
+  role: TUserRole;
+  city?: string;
+  buildings?: string[];
+  active?: boolean;
+}
+
+/**
+ * The body for updating a staff account, mirroring the server's `UpdateUserDto`.
+ *
+ * Every field is optional: a `PUT` carries only what changed. A blank `password` is omitted by
+ * the caller rather than sent empty, so the server leaves the stored hash alone.
+ */
+interface IUserUpdateRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  recheckPassword?: string;
+  role?: TUserRole;
+  city?: string;
+  buildings?: string[];
+  active?: boolean;
+}
+
+export {
+  USER_ROLES,
+  TUserRole,
+  IUser,
+  IUserCapabilities,
+  IAuthenticatedUser,
+  IUserRequest,
+  IUserUpdateRequest,
+};

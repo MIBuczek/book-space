@@ -28,6 +28,7 @@ export const ADMIN_TABS: readonly IAdminTab[] = [
   { path: 'clients', label: 'Clients', capability: 'canSeeClientsTab' },
   { path: 'facilities', label: 'Facilities', capability: 'canSeeFacilitiesTab' },
   { path: 'summary', label: 'Summary', capability: 'canSeeSummaryTab' },
+  { path: 'users', label: 'Users', capability: 'canManageUsers' },
 ];
 
 /**

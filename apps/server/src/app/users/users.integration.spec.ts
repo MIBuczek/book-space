@@ -267,4 +267,24 @@ describe('users routes are administrator-only', () => {
     expect(response.status).toBe(200);
     expect((await userModel.findOne({email: 'admin@example.com'}) as {firstName: string}).firstName).toBe('Grace');
   });
+
+  it('stops a deactivated account from signing in (FR-047)', async () => {
+    // The deactivation is a `PUT {active: false}`, which is the tab's removal action: the account
+    // can no longer sign in, and the records it created stay attributable. This is the acceptance
+    // case the whole rule exists for, so it is asserted end to end rather than on the service.
+    await seedUser('admin@example.com', 'ADMIN');
+    await seedUser('office@example.com', 'OFFICE');
+    const token = await signIn('admin@example.com');
+    const officeId = await idOf('office@example.com');
+
+    const deactivated = await patchUser(officeId, {active: false}, token);
+    expect(deactivated.status).toBe(200);
+
+    const signInAttempt = await fetch(`${ctx.baseUrl}/auth/sign-in`, {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({email: 'office@example.com', password: PASSWORD}),
+    });
+    expect(signInAttempt.status).toBe(401);
+  });
 });

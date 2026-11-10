@@ -87,6 +87,7 @@ describe('adminRoutes', () => {
       clients: 'ClientsTableComponent',
       facilities: 'FacilitiesTabComponent',
       summary: 'SummaryTabComponent',
+      users: 'UsersTableComponent',
     };
 
     for (const tab of ADMIN_TABS) {
