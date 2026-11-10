@@ -53,14 +53,14 @@ describe('AdminShellComponent', () => {
     expect(links).toEqual(['Calendar', 'Bookings']);
   });
 
-  it('renders all five tabs for an administrator', () => {
+  it('renders all six tabs for an administrator', () => {
     TestBed.inject(SessionStore).set('token-1', adminUser());
 
     const links = Array.from(
       (render().nativeElement as HTMLElement).querySelectorAll('.bs-admin__tabs a')
     ).map((a) => a.textContent?.trim());
 
-    expect(links).toEqual(['Calendar', 'Bookings', 'Clients', 'Facilities', 'Summary']);
+    expect(links).toEqual(['Calendar', 'Bookings', 'Clients', 'Facilities', 'Summary', 'Users']);
   });
 
   it('marks the active tab with aria-current, not only colour and weight (NFR-006)', async () => {

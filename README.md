@@ -106,7 +106,34 @@ SEED_REFERENCE_DATA=true yarn start:server
 
 Running it twice is safe: it matches on the key, so a second run leaves twelve documents
 rather than adding twelve more, and it completes a partially seeded database rather than
-skipping it. Then create one administrator account (T051).
+skipping it.
+
+### Create the first administrator
+
+A fresh database has no account, and there is no public registration, so nothing can sign in
+until one administrator exists. Create it with the `bootstrap-admin` tool, which writes the
+account directly to MongoDB and hashes the password through the users schema's `pre('save')`
+hook — the same path the API uses, so the stored value is a `bcrypt` hash:
+
+```bash
+BOOTSTRAP_ADMIN_PASSWORD='<at least 6 characters>' \
+  yarn nx run bootstrap-admin:run -- \
+    --target "$DB_URI" \
+    --email admin@sisk.pl \
+    --first-name Ada --last-name Sisk
+```
+
+`--target` is the MongoDB URI (the same value as `DB_URI`), `--email` is required, and the
+password comes from `BOOTSTRAP_ADMIN_PASSWORD` so it stays out of the shell history and the
+process listing; `--password` is accepted for a one-off local run but is not the documented
+path. `--first-name` and `--last-name` default to `Administrator` / `SISK`. The tool exits `0`
+when an administrator now exists — including when one already did, which it reports as a
+refusal so a re-run in a deployment script does not fail the pipeline — and `1` on any other
+outcome. Sign in at `/sign-in` with the address and password you supplied.
+
+After that, create further staff accounts from the administrator's Users tab (FR-045); the
+bootstrap is only for the first one, because an empty database has no administrator to create
+one (FR-046, §8).
 
 ## Run with Docker
 
@@ -140,14 +167,14 @@ loudly rather than stamping a wrong build number.
 
 ```bash
 yarn lint                                      # ESLint across every project (flat config)
-yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin --configuration=ci
 yarn build:all                                 # production build of every affected project
 yarn nx e2e server-e2e                         # API end-to-end tests
 yarn nx e2e ui-e2e                             # UI end-to-end tests (Cypress)
 ```
 
 Run the unit tests for a shared library on its own when you change it — `--projects=server,ui`
-does not include `date-time`, `booking-rules`, `reporting` or `version`, so a library change
+does not include `date-time`, `booking-rules`, `reporting`, `version` or the `tools/*` projects, so a change there
 would otherwise pass unnoticed:
 
 ```bash
@@ -210,6 +237,7 @@ default.
 | `libs/reporting`                     | Report and CSV vocabulary (`@booking/reporting`)              |
 | `libs/version`                       | The build number and application version (`@booking/version`) |
 | `tools/migration`                    | The one-off Firebase → MongoDB migration tool                 |
+| `tools/bootstrap-admin`              | Creates the first administrator in a fresh database (FR-046)  |
 | `specs/001-booking-platform-rewrite` | Specification, plan and task backlog for the rewrite          |
 | `specs/002-dependency-modernization` | Specification and plan for the toolchain upgrade              |
 

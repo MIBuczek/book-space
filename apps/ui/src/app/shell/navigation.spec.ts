@@ -26,14 +26,19 @@ describe('visibleAdminTabs', () => {
     ]);
   });
 
-  it('shows an administrator all five tabs', () => {
+  it('shows an administrator all six tabs, including Users', () => {
     expect(labels(adminUser().capabilities)).toEqual([
       'Calendar',
       'Bookings',
       'Clients',
       'Facilities',
       'Summary',
+      'Users',
     ]);
+  });
+
+  it('shows office the tabs but not Users, which is administrator-only (FR-045)', () => {
+    expect(labels(officeUser().capabilities)).not.toContain('Users');
   });
 
   it('drops Summary for a deny-listed office account but keeps the other tabs', () => {
@@ -59,6 +64,7 @@ describe('visibleAdminTabs', () => {
       'clients',
       'facilities',
       'summary',
+      'users',
     ]);
   });
 });

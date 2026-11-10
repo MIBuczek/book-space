@@ -1024,6 +1024,32 @@ Three things that are easy to get wrong:
   range is refused with an explicit message (`rangeError`), so the two pickers are independent.
   The spec pins both halves: changing the start month leaves `toMonth` untouched, and a start
   after the end shows the message and keeps "Generuj podsumowanie" disabled.
+- **The Users tab separates pure logic from the component (T051).**
+  `features/admin/users/users-table.ts` holds validation, `buildCreateRequest`/`buildUpdateRequest`,
+  the server-message-to-field map and row shaping; `users-table.component.ts` is the signal wiring.
+  The two request builders are split rather than one `buildUserRequest(form, editing)`: the create
+  body and the update body are different shapes (create always carries the password pair, update
+  omits it when the field is blank so the stored hash survives), and a single boolean parameter
+  made the call site read as `buildUserRequest(form, true)` — the flag's meaning was not visible
+  where it was passed. The service wraps the five routes and types the two bodies separately with
+  `IUserRequest`/`IUserUpdateRequest` from `libs/models`, which is what removes the `as never` cast
+  a single merged builder forced on the `create` call.
+- **A server error message names its field in prose, so mapping it needs a token list, not a key
+  match.** `mapServerErrors` turns the API's `422` `message: string[]` into field errors by looking
+  for a field token in each message, longest/most specific first (`recheck`/`confirm`/`not match`
+  before `password`, or a confirmation message lands on the password field). The server spells the
+  field `E-mail`, so hyphens are stripped before the match or the `email` token misses and the
+  message falls through to the general error. A message that names no field (`Role must be one
+  of…`) becomes the general error, joined; a `422` whose body carries no array, and a non-`422`
+  failure, both fall back to a fixed message.
+- **The bootstrap tool is a `tools/` project and CI must name it, like `migration`.** `nx run
+  bootstrap-admin:run` is the documented first-administrator path (FR-046); the password comes from
+  `BOOTSTRAP_ADMIN_PASSWORD` so it stays out of the shell history, and the tool hashes through the
+  users schema's `pre('save')` hook so the stored value is a `bcrypt` hash — the same path the API
+  uses, not a second hashing implementation. `run-many --projects=server,ui,...` does not include
+  it, so `.github/workflows/ci.yml`'s unit-test and coverage-report steps name it explicitly or its
+  coverage never reaches the gate (the same trap `migration`, `date-time`, `booking-rules`,
+  `reporting` and `version` document).
 
 ## Logging
 
