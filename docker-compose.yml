@@ -1,31 +1,49 @@
-version: '1'
+# The full stack: MongoDB, the API and the nginx-served UI.
+#
+# `docker compose up --build` starts all three. The UI is on http://localhost:4200
+# and proxies `/api` to the API container, so the browser only ever talks to one
+# origin. The API reads DB_URI and JWT_SECRET from the environment; override them
+# for anything but a local run.
 
 services:
-  # Angular App
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # Not published: only the API needs to reach it, and leaving the port
+    # unexposed keeps a local database off the host network.
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      DB_URI: mongodb://mongo:27017/book_space
+      # Override in a real deployment. At least 32 characters, as the server
+      # validates at boot.
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-value-at-least-32-chars}
+      PORT: '3000'
+      # Seed the twelve reference facilities on first start. Off by default; the
+      # seed is authoritative and overwrites an administrator's facility edits.
+      SEED_REFERENCE_DATA: ${SEED_REFERENCE_DATA:-false}
+    ports:
+      - '3000:3000'
+
   ui:
     build:
       context: .
-      dockerfile: ./apps/ui/Dockerfile
-    ports:
-      - '4200:4200'
+      dockerfile: apps/ui/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
     environment:
-      - 'DEV_PLATFORM=DOCKER'
-    volumes:
-      - '/app/node_modules'
-      - '.:/app'
-
-  # Express App
-  service:
-    build:
-      context: .
-      dockerfile: ./apps/server/Dockerfile
+      API_UPSTREAM: http://server:3000
     ports:
-      - '3000:3000'
-    environment:
-      - 'DEV_PLATFORM=DOCKER'
-    volumes:
-      - './:/app'
-      - 'mono-node-modules:/app/node_modules'
+      - '4200:80'
 
 volumes:
-  mono-node-modules: null
+  mongo-data: null
