@@ -56,7 +56,7 @@ describe('US3 — an administrator approves, resolves and archives a booking', (
       cy.contains('button', 'Rozlicz').click();
     });
 
-    cy.contains('.bs-bookings__resolve', 'Rozlicz slot').should('exist');
+    cy.contains('dialog[open]', 'Rozlicz slot').should('exist');
     cy.selectByLabel('Status', 'DONE');
     cy.typeByLabel('Uczestnicy', '12');
     bookings.saveResolve().click();
