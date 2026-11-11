@@ -264,7 +264,7 @@ frontend, proxy, VNet, private endpoint, API, private database — in one reques
 |-----|---------|-------|
 | server | `DB_URI` | the DocumentDB connection string (`mongodb+srv://…mongocluster.cosmos.azure.com/…`) |
 | server | `JWT_SECRET` | ≥ 32 chars |
-| server | `SEED_REFERENCE_DATA`, `SUMMARY_DENY_LIST`, `MAIL_*`, `TENANT_*` (see `004`), `PUBLIC_RATE_LIMIT*`, `NOTIFICATION_QUOTA*` | optional |
+| server | `SEED_REFERENCE_DATA`, `SUMMARY_DENY_LIST`, `MAIL_*`, `SISK_CONTACT_EMAIL`, `PUBLIC_RATE_LIMIT*`, `NOTIFICATION_QUOTA*` | unchanged, optional |
 | ui | `API_UPSTREAM` | the API origin nginx proxies `/api/` to (the backend's private host name) |
 
 On App Service these are **app settings**; credentials are **Key Vault references** where a vault

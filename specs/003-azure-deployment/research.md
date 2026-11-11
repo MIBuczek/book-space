@@ -167,9 +167,9 @@ the backend's private host name (the proxy is internal to the frontend).
 
 **Decision**: the region is a Bicep parameter, default **Poland Central**, not a hard-coded value.
 
-**Evidence (repository fact)**: the platform serves a **Polish municipality**, and the data is
-personal data (booking records). Deploying the compute and the database in a Polish region keeps
-the data in the EU and near the users — the FAQ also notes "Network distance
+**Evidence (repository fact)**: the platform serves SISK, a municipality in **Siechnice, Poland**,
+and the data is personal data (booking records). Deploying the compute and the database in a
+Polish region keeps the data in the EU and near the users — the FAQ also notes "Network distance
 between your application and the cluster affects latency. Deploy your Azure DocumentDB cluster in
 the same region as your application."
 
