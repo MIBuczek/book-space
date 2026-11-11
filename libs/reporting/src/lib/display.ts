@@ -18,9 +18,13 @@ import {ISelectedExtraOption} from '@models/selected-extra-option.model';
 /**
  * The Polish display labels for the values a report prints.
  *
- * Two deliberate differences from the legacy map: the legacy `QUIT` status becomes
- * `Rezygnacja` (the target vocabulary renames it `CANCELED`, CHK014) and the legacy `CARD`
- * payment is absent because the target enum drops it (CHK015).
+ * The status labels are the *legacy* `transformValue` wording, which the target adopts for the
+ * UI as well (CHK014, issue #55): the legacy dropdown labelled `QUIT` "Odwołana" while the app's
+ * own table, summary and CSV called it "Rezygnacja", so the rewrite keeps the report's wording
+ * and makes the screen agree with it rather than the reverse. A guard in the UI
+ * (`bookings-table.spec.ts`) asserts each screen label equals `displayValue(status)`, so the two
+ * maps cannot drift apart again. The legacy `CARD` payment is absent because the target enum
+ * drops it (CHK015).
  */
 const REPORT_VALUE_LABELS: Record<string, string> = {
   // Slot statuses (legacy `BOOKING_STATUS`, target `BOOKING_STATUSES`).

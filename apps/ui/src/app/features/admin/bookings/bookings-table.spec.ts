@@ -1,3 +1,4 @@
+import {displayValue} from '@booking/reporting';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime} from '@models/booked-time.model';
 import {
@@ -261,11 +262,24 @@ describe('constants', () => {
     expect(END_HOURS).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
   });
 
-  it('labels every slot status', () => {
+  it('labels every slot status with the report vocabulary', () => {
+    // The same labels the CSV and the printable report print (CHK014, #55): the screen and the
+    // report must not disagree on a status, which is the defect the legacy app had.
     expect(STATUS_LABELS).toEqual({
-      INITIAL: 'Początkowa',
+      INITIAL: 'Nie rozpoczęta',
       DONE: 'Zakończona',
-      CANCELED: 'Anulowana',
+      CANCELED: 'Rezygnacja',
     });
+  });
+
+  it('labels each status exactly as the CSV and the printable report do', () => {
+    // The two maps live in different libraries on purpose (the UI copy is translatable, the
+    // report vocabulary is the legacy Polish a business artefact prints), so nothing but this
+    // assertion stops them drifting apart — which is what let the legacy dropdown say
+    // "Odwołana" while its own CSV said "Rezygnacja" (issue #55). The report side is read
+    // through `displayValue`, the function the CSV and the report both render with.
+    for (const status of Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>) {
+      expect(STATUS_LABELS[status]).toBe(displayValue(status));
+    }
   });
 });

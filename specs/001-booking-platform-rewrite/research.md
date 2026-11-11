@@ -410,7 +410,11 @@ is duplicated or contradictory. These are recorded so the rewrite does not repro
 **Inconsistencies to resolve during the rewrite**:
 - `BOOKING_STATUS.QUIT` renders as "Rezygnacja" (`transformValue`) while
   `BOOKING_STATUS_OPTIONS` labels the same value "Odwołana"; the target model uses
-  `CANCELED` and one label.
+  `CANCELED` and one label. **Resolved (issue #55, CHK014):** the target adopts the
+  `transformValue` wording for all three statuses (`INITIAL` "Nie rozpoczęta", `DONE`
+  "Zakończona", `CANCELED` "Rezygnacja"), used by the UI, the CSV and the printable report
+  alike; `data-model.md` § "Slot status vocabulary" records the decision and a spec pins the
+  UI and report maps together.
 - The status enum in the new API is `INITIAL | DONE | CANCELED`; the legacy values are
   `INITIAL | DONE | QUIT`.
 - `RECORDS_BOOKINGS_ROW` includes `accepted` in the row, so the boolean renders through

@@ -177,7 +177,7 @@ one and confirm it disappears from default lists and reports.
 3. **Given** an approved booking, **When** an administrator archives it, **Then** it
    is excluded from lists, the calendar and reports, but is retained in storage.
 4. **Given** an approved booking, **When** a staff member resolves a single time
-   slot with a status, **Then** the status is one of `INITIAL`, `DONE`, `QUIT`,
+   slot with a status, **Then** the status is one of `INITIAL`, `DONE`, `CANCELED`,
    participants and comments are stored on that slot only.
 5. **Given** a resolved (non-`INITIAL`) time slot, **When** a staff member tries to
    edit or delete that slot, **Then** the action is blocked with an explanatory message.
@@ -302,7 +302,7 @@ bookings it created remain readable.
   start and end and rejects `start - end > 50 ms`).
 - Cyclical booking: a weekly repeat between a start and end day; the legacy
   generator rounds the week count and can produce an off-by-one extra occurrence.
-- A booking with several time slots where only some are resolved (`DONE`/`QUIT`):
+- A booking with several time slots where only some are resolved (`DONE`/`CANCELED`):
   resolved slots must survive re-generation of the slot list, unresolved ones are
   replaced.
 - A booking whose own slots overlap (e.g. same day, 13:00–15:00 and 14:00–16:00): the
@@ -383,7 +383,7 @@ bookings it created remain readable.
 - **FR-013**: The system MUST support a cyclical booking option that expands a weekly
   repeat between two dates into individual time slots.
 - **FR-014**: The system MUST persist bookings with a lifecycle: unapproved request →
-  approved → archived, and each slot additionally carries `INITIAL`/`DONE`/`QUIT`.
+  approved → archived, and each slot additionally carries `INITIAL`/`DONE`/`CANCELED`.
 - **FR-015**: The system MUST detect and report time conflicts between unapproved
   bookings on the same facility and month, and MUST warn an administrator before an
   approval that would keep a conflict.
