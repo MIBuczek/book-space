@@ -1321,6 +1321,12 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   rather than a number that changes with every merge. The generated file is under
   `/libs/version/generated/` in `.gitignore`; committing it would make the stamp a merge
   conflict on every branch.
+- **The root `package.json` version is not the product version.** It is `1.0.0`, matching
+  `VERSION_BASE` in `libs/version/src/lib/version.ts`, so the two do not read as contradictory.
+  Nothing consumes it — the workspace is `private`, there is no `nx release` config, and no tool
+  or Dockerfile reads `$npm_package_version` — so it is a display value only. The version the app
+  actually reports (`1.0.0+<count>`) is derived from `VERSION_BASE` and the git commit count, and
+  `package.json` is not wired into that. If the base ever moves, move both by hand.
 - **`git rev-list --count HEAD` needs full history.** CI already checks out with
   `fetch-depth: 0` (Nx needs the merge base anyway), but a shallow clone would stamp a count
   from the truncated history — a wrong number rather than an error. `--unshallow` before
