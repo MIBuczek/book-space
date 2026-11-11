@@ -26,17 +26,28 @@
 interface INotificationTemplate {
   /** The stable name the code selects on. */
   id: TTemplateId;
-  /** The EmailJS template this was ported from (`email-service-data.ts`). */
-  legacyTemplateId: string;
+  /**
+   * The EmailJS template this was ported from (`email-service-data.ts`). Absent for the two
+   * applicant templates, which the legacy app never sent — they are new (T062), so there is no
+   * id to trace the wording back to.
+   */
+  legacyTemplateId?: string;
   /** The audience the recipient resolves from. */
-  recipient: 'FACILITY' | 'STAFF' | 'CONTACT' | 'EMPLOYEE';
+  recipient: 'FACILITY' | 'STAFF' | 'APPLICANT' | 'CONTACT' | 'EMPLOYEE';
   /** The subject line, with the same placeholder syntax as the body. */
   subject: string;
   /** The body. */
   body: string;
 }
 
-const TEMPLATE_IDS = ['booking-facility', 'booking-staff', 'contact-message', 'employee-message'] as const;
+const TEMPLATE_IDS = [
+  'booking-facility',
+  'booking-staff',
+  'booking-approved',
+  'booking-rejected',
+  'contact-message',
+  'employee-message',
+] as const;
 type TTemplateId = (typeof TEMPLATE_IDS)[number];
 
 /**
@@ -88,6 +99,50 @@ const NOTIFICATION_TEMPLATES: Record<TTemplateId, INotificationTemplate> = {
       '\n',
       '{{parsedBookingTime}}\n',
       '{{#message}}\nWiadomość: {{message}}\n{{/message}}',
+    ].join(''),
+  },
+  'booking-approved': {
+    id: 'booking-approved',
+    recipient: 'APPLICANT',
+    subject: 'Rezerwacja zatwierdzona: {{building}} ({{city}})',
+    body: [
+      'Witam,\n',
+      '\n',
+      'Twoja prośba o rezerwację została zatwierdzona.\n',
+      '\n',
+      'Obiekt: {{building}}\n',
+      'Miejscowość: {{city}}\n',
+      'Płatność: {{payment}}\n',
+      'Osoba: {{person}}\n',
+      '{{#club}}Firma: {{club}}\n{{/club}}',
+      '\n',
+      '{{parsedBookingTime}}\n',
+      '{{#message}}\nWiadomość: {{message}}\n{{/message}}',
+      '\n',
+      'Pozdrawiamy,\n',
+      'SISK Siechnice\n',
+    ].join(''),
+  },
+  'booking-rejected': {
+    id: 'booking-rejected',
+    recipient: 'APPLICANT',
+    subject: 'Rezerwacja odrzucona: {{building}} ({{city}})',
+    body: [
+      'Witam,\n',
+      '\n',
+      'Twoja prośba o rezerwację została odrzucona.\n',
+      '\n',
+      'Obiekt: {{building}}\n',
+      'Miejscowość: {{city}}\n',
+      'Płatność: {{payment}}\n',
+      'Osoba: {{person}}\n',
+      '{{#club}}Firma: {{club}}\n{{/club}}',
+      '\n',
+      '{{parsedBookingTime}}\n',
+      '{{#message}}\nWiadomość: {{message}}\n{{/message}}',
+      '\n',
+      'Pozdrawiamy,\n',
+      'SISK Siechnice\n',
     ].join(''),
   },
   'contact-message': {

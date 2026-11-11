@@ -179,6 +179,49 @@ describe('notifications over HTTP', () => {
       expect(response.status).toBe(422);
     });
 
+    it('sends the approval decision to the applicant for an administrator (FR-052)', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const bookingId = await createBooking({accepted: true});
+
+      const response = await post('/notifications/booking', {bookingId, audience: 'APPLICANT'}, token);
+
+      expect(response.status).toBe(202);
+      expect(sent).toHaveLength(1);
+      expect(sent[0].to).toBe('klub@example.com');
+      expect(String(sent[0].subject)).toContain('zatwierdzona');
+    });
+
+    it('sends the rejection decision to the applicant for an administrator (FR-052)', async () => {
+      const token = await signIn('admin@example.com', 'ADMIN');
+      const bookingId = await createBooking({accepted: false});
+
+      const response = await post('/notifications/booking', {bookingId, audience: 'APPLICANT'}, token);
+
+      expect(response.status).toBe(202);
+      expect(sent[0].to).toBe('klub@example.com');
+      expect(String(sent[0].subject)).toContain('odrzucona');
+    });
+
+    it('refuses the applicant audience for an office user (FR-052)', async () => {
+      const token = await signIn('office@example.com', 'OFFICE');
+      const bookingId = await createBooking({accepted: true});
+
+      const response = await post('/notifications/booking', {bookingId, audience: 'APPLICANT'}, token);
+
+      expect(response.status).toBe(403);
+      expect(sent).toHaveLength(0);
+    });
+
+    it('refuses the applicant audience for an employee (FR-052)', async () => {
+      const token = await signIn('employee@example.com', 'EMPLOYEE');
+      const bookingId = await createBooking({accepted: true});
+
+      const response = await post('/notifications/booking', {bookingId, audience: 'APPLICANT'}, token);
+
+      expect(response.status).toBe(403);
+      expect(sent).toHaveLength(0);
+    });
+
     it('answers 404 for an unknown booking', async () => {
       const token = await signIn('office@example.com', 'OFFICE');
       const response = await post('/notifications/booking', {bookingId: '507f1f77bcf86cd799439011', audience: 'STAFF'}, token);

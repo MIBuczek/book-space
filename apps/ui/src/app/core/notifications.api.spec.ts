@@ -35,4 +35,19 @@ describe('NotificationsApi', () => {
 
     expect(received).toEqual({status: 'sent'});
   });
+
+  it('posts the applicant decision notification to the booking route (FR-052)', () => {
+    let received: unknown;
+
+    api.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'}).subscribe((value) => (received = value));
+
+    const request = httpMock.expectOne('/api/notifications/booking');
+    expect(request.request.method).toBe('POST');
+    // Only the booking and the audience travel: the recipient and the approved/rejected
+    // wording are resolved server-side, so the UI cannot name an address or a decision.
+    expect(request.request.body).toEqual({bookingId: 'b1', audience: 'APPLICANT'});
+    request.flush({status: 'sent'});
+
+    expect(received).toEqual({status: 'sent'});
+  });
 });

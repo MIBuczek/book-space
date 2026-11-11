@@ -3,15 +3,21 @@ import {optionalVariables, renderTemplate, requiredVariables} from './render';
 import {bookingVariables} from '../mail/booking-email';
 
 /**
- * The four templates are the contract (contracts/notification-templates.md): the variable set
- * is what the legacy `email-services.ts` built, and the recipient is what the legacy dispatch
+ * The templates are the contract (contracts/notification-templates.md): the variable set is
+ * what the legacy `email-services.ts` built, and the recipient is what the legacy dispatch
  * resolved. These tests pin the contract rather than the wording, so a re-worded body passes
  * and a dropped variable does not.
+ *
+ * The four legacy templates are joined by two applicant templates (T062), which the legacy app
+ * never sent — they carry no `legacyTemplateId`, because there is no EmailJS id to trace the
+ * wording back to.
  */
 describe('notification templates', () => {
-  it('declares exactly the four legacy templates', () => {
+  it('declares the four legacy templates and the two applicant templates', () => {
     expect([...TEMPLATE_IDS].sort()).toEqual([
+      'booking-approved',
       'booking-facility',
+      'booking-rejected',
       'booking-staff',
       'contact-message',
       'employee-message',
@@ -25,9 +31,16 @@ describe('notification templates', () => {
     expect(NOTIFICATION_TEMPLATES['employee-message'].legacyTemplateId).toBe('template_izso2cm');
   });
 
+  it('gives the applicant templates no legacy id, because the legacy app never sent them', () => {
+    expect(NOTIFICATION_TEMPLATES['booking-approved'].legacyTemplateId).toBeUndefined();
+    expect(NOTIFICATION_TEMPLATES['booking-rejected'].legacyTemplateId).toBeUndefined();
+  });
+
   it('documents the recipient each template resolves to', () => {
     expect(NOTIFICATION_TEMPLATES['booking-facility'].recipient).toBe('FACILITY');
     expect(NOTIFICATION_TEMPLATES['booking-staff'].recipient).toBe('STAFF');
+    expect(NOTIFICATION_TEMPLATES['booking-approved'].recipient).toBe('APPLICANT');
+    expect(NOTIFICATION_TEMPLATES['booking-rejected'].recipient).toBe('APPLICANT');
     expect(NOTIFICATION_TEMPLATES['contact-message'].recipient).toBe('CONTACT');
     expect(NOTIFICATION_TEMPLATES['employee-message'].recipient).toBe('EMPLOYEE');
   });
@@ -41,6 +54,23 @@ describe('notification templates', () => {
     expect(NOTIFICATION_TEMPLATES['booking-facility'].subject).not.toBe(
       NOTIFICATION_TEMPLATES['booking-staff'].subject
     );
+  });
+
+  it('gives the two applicant variants distinct subject lines', () => {
+    expect(NOTIFICATION_TEMPLATES['booking-approved'].subject).not.toBe(
+      NOTIFICATION_TEMPLATES['booking-rejected'].subject
+    );
+  });
+
+  it('does not carry the facility-only variables on the applicant templates', () => {
+    // The applicant is the requestor, not the facility, so the facility's own address and the
+    // "who asked" framing do not belong in the decision e-mail.
+    for (const templateId of ['booking-approved', 'booking-rejected'] as const) {
+      const declared = requiredVariables(NOTIFICATION_TEMPLATES[templateId]);
+      expect(declared).not.toContain('buildingEmail');
+      expect(declared).not.toContain('email');
+      expect(declared).not.toContain('phone');
+    }
   });
 });
 
@@ -70,19 +100,22 @@ describe('every declared variable is populated for a complete booking', () => {
     ],
   };
 
-  it.each(['booking-facility', 'booking-staff'] as const)('%s', (templateId) => {
-    const template = NOTIFICATION_TEMPLATES[templateId];
-    const variables = bookingVariables(completeBooking, 'facility@example.com');
+  it.each(['booking-facility', 'booking-staff', 'booking-approved', 'booking-rejected'] as const)(
+    '%s',
+    (templateId) => {
+      const template = NOTIFICATION_TEMPLATES[templateId];
+      const variables = bookingVariables(completeBooking, 'facility@example.com');
 
-    for (const name of requiredVariables(template)) {
-      expect(variables[name]).toBeDefined();
-      expect(variables[name]).not.toBe('');
+      for (const name of requiredVariables(template)) {
+        expect(variables[name]).toBeDefined();
+        expect(variables[name]).not.toBe('');
+      }
+
+      const {subject, text} = renderTemplate(template, variables);
+      expect(subject).not.toContain('{{');
+      expect(text).not.toContain('{{');
     }
-
-    const {subject, text} = renderTemplate(template, variables);
-    expect(subject).not.toContain('{{');
-    expect(text).not.toContain('{{');
-  });
+  );
 
   it.each(['contact-message', 'employee-message'] as const)('%s', (templateId) => {
     const template = NOTIFICATION_TEMPLATES[templateId];

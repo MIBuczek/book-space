@@ -1351,6 +1351,20 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   audience receives, which is what the task exists to prevent. Do not rename a placeholder in a
   template without the builder; `templates.spec.ts` asserts every declared variable is
   populated for a complete booking.
+- **The applicant decision notification is a third audience, and it is operator-triggered
+  (T062, FR-052).** `POST /notifications/booking` takes `audience`; `FACILITY` and `STAFF` are
+  the legacy notifications and `APPLICANT` (added by T062) tells the requestor their booking was
+  approved or rejected. It is *not* an automatic side effect of `POST /bookings/{_id}/approve`
+  — open question 5 was answered "an administrator may notify", so the send is an explicit
+  action and `BookingsModule` does not depend on `NotificationModule`. Two things make it safe:
+  the recipient is the booking's own stored `personEmail` (never the request body), and the
+  template (`booking-approved` / `booking-rejected`) is selected from the booking's **stored**
+  `accepted` flag — so the e-mail and the record cannot disagree. The `APPLICANT` audience is
+  administrator-only, enforced in the controller (it needs the authenticated role, which the
+  body cannot be trusted to name) the way `BookingController.getAllBookings` narrows `all`; the
+  UI gate is `canApproveBookings`, so the button and the route agree. The two applicant
+  templates carry no `legacyTemplateId` — the legacy app never sent them — and deliberately omit
+  the facility variant's `buildingEmail` and the requestor's own `email`/`phone`.
 
 ## Abuse protection (T057)
 

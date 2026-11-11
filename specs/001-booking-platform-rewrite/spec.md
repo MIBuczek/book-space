@@ -503,6 +503,13 @@ bookings it created remain readable.
   allow-listed against a facility's stored contact address, and only an authenticated
   staff caller MAY name one — a public caller that supplies a `recipient` is refused with
   `403`, and a staff caller whose address matches no facility is refused with `422`.
+- **FR-052**: The system MUST allow an administrator to notify the applicant when their
+  booking request is approved or rejected. The notification goes to the booking's own
+  stored applicant address, never to an address supplied in the request, and the message
+  is selected from the booking's stored decision — so the e-mail and the record cannot
+  disagree. Sending is an explicit administrator action (the `APPLICANT` audience of
+  `POST /notifications/booking`), not an automatic side effect of the approve/reject
+  write, so an operator decides when the requestor is contacted.
 
 ### 6.2 Non-Functional Requirements
 
@@ -603,8 +610,14 @@ bookings it created remain readable.
    required, and should it be a general configuration instead of a hardcoded account?
 4. **[NEEDS CLARIFICATION]** Should rejected bookings be deleted or retained with a
    rejection status for audit?
-5. **[NEEDS CLARIFICATION]** Is a notification required for the applicant when a
-   request is approved or rejected?
+5. **[RESOLVED — T062]** Is a notification required for the applicant when a request is
+   approved or rejected? **Yes.** An administrator may notify the requestor when their
+   request is approved or rejected, through the `APPLICANT` audience of
+   `POST /notifications/booking` (FR-052). It is an explicit operator action rather than an
+   automatic side effect of the approve/reject write, so the operator decides when the
+   applicant is contacted. The recipient is the booking's stored `personEmail` and the
+   message (`booking-approved` / `booking-rejected`) is selected from the booking's stored
+   decision, so the e-mail cannot claim a decision the record does not carry.
 6. **[NEEDS CLARIFICATION]** Which e-mail provider replaces EmailJS, and who owns the
    sending domain?
 7. **[RESOLVED — T060]** What is the retention policy for archived bookings?

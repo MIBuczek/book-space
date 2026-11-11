@@ -121,6 +121,41 @@ describe('NotificationService', () => {
       );
     });
 
+    it('sends the decision to the booking applicant for the APPLICANT audience (FR-052)', async () => {
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve({...booking, accepted: true})});
+
+      await service.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'});
+
+      // The address is the booking's own personEmail, never the facility or the SISK inbox.
+      expect(buildingModel.findOne).not.toHaveBeenCalled();
+      expect(sent[0].to).toBe('jan@example.com');
+    });
+
+    it('selects the approved template from the stored accepted flag', async () => {
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve({...booking, accepted: true})});
+
+      await service.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'});
+
+      expect(sent[0].subject).toContain('zatwierdzona');
+    });
+
+    it('selects the rejected template from the stored accepted flag', async () => {
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve({...booking, accepted: false})});
+
+      await service.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'});
+
+      expect(sent[0].subject).toContain('odrzucona');
+    });
+
+    it('refuses an applicant notification when the booking carries no address', async () => {
+      bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve({...booking, personEmail: ''})});
+
+      await expect(
+        service.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'})
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(sent).toHaveLength(0);
+    });
+
     it('maps a transport failure to 502 and logs it with the booking', async () => {
       bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
       config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');

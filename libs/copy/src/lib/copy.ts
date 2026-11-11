@@ -231,6 +231,9 @@ const BOOKINGS = {
   statusLabels: {INITIAL: 'Początkowa', DONE: 'Zakończona', CANCELED: 'Anulowana'},
   fromBeginning: 'Od początku',
   conflict: 'Konflikt',
+  notifyApplicant: 'Powiadom wnioskującego',
+  notifySent: 'Powiadomienie zostało wysłane do wnioskującego.',
+  notifyFailure: 'Nie udało się wysłać powiadomienia. Spróbuj ponownie później.',
 } as const;
 
 /** The admin clients tab (FR-024–FR-026). */

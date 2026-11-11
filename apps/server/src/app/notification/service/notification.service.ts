@@ -17,6 +17,7 @@ import {OutboundQuotaService} from '../../security/quota/outbound-quota.service'
 /** The recipient address an audience resolves to. */
 const STAFF_AUDIENCE = 'STAFF';
 const FACILITY_AUDIENCE = 'FACILITY';
+const APPLICANT_AUDIENCE = 'APPLICANT';
 
 @Injectable()
 export class NotificationService {
@@ -30,11 +31,18 @@ export class NotificationService {
   ) {}
 
   /**
-   * Sends a booking notification to the facility or to SISK staff (FR-032, FR-033).
+   * Sends a booking notification to the facility, to SISK staff, or to the applicant
+   * (FR-032, FR-033, FR-052).
    *
    * The recipient is resolved server-side: the facility address from the facility record, the
-   * staff address from configuration. Neither is taken from the request, so a caller cannot
-   * redirect the notification, and neither is in the client bundle (FR-035).
+   * staff address from configuration, the applicant address from the booking's own
+   * `personEmail`. None is taken from the request, so a caller cannot redirect the
+   * notification, and none is in the client bundle (FR-035).
+   *
+   * The `APPLICANT` audience is the decision notification (T062): the template is selected from
+   * the booking's **stored** `accepted` flag, not from anything the caller sends, so the
+   * message cannot claim a decision the booking does not carry. The flag is read from the
+   * document, which is the same value the approve route wrote.
    *
    * A provider failure answers `502` and never touches the booking (FR-036): the booking is
    * read, not written, so there is nothing to roll back, and the operator is told the send
@@ -42,6 +50,11 @@ export class NotificationService {
    */
   async notifyBooking(request: BookingNotificationDto): Promise<{status: string}> {
     const booking = await this.loadBooking(request.bookingId);
+
+    if (request.audience === APPLICANT_AUDIENCE) {
+      return this.notifyApplicant(booking);
+    }
+
     const recipient = await this.resolveRecipient(request.audience, booking);
 
     const isFacility = request.audience === FACILITY_AUDIENCE;
@@ -58,6 +71,36 @@ export class NotificationService {
     await this.send({to: recipient, subject, text}, {
       bookingId: String(booking._id),
       audience: request.audience,
+    });
+    return {status: 'sent'};
+  }
+
+  /**
+   * Sends the approval/rejection decision to the applicant (FR-052, T062).
+   *
+   * The recipient is the booking's own `personEmail`, so the message goes to the person who
+   * asked, never to an address the caller names. The template is chosen from the stored
+   * `accepted` flag: `booking-approved` when the booking is accepted, `booking-rejected`
+   * otherwise. That is the decision the administrator already made through
+   * `POST /bookings/{_id}/approve`, and reading it here rather than accepting it in the body is
+   * what keeps the e-mail and the record from disagreeing.
+   *
+   * A booking with no applicant address cannot be notified, which is a `404` rather than a
+   * silent no-op: `personEmail` is required on the schema, so its absence is a data problem
+   * the operator should see, not a message that quietly reports success.
+   */
+  private async notifyApplicant(booking: INotifiableBooking & {_id?: unknown; accepted?: boolean}): Promise<{status: string}> {
+    const recipient = booking.personEmail;
+    if (!recipient) {
+      throw new NotFoundException('The booking has no applicant address');
+    }
+
+    const templateId = booking.accepted ? 'booking-approved' : 'booking-rejected';
+    const {subject, text} = bookingEmail(booking, templateId);
+
+    await this.send({to: recipient, subject, text}, {
+      bookingId: String(booking._id),
+      audience: APPLICANT_AUDIENCE,
     });
     return {status: 'sent'};
   }

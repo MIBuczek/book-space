@@ -6,6 +6,7 @@ import {COPY} from '@booking/copy';
 import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
 import {BookingsApi} from '../../../core/bookings.api';
 import {FacilitiesApi} from '../../../core/facilities.api';
+import {NotificationsApi} from '../../../core/notifications.api';
 import {SessionStore} from '../../../core/session.store';
 import {
   ButtonComponent,
@@ -183,6 +184,13 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
               >
                 {{ row.accepted ? copy.unapprove : copy.approve }}
               </book-space-button>
+              <book-space-button
+                variant="secondary"
+                [disabled]="notifyTargetId() === row.booking._id"
+                (pressed)="notifyApplicant(row.booking)"
+              >
+                {{ copy.notifyApplicant }}
+              </book-space-button>
             }
             @if (canArchiveBookings()) {
               <book-space-button variant="secondary" (pressed)="toggleArchive(row.booking)">
@@ -215,6 +223,13 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
           <p class="bs-bookings__conflicts" [class.bs-bookings__conflicts--active]="conflictCount() > 0">
             {{ copy.conflicts(conflictCount()) }}
           </p>
+        }
+
+        @if (notifySuccess(); as message) {
+          <p class="bs-bookings__notify" role="status">{{ message }}</p>
+        }
+        @if (notifyError(); as message) {
+          <p class="bs-bookings__notify bs-bookings__notify--error" role="alert">{{ message }}</p>
         }
       }
 
@@ -364,6 +379,12 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         color: #a4262c;
         font-weight: 600;
       }
+      .bs-bookings__notify {
+        color: #0b6a0b;
+      }
+      .bs-bookings__notify--error {
+        color: #a4262c;
+      }
       .bs-bookings__warning {
         border: 1px solid #d9d9d9;
         border-radius: 6px;
@@ -376,6 +397,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
 export class BookingsTableComponent {
   private readonly bookingsApi = inject(BookingsApi);
   private readonly facilitiesApi = inject(FacilitiesApi);
+  private readonly notificationsApi = inject(NotificationsApi);
   private readonly session = inject(SessionStore);
 
   readonly copy = COPY.bookings;
@@ -419,6 +441,16 @@ export class BookingsTableComponent {
   readonly editPersonName = signal('');
   readonly editPhone = signal('');
   readonly deleteTarget = signal<IBooking | null>(null);
+
+  /**
+   * The applicant-notification status for the last send (FR-052, T062).
+   *
+   * One pair of signals rather than per-row state: the action is one at a time, and the message
+   * is a page-level status line, the same shape the Facilities tab uses for its message form.
+   */
+  readonly notifyTargetId = signal<string | null>(null);
+  readonly notifyError = signal<string | null>(null);
+  readonly notifySuccess = signal<string | null>(null);
 
   readonly canApproveBookings = computed(() => this.session.capabilities()?.canApproveBookings === true);
   readonly canArchiveBookings = computed(() => this.session.capabilities()?.canArchiveBookings === true);
@@ -580,6 +612,36 @@ export class BookingsTableComponent {
 
   private sendApproval(_id: string, accepted: boolean, force: boolean): void {
     this.bookingsApi.approve(_id, accepted, force).subscribe(() => this.reload());
+  }
+
+  /**
+   * Sends the decision notification to the applicant (FR-052, T062).
+   *
+   * The UI sends only the booking id and the `APPLICANT` audience: the server resolves the
+   * recipient from the booking's stored `personEmail` and selects the approved/rejected wording
+   * from the booking's stored `accepted` flag. So this action is available on any row — the
+   * message follows the booking's own decision rather than a decision the screen is about to
+   * make — and the administrator decides *whether* to send, not what it says.
+   *
+   * A failed send is surfaced rather than swallowed (the same acceptance criterion the
+   * Facilities tab meets): the message names the problem for any status, because a `502`
+   * provider failure and a `403` both mean the applicant was not notified.
+   */
+  notifyApplicant(booking: IBooking): void {
+    this.notifyError.set(null);
+    this.notifySuccess.set(null);
+    this.notifyTargetId.set(booking._id);
+
+    this.notificationsApi.notifyBooking({bookingId: booking._id, audience: 'APPLICANT'}).subscribe({
+      next: () => {
+        this.notifyTargetId.set(null);
+        this.notifySuccess.set(this.copy.notifySent);
+      },
+      error: () => {
+        this.notifyTargetId.set(null);
+        this.notifyError.set(this.copy.notifyFailure);
+      },
+    });
   }
 
   toggleArchive(booking: IBooking): void {

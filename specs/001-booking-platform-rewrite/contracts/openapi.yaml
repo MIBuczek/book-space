@@ -713,7 +713,15 @@ paths:
   /notifications/booking:
     post:
       tags: [notifications]
-      summary: Send a booking notification to the facility or to SISK staff (office or administrator)
+      summary: Send a booking notification to the facility, to SISK staff, or to the applicant
+      description: >
+        `audience` is the operator's opt-in. `FACILITY` notifies the facility the booking is
+        for (FR-032); `STAFF` notifies the SISK inbox that a public request arrived (FR-033).
+        `APPLICANT` notifies the person who requested the booking that it was approved or
+        rejected (FR-052); it is administrator-only, matching the approve/reject routes, and
+        the message is selected from the booking's stored `accepted` flag. The recipient is
+        resolved server-side in every case — the facility's address, the configured SISK
+        inbox, or the booking's own `personEmail` — never from the request body (FR-035).
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -724,13 +732,15 @@ paths:
               required: [bookingId, audience]
               properties:
                 bookingId: {type: string}
-                audience: {type: string, enum: [FACILITY, STAFF]}
+                audience: {type: string, enum: [FACILITY, STAFF, APPLICANT]}
       responses:
         '202': {description: Accepted; the recipient is resolved server-side}
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: >
+            The caller is not staff, or a non-administrator asked for the `APPLICANT`
+            audience (FR-052).
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
