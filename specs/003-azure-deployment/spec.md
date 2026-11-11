@@ -63,8 +63,8 @@ All five open questions are answered; they are decisions now, not open items.
    Basic+, which this satisfies.
 5. **Custom domain and TLS, and region?** → **Yes** — the frontend is served on a **custom
    domain** with a **TLS certificate** (an App Service managed certificate). The **region** is the
-   operator's choice for data residency; the plan defaults to **Poland Central** (the
-   municipality is SISK, Siechnice) and records it as a parameter, not a hard-coded value.
+   operator's choice for data residency; the plan defaults to **Poland Central** (the tenant is
+   a Polish municipality) and records it as a parameter, not a hard-coded value.
 
 ## User Scenarios & Testing *(mandatory)*
 

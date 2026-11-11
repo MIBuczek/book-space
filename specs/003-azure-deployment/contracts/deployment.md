@@ -38,7 +38,7 @@ Optional (each unset disables the feature rather than breaking boot):
 | `SEED_REFERENCE_DATA` | Exact string `true` to seed the twelve facilities; anything else leaves it off. |
 | `SUMMARY_DENY_LIST` | Comma-separated accounts denied the Summary tab. |
 | `MAIL_ENDPOINT`, `MAIL_API_KEY`, `MAIL_FROM` | Outbound mail; unset means a visible `502`. |
-| `SISK_CONTACT_EMAIL` | The SISK inbox for notifications. |
+| `TENANT_*` (see `specs/004-internationalisation/contracts/tenant.md`) | Tenant identity: brand name, contact e-mail, URLs, staff inbox. |
 | `PUBLIC_RATE_LIMIT`, `PUBLIC_RATE_LIMIT_WINDOW_MS`, `NOTIFICATION_QUOTA`, `NOTIFICATION_QUOTA_WINDOW_MS` | Abuse protection. |
 
 Rules:
