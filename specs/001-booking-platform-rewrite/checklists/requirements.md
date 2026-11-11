@@ -21,7 +21,7 @@
 
 - [x] CHK012 The capability matrix matches the legacy permission helpers
 - [x] CHK013 The API contract's enums match the data model's enums
-- [ ] CHK014 The booking status vocabulary is reconciled: legacy `QUIT` → target `CANCELED`, and one Polish label must be chosen (currently "Rezygnacja" vs "Odwołana")
+- [x] CHK014 The booking status vocabulary is reconciled: legacy `QUIT` → target `CANCELED` (migration, T042), and one Polish label per value — the UI, the CSV and the printable report all use `INITIAL` "Nie rozpoczęta", `DONE` "Zakończona", `CANCELED` "Rezygnacja" (the `transformValue` wording; `data-model.md` § "Slot status vocabulary", issue #55)
 - [x] CHK015 The payment-method enum is reconciled: target retains `FREE` (Bezpłatne) and drops `CARD`, which the business does not use
 - [ ] CHK016 Client and facility delete routes are corrected to `:_id`
 - [ ] CHK017 Password hashing is applied on update paths, not only on create

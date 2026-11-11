@@ -106,7 +106,14 @@ const BOOKING_COLUMNS = [
   {key: 'conflictLabel', label: COPY.bookings.columns.conflict},
 ];
 
-/** The labels for a slot's status, matching the legacy `BOOKING_STATUS_OPTIONS`. */
+/**
+ * The labels for a slot's status (CHK014, #55).
+ *
+ * These are the same words the CSV and the printable report print, so the screen and the
+ * report cannot disagree on a status — the defect the legacy app had, where the dropdown said
+ * "Odwołana" and `transformValue` (the table, the summary, the CSV) said "Rezygnacja". The
+ * `bookings-table.spec.ts` guard pins the two maps together.
+ */
 const STATUS_LABELS: Record<TSingleBookingStatus, string> = COPY.bookings.statusLabels;
 
 /** The label for the accepted flag, never colour alone (NFR-006, FR-037). */

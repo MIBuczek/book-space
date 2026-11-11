@@ -1029,6 +1029,21 @@ Three things that are easy to get wrong:
   `apps/server/src/app/reporting/csv/display.ts` and `.../summary/summary.ts` now re-export from
   it, so the server's existing import sites are unchanged. The server's `display.ts` keeps the
   date/time formatting (its projection of `@booking/date-time`) and nothing else.
+- **The slot status labels agree between the screen and the report, and a spec holds them there
+  (T063, CHK014, issue #55).** The UI label map (`COPY.bookings.statusLabels` in `libs/copy`) and
+  the report map (`REPORT_VALUE_LABELS` in `libs/reporting`) stay separate on purpose — the copy is
+  translatable, the report vocabulary is the legacy Polish a business artefact prints — so nothing
+  but a test stops them drifting. They did drift: the legacy dropdown labelled `QUIT` "Odwołana"
+  while the app's own table, summary and CSV (`transformValue`) called it "Rezygnacja". The target
+  keeps the **`transformValue`** wording (`INITIAL` "Nie rozpoczęta", `DONE` "Zakończona",
+  `CANCELED` "Rezygnacja"), which also keeps the CSV byte-compatible with the legacy export — the
+  legacy CSV already printed "Rezygnacja", so matching the *dropdown* would have changed the export
+  instead. The guard is the second assertion in `bookings-table.spec.ts`'s "labels each status
+  exactly as the CSV and the printable report do", which asserts each UI label equals
+  `displayValue(status)`; if you add a status value, add it to both maps and the loop covers it.
+  Do not "unify" by importing one map into the other: `libs/copy` is UI copy and `libs/reporting`
+  is the server's report vocabulary, and the whole point is that each answers to a different
+  audience.
 - **The printable report is the page, not a popup.** FR-030/T028 is satisfied by rendering the
   report in a `bs-printable` node and calling `window.print()`; `styles.scss` hides every other
   element under `@media print`. The legacy `PreviewPDF.tsx` opened a window at a hardcoded

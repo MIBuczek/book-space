@@ -228,7 +228,7 @@ const BOOKINGS = {
     accepted: 'Zakceptowana',
     conflict: 'Konflikty',
   },
-  statusLabels: {INITIAL: 'Początkowa', DONE: 'Zakończona', CANCELED: 'Anulowana'},
+  statusLabels: {INITIAL: 'Nie rozpoczęta', DONE: 'Zakończona', CANCELED: 'Rezygnacja'},
   fromBeginning: 'Od początku',
   conflict: 'Konflikt',
   notifyApplicant: 'Powiadom wnioskującego',

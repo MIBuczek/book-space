@@ -230,6 +230,31 @@ Current schema: `apps/server/src/app/bookings/schemas/booked-time.schema.ts`
 schema rejecting a non-integer. `BookingDto.bookedTimes` now carries `@ValidateNested`, so the
 create path validates each slot — it previously checked only that the array was non-empty.
 
+### Slot status vocabulary (CHK014, issue #55)
+
+The enum is `INITIAL | DONE | CANCELED` and the legacy `QUIT` maps to `CANCELED` during
+migration (T042). One Polish label is chosen per value, and **the same label is used in the UI,
+the CSV export and the printable report**:
+
+| Value | Label | Legacy `BOOKING_STATUS_OPTIONS` (dropdown) | Legacy `transformValue` (table, summary, CSV) |
+|-------|-------|--------------------------------------------|-----------------------------------------------|
+| `INITIAL` | `Nie rozpoczęta` | Nie odbyła się | Nie rozpoczęta |
+| `DONE` | `Zakończona` | Odbyła się | Zakończona |
+| `CANCELED` | `Rezygnacja` | Odwołana | Rezygnacja |
+
+The target adopts the **`transformValue`** wording, not the dropdown's, for two reasons. It is
+the vocabulary the business already reads in the exported report, so the rewrite's CSV is
+byte-compatible with the legacy export and no downstream spreadsheet changes; and the legacy
+dropdown was the inconsistent surface (it labelled `QUIT` "Odwołana" while the app's own table,
+summary and CSV called it "Rezygnacja"), so matching it would carry the defect forward rather
+than correct it.
+
+The UI labels live in `libs/copy` (`COPY.bookings.statusLabels`) and the report labels in
+`libs/reporting` (`REPORT_VALUE_LABELS`), deliberately separate maps — the copy is translatable,
+the report vocabulary is the legacy Polish a business artefact prints. They are held equal by a
+guard in `apps/ui/src/app/features/admin/bookings/bookings-table.spec.ts`, which asserts each UI
+label equals `displayValue(status)`; that is the assertion the legacy app never had.
+
 ---
 
 ## selectedExtraOptions (embedded) — [new]
