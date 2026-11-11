@@ -259,8 +259,8 @@ switch to it — the keys that exist render, the rest fall back to the default, 
    remain Polish and are documented as such (FR-015). The UI's translation layer is the only i18n
    surface. No server-side translation file, no `Accept-Language` negotiation.
 3. **The documentation keeps the legacy provenance.** The product is de-branded (FR-007);
-   `README.md`, `AGENTS.md` and the specs keep naming the legacy origin (FR-016). The two are
-   different audiences and are treated differently on purpose.
+   `README.md`, `AGENTS.md` and the specs keep naming the legacy origin. The two are different
+   audiences and are treated differently on purpose.
 4. **The placeholder tenant name is `Book Space`.**
 5. **The facility seed stays as it is.** The twelve facilities are sample data; they carry no SISK
    brand, so they remain (FR-008).
