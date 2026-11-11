@@ -24,8 +24,8 @@ This feature does the translation itself, and removes the municipality's brandin
 2. An **English translation** is added alongside the Polish one.
 3. A **language switch** lets a user choose the language, and the choice persists.
 4. Every **SISK-specific reference is removed** from the product — the brand, the contact
-   addresses, the facility seed data, the default deny-list — so the platform is a generic,
-   unbranded booking system whose tenant is supplied by configuration.
+   addresses, the default deny-list — so the platform is a generic, unbranded booking system
+   whose tenant is supplied by configuration.
 5. **Naming is English throughout**: code identifiers, keys, filenames, environment variables
    and route paths are English (they already largely are); the Polish that remains is *content*,
    and it lives in the translation files, not in the code.
@@ -48,12 +48,24 @@ HTTP contract or the domain rules.
   identifiers, keys, filenames, env vars and routes. The content is Polish and English, in the
   translation files. A Polish word in `pl.json` is correct; a Polish word in a `.ts` identifier
   is not.
-- Q: How far does "remove all info about SISK" go? → **A: the product carries no SISK value.**
-  The brand, the contact e-mail/website/privacy-policy URLs, the facility seed addresses, the
-  default deny-list address and the notification signature become **configuration** with neutral
-  defaults. The repository *documentation* (`README.md`, `AGENTS.md`, `specs/`) still describes
-  the legacy origin (`MIBuczek/sisk-booking-app`) — that is provenance, not product content, and
-  removing it would falsify the history. See open question 3.
+- Q: How far does "remove all info about SISK" go? → **A: the product.** The brand, the contact
+  e-mail/website/privacy-policy URLs, the default deny-list address and the notification
+  signature become **configuration** with neutral defaults. The repository *documentation*
+  (`README.md`, `AGENTS.md`, `specs/`) keeps the legacy provenance; the facility **sample data**
+  is exempt (decision 5).
+
+### Session 2026-11-08, round 2 — the open questions, answered
+
+1. **The language lives in a stored preference** (`localStorage`), not a `/en/...` path segment.
+2. **The server side stays Polish.** The CSV export, the printable report and the notification
+   e-mails are read outside the browser and remain Polish; this is a **documented** decision
+   (FR-015), not an oversight. The UI's translation layer is the only i18n surface.
+3. **SISK stays in the repository documentation** (provenance): the product is de-branded, but
+   `README.md`, `AGENTS.md` and the specs keep naming the legacy origin. Only the *product* is
+   de-branded.
+4. **The placeholder tenant name is `Book Space`** until a tenant is configured.
+5. **The facility seed stays as it is** — it is sample data; it carries no SISK brand, and the
+   sample facilities themselves may remain.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -88,9 +100,9 @@ English. Switch back; every string is Polish.
 
 ### User Story 2 - No SISK value ships in the product (Priority: P1)
 
-The application contains no SISK brand, address, URL or facility e-mail. A deployment supplies
-its own tenant identity through configuration; with nothing configured it shows a neutral product
-name and no municipal links. The facility seed data is neutral or tenant-supplied.
+The application contains no SISK brand, address or URL. A deployment supplies its own tenant
+identity through configuration; with nothing configured it shows a neutral product name and no
+municipal links. The facility **sample data** may remain.
 
 **Why this priority**: it is an explicit requirement, and it is the prerequisite for the platform
 being reusable by another tenant.
@@ -106,13 +118,12 @@ links.
    **Then** there is no match.
 2. **Given** the application with no tenant configuration, **When** it renders, **Then** the
    footer shows the product name and no SISK link, and the contact page shows no SISK address.
-3. **Given** the facility seed, **When** it runs, **Then** it contains no `@gmail.com` facility
-   address and no SISK-specific name (the reference facilities are the municipality's, so they
-   are configuration or a clearly-marked sample).
-4. **Given** the notification templates, **When** a notification is sent, **Then** the signature
+3. **Given** the notification templates, **When** a notification is sent, **Then** the signature
    is the configured tenant name, not "SISK Siechnice".
-5. **Given** the default Summary deny-list, **When** no override is set, **Then** no specific
+4. **Given** the default Summary deny-list, **When** no override is set, **Then** no specific
    person's address is denied (the legacy default is removed).
+5. **Given** the facility sample data, **When** it runs, **Then** it carries no SISK brand (the
+   twelve facilities themselves may remain).
 
 ---
 
@@ -152,18 +163,17 @@ switch to it — the keys that exist render, the rest fall back to the default, 
   copy is in JSON it must flag any user-facing literal, which is a stricter and language-agnostic
   rule.
 - **Server-side Polish.** The CSV column labels, the report vocabulary and the notification
-  templates are read outside the Angular bundle (a spreadsheet, an inbox). They cannot use the
-  UI's translation library; the plan must decide whether they stay Polish, become configurable,
-  or are translated server-side (open question 2).
+  templates are read outside the Angular bundle (a spreadsheet, an inbox) and stay Polish
+  (decision 2, FR-015); the UI's translation layer is the only i18n surface.
 - **Dates and numbers.** A locale implies a date and number format; `@booking/date-time` already
   formats through `Intl` with `Europe/Warsaw`. The switch must not silently change the
   facility's time zone — the language and the time zone are separate concerns.
 - **The language in the URL.** Whether the language is a path segment (`/en/...`), a query
   parameter, or a stored preference affects shareable links and the SSR/caching story. The plan
   chooses the smallest option that satisfies the story.
-- **The seed is authoritative.** `ReferenceDataService` `$set`s every field, so a rebranded seed
-  overwrites an administrator's edits; the seed's tenant data must therefore be configuration,
-  not a constant that flips with a release.
+- **The seed is authoritative.** `ReferenceDataService` `$set`s every field, so running the seed
+  overwrites an administrator's edits to a facility. It stays as it is (decision 5) and is only
+  run when `SEED_REFERENCE_DATA=true`.
 
 ## Requirements *(mandatory)*
 
@@ -179,11 +189,12 @@ switch to it — the keys that exist render, the rest fall back to the default, 
   → key), never to an empty string.
 - **FR-006**: A spec MUST fail when a key present in the default language is absent from another
   language file, and when a translation drops an interpolation parameter.
-- **FR-007**: The product MUST carry **no SISK brand, address, URL, facility e-mail or personal
-  address**. Tenant identity (name, contact e-mail, website, privacy-policy URL, the staff inbox,
-  the seed facilities) MUST come from **configuration** with neutral defaults.
-- **FR-008**: The facility seed MUST contain no SISK-specific or personal data; it is either
-  neutral sample data or tenant-supplied configuration.
+- **FR-007**: The product MUST carry **no SISK brand, address, URL or personal address**. Tenant
+  identity (name, contact e-mail, website, privacy-policy URL, the staff inbox) MUST come from
+  **configuration** with neutral defaults. The repository *documentation* keeps the legacy
+  provenance.
+- **FR-008**: The facility **sample data** (the twelve facilities) MAY remain as it is; it carries
+  no SISK brand. It is sample data, not a tenant identity.
 - **FR-009**: The default Summary deny-list MUST NOT name a specific person; an unset value denies
   nobody.
 - **FR-010**: Notification templates MUST sign with the configured tenant name, not a hardcoded
@@ -197,8 +208,8 @@ switch to it — the keys that exist render, the rest fall back to the default, 
 - **FR-014**: The language switch MUST NOT change the facility's time zone or the date/number
   formatting locale used for business data (the `Europe/Warsaw` behaviour is preserved).
 - **FR-015**: The server-side artefacts that carry Polish (CSV labels, report vocabulary,
-  notification templates) MUST be handled by an explicit decision — configurable, translated
-  server-side, or documented as deliberately single-language — not left implicit.
+  notification templates) are **deliberately single-language (Polish)**, and this MUST be
+  documented in `AGENTS.md`; the UI's translation layer is the only i18n surface.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -209,8 +220,8 @@ switch to it — the keys that exist render, the rest fall back to the default, 
 - **Language** — a code (`pl`, `en`), a display name in its own language (`Polski`, `English`),
   and a flag for whether it is the default.
 - **Tenant configuration** — the brand name, the contact e-mail, the website and privacy-policy
-  URLs, the staff inbox, and the seed facility list. Server-side settings; a public subset
-  reaches the UI (the footer and the contact page).
+  URLs, and the staff inbox. Server-side settings; a public subset reaches the UI (the footer
+  and the contact page).
 
 ## Success Criteria *(mandatory)*
 
@@ -237,26 +248,19 @@ switch to it — the keys that exist render, the rest fall back to the default, 
   build serves every language.
 - The tenant identity is server configuration; the UI reads the public subset from an endpoint
   (or a build-time/runtime config), not from a hardcoded constant.
-- The server-side Polish artefacts are handled by the decision in open question 2; the plan
-  proposes the smallest correct option.
+- The server-side Polish artefacts are deliberately single-language (FR-015).
 
-## Open Questions
+## Decisions (the five open questions, answered 2026-11-08)
 
-1. **Where does the language live?** The plan proposes a **stored preference** (a signal plus
-   `localStorage`), with no path segment, so links are stable and the SPA stays a single bundle.
-   A path segment (`/en/...`) is better for shareable language-specific links and for SEO; it is
-   a larger change (every route and the guards). Confirm the stored-preference choice.
-2. **Server-side Polish.** The CSV export, the printable report and the notification e-mails are
-   read outside the browser. Options: (a) leave them Polish (documented), (b) make them
-   **configurable per tenant** (a server translation file), (c) translate them by the same
-   `Accept-Language` the request carries. The plan proposes **(a) for the report artefacts and
-   (b) for the e-mail templates** (the tenant supplies the wording), because a spreadsheet and an
-   inbox are the tenant's business artefacts, not the visitor's screen. Confirm.
-3. **How much SISK remains in the repository documentation?** The plan removes SISK from the
-   *product* and leaves the provenance in `README.md`/`AGENTS.md`/`specs/` (the legacy repo is
-   named `MIBuczek/sisk-booking-app`). Removing it from the documentation would falsify the
-   history; confirm that provenance stays.
-4. **The tenant name and defaults.** The plan uses a neutral placeholder (`Book Space`) until a
-   tenant is configured. Confirm the placeholder is acceptable, or supply the tenant name.
-5. **The seed facilities.** The twelve facilities are the municipality's real facilities. The plan
-   moves them to a tenant-supplied seed (or neutral sample data). Confirm which.
+1. **The language is a stored preference** (`localStorage`). No path segment: links stay stable
+   and the SPA stays a single bundle. A path segment is recorded as the alternative if shareable
+   language-specific links become a requirement.
+2. **The server stays Polish.** The CSV export, the printable report and the notification e-mails
+   remain Polish and are documented as such (FR-015). The UI's translation layer is the only i18n
+   surface. No server-side translation file, no `Accept-Language` negotiation.
+3. **The documentation keeps the legacy provenance.** The product is de-branded (FR-007);
+   `README.md`, `AGENTS.md` and the specs keep naming the legacy origin (FR-016). The two are
+   different audiences and are treated differently on purpose.
+4. **The placeholder tenant name is `Book Space`.**
+5. **The facility seed stays as it is.** The twelve facilities are sample data; they carry no SISK
+   brand, so they remain (FR-008).

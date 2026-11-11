@@ -14,9 +14,10 @@ Two changes to the Angular UI, plus a small server-side configuration change:
    `TranslateService.instant`) instead of a static import, so a language switch re-renders without
    a rebuild.
 2. **A language switch** in the shell changes the active language and persists the choice.
-3. **SISK is removed from the product.** The brand, the contact addresses/URLs, the facility seed
-   e-mails, the default Summary deny-list and the notification signature become **tenant
-   configuration** with neutral defaults.
+3. **SISK is removed from the product.** The brand, the contact addresses/URLs, the default
+   Summary deny-list and the notification signature become **tenant configuration** with neutral
+   defaults. The repository documentation keeps the legacy provenance (decision 3), and the
+   facility **sample data** stays (decision 5).
 
 The change is bounded because the hard part is already done: the copy is centralised in one
 object with a guard spec that stops literals creeping back. This feature is mostly *mechanical*
@@ -85,15 +86,15 @@ Full detail in [research.md](./research.md). The decisions:
 3. **Default language Polish**, fallback Polish; English added. The default is a constant in one
    place, not a scattered assumption.
 4. **The language preference is stored** (`localStorage`) and read at start-up, so a reload keeps
-   it. No path segment (open question 1).
+   it. No path segment (decision 1).
 5. **De-branding = configuration.** A new `TENANT_*` settings group (server) and a public subset
    the UI reads; neutral defaults so an unconfigured deployment still renders.
 6. **The guard spec is retargeted** from "Polish characters" to "user-facing literal", which is
    stricter and language-agnostic (the current rule would pass an English literal, and would pass
    a Polish *comment* is already excluded).
-7. **Server-side Polish artefacts** are handled per open question 2: the report artefacts stay
-   Polish (a spreadsheet is the tenant's business artefact) and the e-mail templates become
-   tenant-configurable.
+7. **Server-side Polish artefacts stay Polish** (decision 2): the CSV export, the printable
+   report and the notification e-mails are read outside the browser, so the UI's translation
+   layer is the only i18n surface. This is documented in `AGENTS.md` (FR-015).
 
 ## Project Structure
 
@@ -141,7 +142,6 @@ libs/copy/                             # REMOVED (its spec is replaced by the JS
 
 # The server (modified — de-branding)
 apps/server/src/app/config/env.validation.ts   # TENANT_* settings, neutral defaults
-apps/server/src/app/buildings/seed/            # the seed reads the tenant facility list
 apps/server/src/app/notification/templates/    # the signature is the tenant name
 apps/server/src/app/reporting/deny-list.ts     # the default deny-list is empty
 ```
@@ -208,7 +208,6 @@ honest.
 | `COPY.contact.website` / `siskWebsiteUrl` | `TENANT_WEBSITE_URL` | unset |
 | `COPY.contact.privacyPolicyUrl` | `TENANT_PRIVACY_URL` | unset |
 | `COPY.contact.*` staff address | `SISK_CONTACT_EMAIL` → **`TENANT_STAFF_EMAIL`** | required for the staff path, no default |
-| seed facility e-mails (`siechnice.hala@gmail.com`) | the tenant seed | neutral sample data |
 | `DEFAULT_SUMMARY_DENY_LIST = 'mkulakowski@umsiechnice.pl'` | empty | deny nobody |
 | template signature "SISK Siechnice" | `TENANT_NAME` | the product name |
 
@@ -217,16 +216,16 @@ brand). A public subset (name, contact e-mail, URLs) reaches the UI — either o
 public endpoint or a small `GET /api/tenant` (the plan chooses the endpoint, so the UI needs no
 rebuild to rebrand).
 
-### D7 — Server-side Polish artefacts (open question 2)
+### D7 — Server-side Polish artefacts stay Polish (decision 2)
 
-- **CSV export and printable report**: stay Polish, documented. A spreadsheet is the tenant's
-  business artefact, not a visitor's screen; translating it would need a server-side catalogue
-  and a locale on the request, for no user benefit.
-- **Notification e-mail templates**: the *signature and wording* become tenant-configurable
-  (a `TENANT_NAME` at minimum). The bodies stay as they are; a full server-side translation is
-  deferred (recorded as out of scope).
+- **CSV export, printable report and notification e-mails**: stay Polish, documented in
+  `AGENTS.md`. They are read outside the browser (a spreadsheet, an inbox), so they cannot use
+  the UI's translation library, and translating them would need a server-side catalogue and a
+  locale on the request for no user benefit.
+- **The e-mail signature** still becomes the configured tenant name (`TENANT_NAME`, D6), because
+  a hardcoded brand is a de-branding defect regardless of language.
 
-### D8 — No route change; the language is a stored preference (open question 1)
+### D8 — No route change; the language is a stored preference (decision 1)
 
 The plan does **not** add a `/en/...` path segment. The reasons: every route and both guards would
 need the prefix, `capabilityGuard`/`guestGuard` would need to preserve it, and the SPA is one
@@ -254,8 +253,8 @@ as the alternative if shareable language-specific links become a requirement.
 - **Phase 2 — Migrate the consumers**: replace every `COPY.x` read with a `translate` key (26
   components + the shell), retarget the guard spec, replace `libs/copy`'s spec with the
   completeness spec, delete `libs/copy`.
-- **Phase 3 — De-branding**: the `TENANT_*` settings, the neutral defaults, the seed, the
-  templates, the deny-list, the `SISK_CONTACT_EMAIL` rename, the UI's tenant read.
+- **Phase 3 — De-branding**: the `TENANT_*` settings, the neutral defaults, the templates, the
+  deny-list, the `SISK_CONTACT_EMAIL` rename, and the UI's tenant read.
 - **Phase 4 — Verification**: the switch works end to end; the bundle has no SISK string; the
   completeness and guard specs pass; CI is green.
 - **Phase 5 — Docs**: `README`, `AGENTS.md`, `ui-conventions.md` (the translation conventions).

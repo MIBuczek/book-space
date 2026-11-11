@@ -44,8 +44,8 @@ Then:
 3. Confirm the built bundle is unchanged: `npx nx build ui` then
    `grep -ri "sisk\|siechnice" dist/apps/ui` returns nothing (SC-002).
 
-To change the seed facilities, supply the tenant's list and run with `SEED_REFERENCE_DATA=true`;
-the seed is an idempotent upsert, so it applies on the next run.
+The facility seed is sample data and stays as it is (decision 5); a tenant may replace it through
+the seed, which is an idempotent upsert.
 
 ## C. Local development
 

@@ -131,7 +131,8 @@ switch and asserts the DOM changes (so the trap is caught, not assumed away).
 
 ## R8 — The de-branding surface (what "all info about SISK" means)
 
-**Decision**: remove SISK from the **product**; leave it in the **provenance** (documentation).
+**Decision**: remove SISK from the **product**; leave it in the **provenance** (documentation,
+decision 3). The two are different audiences and are treated differently on purpose.
 
 **Evidence (repository fact)** — the SISK values in tracked source, and their disposition:
 
@@ -142,12 +143,12 @@ switch and asserts the DOM changes (so the trap is caught, not assumed away).
 | `apps/server/src/app/reporting/deny-list.ts` | `mkulakowski@umsiechnice.pl` | → empty default |
 | `apps/server/src/app/notification/templates/templates.ts` | "SISK Siechnice" signature | → `TENANT_NAME` |
 | `apps/server/src/app/config/env.validation.ts` | `SISK_CONTACT_EMAIL` | → `TENANT_STAFF_EMAIL` |
-| `README.md`, `AGENTS.md`, `specs/` | the legacy origin (`MIBuczek/sisk-booking-app`) | **kept** — provenance |
+| `README.md`, `AGENTS.md`, `specs/` | the legacy origin (`MIBuczek/sisk-booking-app`) | **kept** — provenance (decision 3) |
 | test fixtures (`@sisk.pl`, `admin@sisk.pl`) | sample addresses | → neutral (`@example.com`) |
 
 **Consequence**: FR-007–FR-010 and SC-002 are checkable by grepping the built bundle (product)
-and by reading the documentation (provenance). The two are different audiences and are treated
-differently on purpose.
+and by reading the documentation (provenance). The facility **sample data** stays (decision 5);
+it carries no SISK brand.
 
 ---
 
@@ -166,10 +167,11 @@ hides the element rather than rendering an empty link (SC-005).
 
 ---
 
-## R10 — Server-side Polish is a separate decision
+## R10 — Server-side Polish stays Polish (decision 2)
 
-**Decision**: the CSV export and the printable report stay Polish (documented); the e-mail
-template signature becomes the tenant name; a full server-side translation is out of scope.
+**Decision**: the CSV export, the printable report and the notification e-mail bodies stay
+Polish, documented in `AGENTS.md` (FR-015); only the e-mail **signature** becomes the tenant name
+(a de-branding fix, not a translation). The UI's translation layer is the only i18n surface.
 
 **Evidence (repository fact)**: `apps/server/src/app/reporting/csv/csv-columns.ts` (4 labels),
 `libs/reporting/src/lib/display.ts` (12 values), and

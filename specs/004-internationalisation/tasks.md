@@ -77,8 +77,8 @@
 - [ ] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
       `TENANT_NAME`, not "SISK Siechnice"; update the template spec.
 - [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: empty default; update the spec.
-- [ ] **T255** [P] `apps/server/src/app/buildings/seed/facility-seed.ts`: neutral sample data or
-      tenant input; no `@gmail.com` facility address; update the seed spec.
+- [ ] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
+      brand (decision 5: the sample facilities stay as they are).
 - [ ] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
       (`@example.com`) across the UI and server specs.
 - [ ] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
@@ -92,7 +92,8 @@
       retargeted guard), the tenant settings, the deny-list behaviour change.
 - [ ] **T261** [P] `specs/001-booking-platform-rewrite/ui-conventions.md`: the i18n convention.
 - [ ] **T262** [P] `README.md`: the tenant settings and how to add a language.
-- [ ] **T263** Record the server-side Polish decision (open question 2) in `AGENTS.md`.
+- [ ] **T263** Record the server-side Polish decision (decision 2, FR-015) in `AGENTS.md`; note
+      that the documentation keeps the legacy provenance (decision 3).
 
 ## Dependencies
 
@@ -102,8 +103,8 @@
 
 ## Out of scope
 
-- A path-segment language (`/en/...`) — the stored preference is chosen (open question 1).
-- A full server-side translation of the CSV/report/e-mail bodies (open question 2; the e-mail
-  signature is the tenant name, the rest is documented as Polish).
+- A path-segment language (`/en/...`) — the stored preference is chosen (decision 1).
+- A server-side translation of the CSV/report/e-mail bodies — they stay Polish (decision 2);
+  only the e-mail signature becomes the tenant name.
 - Any change to the HTTP contract, the authorisation model or the domain rules.
-- Removing SISK from the repository *documentation* (provenance — open question 3).
+- Replacing the facility sample data — it stays as it is (decision 5).

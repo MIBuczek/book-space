@@ -50,8 +50,8 @@ interface ITenant {
 
 ## 4. The facility seed
 
-- The twelve facilities are the municipality's; they move out of the constant
-  (`apps/server/src/app/buildings/seed/facility-seed.ts`) into **tenant input**.
+- The twelve facilities are **sample data** and stay as they are (decision 5); they carry no
+  SISK brand. A tenant may replace them through the seed.
 - The seed keeps its idempotent upsert (`ReferenceDataService`), so a rebranded seed is applied on
   the next `SEED_REFERENCE_DATA=true` run and does not fight an administrator's edits otherwise.
 - The default (no tenant input) is **neutral sample data** with no real address and no
@@ -67,7 +67,8 @@ interface ITenant {
 ## 6. Non-negotiable invariants
 
 1. **No SISK value in the product.** The built UI bundle and the server source contain no
-   `sisk`/`siechnice` (SC-002). Documentation provenance is exempt (research R8).
+   `sisk`/`siechnice` (SC-002). Documentation provenance is exempt (decision 3); the facility
+   sample data is exempt (decision 5).
 2. **No secret in the bundle.** The tenant values are public contact details; the staff inbox and
    the deny-list stay server-side.
 3. **A neutral default renders.** With no tenant configuration the app boots and renders the

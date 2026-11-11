@@ -74,8 +74,10 @@ default so an unconfigured deployment renders (SC-005).
 | `TENANT_WEBSITE_URL` | `www.sisk-siechnice.pl` | unset → the link is hidden |
 | `TENANT_PRIVACY_URL` | the SISK privacy-policy URL | unset → the link is hidden |
 | `TENANT_STAFF_EMAIL` (renamed from `SISK_CONTACT_EMAIL`) | the SISK inbox | required only for the staff path; no default |
-| the tenant facility seed | `facility-seed.ts`'s twelve facilities | neutral sample data |
 | (removed) `SUMMARY_DENY_LIST` default | `mkulakowski@umsiechnice.pl` | empty → deny nobody |
+
+The facility seed is **sample data** and stays as it is (decision 5); it carries no SISK brand and
+is not a tenant setting.
 
 ### The public subset
 
@@ -94,5 +96,4 @@ secret scan trivially green).
 ## 5. No change to the domain model
 
 The booking, client, user and facility schemas, the DTOs and the HTTP contract are unchanged. The
-only schema-adjacent change is the **seed's facility data**, which becomes tenant input; the
-`IBuilding` shape does not change.
+facility **sample data** stays as it is (decision 5); the `IBuilding` shape does not change.
