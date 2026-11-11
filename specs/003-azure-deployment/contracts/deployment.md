@@ -3,7 +3,7 @@
 The contract between the running application and its Azure environment. It names **what each app
 needs**, **where it comes from**, and **what must never happen**. The images are already
 environment-driven (`apps/server/Dockerfile`, `apps/ui/Dockerfile`), so this contract is the
-existing one, made explicit and extended for Cosmos and ServiceNow.
+existing one, made explicit and extended for Cosmos.
 
 ## 1. Images
 
@@ -20,7 +20,7 @@ Both Dockerfiles are unchanged. The build context must carry **full git history*
 - Images live in **Azure Container Registry**.
 - Tags: `:<git-sha>` (immutable, the deploy target) and `:main` (moving convenience).
 - The App Services pull with a **managed identity** holding `AcrPull` (no registry password in a
-  workflow — research R7).
+  workflow — research R8).
 
 ## 3. Server app settings (App Service configuration)
 
@@ -40,7 +40,6 @@ Optional (each unset disables the feature rather than breaking boot):
 | `MAIL_ENDPOINT`, `MAIL_API_KEY`, `MAIL_FROM` | Outbound mail; unset means a visible `502`. |
 | `SISK_CONTACT_EMAIL` | The SISK inbox for notifications. |
 | `PUBLIC_RATE_LIMIT`, `PUBLIC_RATE_LIMIT_WINDOW_MS`, `NOTIFICATION_QUOTA`, `NOTIFICATION_QUOTA_WINDOW_MS` | Abuse protection. |
-| `SERVICENOW_ENDPOINT`, `SERVICENOW_TABLE`, `SERVICENOW_USER`, `SERVICENOW_PASSWORD`, `SERVICENOW_TOKEN`, `SERVICENOW_TIMEOUT_MS` | ServiceNow integration (see `contracts/servicenow.md`). |
 
 Rules:
 
@@ -53,12 +52,14 @@ Rules:
 
 | Setting | Notes |
 |---------|-------|
-| `API_UPSTREAM` | The API origin nginx proxies `/api/` to (substituted into `nginx.conf.template` at start). |
+| `API_UPSTREAM` | The API origin nginx proxies `/api/` to. **This is the backend's private host name** (`https://app-book-space-api.azurewebsites.net`), resolved through the private DNS zone (see `contracts/network.md`). |
 
 The UI issues **relative** `/api` requests, so the deployment needs **no CORS exception** and the
-bundle is not tied to a host name (FR-011). If the UI and API are ever served from different
-origins, the proxy (or a gateway) must keep `/api` same-origin; adding CORS instead is a deviation
-to be recorded.
+bundle is not tied to a host name (FR-010).
+
+> Note: because the backend is private, the frontend must be able to resolve and reach it via VNet
+> integration. If `API_UPSTREAM` were a public host name, the proxy would fail — this is the
+> failure mode to check first if the UI loads but its data calls do not.
 
 ## 5. Cosmos DB
 
@@ -72,6 +73,8 @@ to be recorded.
 - **Sharding**: off by default. A sharded collection makes every unique index compound with the
   shard key, which would change the `{city, property}` index; the data volume does not require it.
 - **Transactions**: none cross a collection boundary (research R4).
+- **Network**: whether Cosmos is public (firewall-restricted) or private is open question 3. If
+  private, the migration run needs VNet access (research R10).
 
 ## 6. Release contract
 
@@ -79,13 +82,15 @@ to be recorded.
 - `release.yml` runs on `push: main` only. It builds → pushes to ACR → updates both App Services
   to the new SHA tag.
 - Azure authentication is **OIDC** (federated identity); **no Azure secret is stored** (FR-005,
-  research R6).
+  research R7).
 - **Rollback** = re-deploy the previous SHA tag to both apps (SC-006).
 - A failed build stops the workflow **before** any app is updated, so a release is all-or-nothing.
+- The **smoke test goes through the frontend** (plan § D7), because the backend is private.
 
 ## 7. Non-negotiable invariants
 
 1. No credential in the client bundle (`SC-007`; CI's `scan-bundle.js`).
 2. No credential committed to the repository (`scan-secrets.js`).
 3. No long-lived Azure credential in GitHub.
-4. The legacy Firebase project stays intact until reconciliation passes (Constitution V).
+4. The backend has **no public inbound** (`contracts/network.md`).
+5. The legacy Firebase project stays intact until reconciliation passes (Constitution V).

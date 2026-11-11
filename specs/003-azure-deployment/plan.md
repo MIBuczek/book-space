@@ -1,4 +1,4 @@
-# Implementation Plan: Azure Deployment and ServiceNow Integration
+# Implementation Plan: Azure Deployment (Cosmos DB, App Services, Internal Backend)
 
 **Branch**: `003-azure-deployment` | **Date**: 2026-11-08 | **Spec**: [spec.md](./spec.md)
 
@@ -14,24 +14,27 @@ containers) from a self-managed stack to **Azure**:
 - **Compute** → **Azure App Service (Linux, containers)**, one web app per image, images in
   **Azure Container Registry**, built and released by **GitHub Actions** using a federated
   (OIDC) identity and a managed identity for the ACR pull.
-- **ServiceNow** → a **server-side** integration: the API holds the credential, the UI reaches it
-  through a backend route.
+- **Topology** → the **backend is internal**: public access is disabled and it is reached only
+  through a **private endpoint**, with the **frontend** as the sole caller over **VNet
+  integration**. The browser talks to the frontend; the frontend proxies `/api` to the private
+  backend.
 
-This is a deployment/integration feature. The HTTP contract, authorisation and domain rules are
-unchanged, so the existing CI gate (lint, tests, build, secret scan) stays the merge gate and a
-**new** release workflow runs only on `main`.
+This is a deployment feature. The HTTP contract, authorisation and domain rules are unchanged, so
+the existing CI gate (lint, tests, build, secret scan) stays the merge gate and a **new** release
+workflow runs only on `main`.
 
 The work is bounded because the containers already exist (`apps/server/Dockerfile`,
 `apps/ui/Dockerfile`) and the app is stateless (all state in MongoDB, session is a JWT), so
-"deploy" is configuration plus a workflow, not a re-architecture. The genuinely risky part is
-**Cosmos compatibility**, and that is where the research below concentrates.
+"deploy" is configuration plus a workflow, not a re-architecture. The genuinely risky parts are
+**Cosmos compatibility** and **the private networking**, and the research below concentrates
+there.
 
 ## Technical Context
 
 **Language/Version**: Node 24 (`.nvmrc`, `engines`), TypeScript 6.0.3 (Angular-pinned).
 
-**Primary Dependencies**: Angular 22, NestJS 11, Mongoose 9, MongoDB driver 7.x; `fetch` for
-outbound HTTP (no new HTTP client).
+**Primary Dependencies**: Angular 22, NestJS 11, Mongoose 9, MongoDB driver 7.x. No new runtime
+dependency — the private path is Azure networking, and the app's `fetch` usage is unchanged.
 
 **Storage**: **Azure Cosmos DB for MongoDB** (target). The app talks Mongoose/driver 7.x over the
 MongoDB wire protocol; Cosmos exposes 5.0/6.0/7.0 wire-protocol versions.
@@ -39,15 +42,16 @@ MongoDB wire protocol; Cosmos exposes 5.0/6.0/7.0 wire-protocol versions.
 **Testing**: Jest 30 (unit + integration via `mongodb-memory-server`), Cypress 16 (e2e). The
 Cosmos path needs a **new, opt-in** integration suite (the in-memory `mongod` cannot test Cosmos).
 
-**Target Platform**: Linux containers on Azure App Service.
+**Target Platform**: Linux containers on Azure App Service, backend behind a private endpoint.
 
 **Project Type**: web application (two apps + shared libs + tools), unchanged.
 
-**Performance Goals**: unchanged from `001` (the platform serves a municipality's bookings). The
-only new performance concern is the Cosmos search scan (below).
+**Performance Goals**: unchanged from `001`. The one new performance concern is the Cosmos search
+scan (below). The private hop adds a negligible in-VNet latency.
 
 **Constraints**: no secret in the client bundle (`SC-007`); no long-lived Azure credential in the
-repository; `main` deployable with zero manual steps; rollback by re-deploying a previous tag.
+repository; the backend must not be publicly reachable; `main` deployable with zero manual steps;
+rollback by re-deploying a previous tag.
 
 **Scale/Scope**: the municipality's data — four collections, tens of thousands of documents at
 most. Small enough that sharding is unnecessary and a modest Cosmos tier suffices.
@@ -58,16 +62,16 @@ most. Small enough that sharding is unnecessary and a modest Cosmos tier suffice
 
 | Principle | How this plan satisfies it |
 |-----------|----------------------------|
-| **I. Server-side enforcement** | The ServiceNow integration is server-side by construction (FR-008/009); the credential never reaches the browser. |
-| **II. Test-first for domain logic** | The ServiceNow client and its error mapping get tests first (a mock ServiceNow); the deployment itself is verified by the workflow and a smoke test, not by unit tests (it has no domain logic). |
-| **III. Measured coverage** | New server code (the ServiceNow module) is covered to the existing thresholds. Deployment YAML is not application code and is not in a coverage scope. |
-| **IV. Single source of truth for types** | Any ServiceNow request/response type the UI needs lives in `libs/models`, not in the app. |
+| **I. Server-side enforcement** | Strengthened, not weakened: the API's own guards remain the enforcement (FR-011), and the network control is additional. The private backend removes a whole class of public abuse before it reaches the app. |
+| **II. Test-first for domain logic** | No domain logic changes. The private topology is verified by infrastructure checks and a connectivity test (SC-005), not by unit tests. |
+| **III. Measured coverage** | Unchanged: no new application code is required by this feature (the private path is config). If the Cosmos work needs a small code change, it carries its tests. |
+| **IV. Single source of truth for types** | Unchanged: no new shared type is introduced. |
 | **V. Reversible Migration** | Unchanged and re-affirmed: the legacy Firebase project stays intact until reconciliation passes. Cosmos is a **new** target; the legacy copy is untouched. The migration remains idempotent and re-runnable. |
-| **Security constraints** | OIDC federation + managed identity (no stored secret); all config from App Service settings/Key Vault; the bundle scan (SC-002) still gates the UI. |
+| **Security constraints** | OIDC federation + managed identity (no stored secret); all config from App Service settings/Key Vault; the bundle scan (SC-002) still gates the UI; the backend loses its public surface. |
 
-**Complexity Tracking**: no new abstraction beyond one provider seam for ServiceNow, mirroring the
-existing mail transport (`notification/mail/mail-transport.ts`). That is the repository's
-established pattern for an outbound provider, so it is a reuse, not a new layer.
+**Complexity Tracking**: no new abstraction and no new application code. The feature adds
+infrastructure-as-code and a release workflow, which are configuration, not a layer. This is
+deliberately the smallest change that satisfies the request.
 
 ## Research Summary
 
@@ -88,13 +92,17 @@ Full detail in [research.md](./research.md). The findings that change the plan:
    plan forbids introducing one.
 5. **`explain('queryPlanner')` is a `mongod` behaviour.** The index tests stay on
    `mongodb-memory-server`; Cosmos gets its own opt-in suite.
-6. **App Service can pull from ACR with a managed identity; GitHub Actions can federate to Azure
+6. **A private endpoint gives inbound privacy; VNet integration gives outbound access; they use
+   *different* subnets.** This is exactly the "internal backend, only the frontend calls it" shape
+   (US3). *(Microsoft Learn, "Use Private Endpoints for Apps" and "Integrate your app with an Azure
+   virtual network".)* A private endpoint is available on **Basic and above**.
+7. **App Service can pull from ACR with a managed identity; GitHub Actions can federate to Azure
    with OIDC (no secret).** *(Microsoft Learn, "Deploy container to App Service", "Connect from
    Azure with OpenID Connect".)*
-7. **Container Apps vs App Service.** Container Apps is the more "cloud-native" option (revisions,
+8. **Container Apps vs App Service.** Container Apps is the more "cloud-native" option (revisions,
    scale to zero); App Service is the request's explicit choice and is simpler for a two-container
    web app with slots. The plan follows the request (**App Service**) and notes Container Apps as
-   the alternative if scale-to-zero is wanted.
+   the alternative.
 
 **Tier recommendation**: **Cosmos DB for MongoDB vCore** (a real MongoDB 5.0–7.0). It removes
 findings 2 and 3 entirely and gives `explain`/`listIndexes` parity with the tests. RU-based is
@@ -113,7 +121,7 @@ specs/003-azure-deployment/
 ├── data-model.md        # Phase 1 output — Cosmos indexing/partition notes
 ├── contracts/           # Phase 1 output
 │   ├── deployment.md    #   the environment/settings contract (what each app needs)
-│   └── servicenow.md    #   the ServiceNow integration contract (endpoint, auth, error mapping)
+│   └── network.md       #   the private-topology contract (who may reach what)
 ├── quickstart.md        # Phase 1 output — local + deploy runbook
 └── tasks.md             # Phase 2 output (/speckit.tasks — NOT created here)
 ```
@@ -124,10 +132,12 @@ specs/003-azure-deployment/
 # Infrastructure (new)
 infra/
 ├── bicep/                       # Azure resources as Bicep (subscription-agnostic)
-│   ├── main.bicep               #   resource group scope: ACR, plan, apps, Cosmos
+│   ├── main.bicep               #   resource group scope: ACR, plan, apps, Cosmos, network
 │   ├── modules/
 │   │   ├── acr.bicep            #   registry + managed identity pull role
 │   │   ├── app-service.bicep    #   one Linux web app per image
+│   │   ├── network.bicep        #   VNet, the two subnets, private DNS zone
+│   │   ├── private-endpoint.bicep #  the backend's private endpoint (public access off)
 │   │   ├── cosmos.bicep         #   MongoDB-API account + database + collections/indexes
 │   │   └── identity.bicep       #   user-assigned identity + federated credential (OIDC)
 │   └── params/
@@ -141,38 +151,18 @@ infra/
 ├── ci.yml                       # unchanged — the merge gate
 └── release.yml                  # NEW — build → push to ACR → deploy both App Services
 
-# Application (existing, minimal change)
-apps/server/
-├── Dockerfile                   # unchanged (already multi-stage, already env-driven)
-└── src/app/
-    ├── config/env.validation.ts # + SERVICENOW_* settings (optional, like MAIL_*)
-    └── servicenow/              # NEW module, mirrors notification/mail/ shape
-        ├── service/servicenow.service.ts
-        ├── service/servicenow.service.spec.ts
-        ├── client/servicenow-client.ts      # the provider seam (mirrors IMailTransport)
-        ├── client/servicenow-client.spec.ts
-        ├── controller/servicenow.controller.ts
-        ├── models/servicenow.dto.ts
-        └── servicenow.module.ts
-
-apps/ui/src/app/
-├── core/servicenow.api.ts       # NEW — calls /api/servicenow/* (never ServiceNow directly)
-└── features/.../                # the surface that triggers the action
-
-libs/models/
-└── servicenow.model.ts          # NEW — the request/response types the UI shares
-
-# Cosmos-specific verification (new, opt-in)
-apps/server/src/testing/cosmos-test-context.ts   # connects to a real Cosmos account from env
-apps/server/src/app/**/*.cosmos.spec.ts          # opt-in suite, skipped without COSMOS_URI
+# Application (existing, no change expected)
+apps/server/Dockerfile           # unchanged (already multi-stage, already env-driven)
+apps/ui/Dockerfile               # unchanged
+apps/ui/nginx.conf.template      # unchanged — the /api proxy is what makes US3 work
 ```
 
 **Structure Decision**: the repository is a web application (two apps + shared libs + tools). No
-structure changes; the feature adds an `infra/` tree, a `release.yml`, a `servicenow/` module
-mirroring the `notification/` module, and an opt-in Cosmos test context. The ServiceNow module
-copies the mail transport's shape on purpose — one provider seam, an unconfigured implementation
-that throws, and `fetch` for the call — so the codebase has one pattern for an outbound provider,
-not two.
+structure changes; the feature adds an `infra/` tree and a `release.yml`. Notably, **no application
+code changes**: the private topology is achieved entirely in Azure networking, and the frontend's
+existing nginx `/api` proxy (`apps/ui/nginx.conf.template`, upstream `API_UPSTREAM`) is exactly the
+mechanism US3 needs — the frontend is already the only caller of the API, so making the backend
+private is a networking change, not an app change.
 
 ## Design Decisions
 
@@ -205,74 +195,99 @@ negotiable. The plan measures it on the spike account and records the outcome; t
 matters, is a normalised lower-case field with a non-case-insensitive regex (a schema change,
 deferred until the measurement justifies it).
 
-### D4 — Images are tagged by SHA; deploy is a separate workflow (FR-012)
+### D4 — The backend is private; the frontend is the only caller (US3, finding 6)
+
+This is the request's "BE internal, just FE can call it", and it is achieved with three Azure
+constructs, all in the VNet:
+
+```text
+Internet ──▶ FE App Service (public) ──VNet integration──▶ private DNS ──▶ BE private endpoint
+                     │                                                          │
+                     └── browser loads the SPA, calls /api on the FE's own origin ┘
+                                                                        BE App Service
+                                                                   (public access DISABLED)
+```
+
+- **Backend App Service**: public network access **disabled**; a **private endpoint** in the VNet
+  gives inbound access. (A private endpoint needs Basic+.)
+- **Frontend App Service**: keeps public inbound (it is the public surface) and gets **VNet
+  integration** on a **different subnet** for outbound calls to the backend's private host name.
+  The two subnets must differ (finding 6).
+- **Private DNS zone** (`privatelink.azurewebsites.net`) linked to the VNet, so the frontend
+  resolves the backend's host name to the private IP.
+
+The API's own auth is untouched (FR-011): the private path is a second wall, not a replacement for
+`AuthGuard`/`RolesGuard`.
+
+**Why this and not the cheaper option**: access restrictions by the frontend's outbound IP are
+weaker (App Service outbound IPs are shared and can change). The private endpoint is the boundary
+the requirement implies. The alternative is recorded in open question 1.
+
+**Cost/plan note**: a private endpoint requires **Basic or higher**, and slots require
+**Standard or higher** (open question 4).
+
+### D5 — Images are tagged by SHA; deploy is a separate workflow (FR-013)
 
 `release.yml` runs on `push: main` only. It builds both images, pushes
 `book-space-{server,ui}:<sha>` (and `:main`), and updates each App Service to the SHA tag. Rollback
 is re-deploying a previous SHA tag (SC-006). The existing `ci.yml` is untouched, so the merge gate
 and the release are independent and a red build cannot deploy.
 
-### D5 — No Azure secret in the repository (FR-005/006)
+### D6 — No Azure secret in the repository (FR-005/006)
 
 A user-assigned managed identity with a **federated credential** trusts the GitHub repo's OIDC
 token; `azure/login` exchanges it. App Service pulls from ACR with the same (or a second) managed
 identity holding `AcrPull`. Nothing long-lived is stored. This is the single most important
 security decision in the feature.
 
-### D6 — ServiceNow is a server-side module mirroring the mail transport
+### D7 — The smoke test respects the private backend (edge case)
 
-`servicenow/client/servicenow-client.ts` defines an `IServiceNowClient` seam with:
-- an `UnconfiguredServiceNowClient` that **throws** (so an unconfigured deployment fails visibly,
-  `502` — FR-010), and
-- an `HttpServiceNowClient` that POSTs to the configured endpoint with a bearer/basic credential
-  read from the environment, with a timeout, exactly like `HttpMailTransport`.
+Because the backend is private, the release workflow's post-deploy check **cannot** `curl` the API
+from the public internet. The check targets the **frontend's** proxied path (`GET <fe>/api/buildings`
+returns the twelve facilities), which proves the whole chain — frontend, proxy, VNet, private
+endpoint, API, Cosmos — in one request. A direct API check is an optional VNet-joined step.
 
-`servicenow.controller.ts` exposes `/api/servicenow/*`, guarded by `AuthGuard('jwt')` +
-`RolesGuard`, with `@Roles` set per the open question (who may call it). The UI calls the backend
-only (FR-008/009).
+### D8 — Configuration contract
 
-### D7 — Configuration contract
+| App | Setting | Notes |
+|-----|---------|-------|
+| server | `DB_URI` | the Cosmos MongoDB connection string (must match `/^mongodb(\+srv)?:\/\//`) |
+| server | `JWT_SECRET` | ≥ 32 chars |
+| server | `SEED_REFERENCE_DATA`, `SUMMARY_DENY_LIST`, `MAIL_*`, `SISK_CONTACT_EMAIL`, `PUBLIC_RATE_LIMIT*`, `NOTIFICATION_QUOTA*` | unchanged, optional |
+| ui | `API_UPSTREAM` | the API origin nginx proxies `/api/` to (the private host name) |
 
-New server settings, all optional (like `MAIL_*`), so an unconfigured deployment boots and fails
-the action rather than refusing to start:
-
-| Setting | Purpose |
-|---------|---------|
-| `SERVICENOW_ENDPOINT` | The ServiceNow Table API base URL |
-| `SERVICENOW_TABLE` | The table to create records in (e.g. `incident`) |
-| `SERVICENOW_USER` / `SERVICENOW_PASSWORD` | Basic-auth credential (or `SERVICENOW_TOKEN`) |
-| `SERVICENOW_TIMEOUT_MS` | Outbound timeout (default 10 000, matching the mail transport) |
-
-On App Service these are **app settings**; the credential values are **Key Vault references**
-where a vault is used. None reaches the client bundle.
+On App Service these are **app settings**; credentials are **Key Vault references** where a vault
+is used. None reaches the client bundle.
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 |------|------------|
 | Cosmos compatibility surprises (indexes, `$regex`, `explain`) | Phase 0 spike against a real account; the opt-in Cosmos suite; vCore recommended. |
+| The private endpoint misconfigured (DNS, subnet) | The topology is Bicep (FR-012), so it is reproducible; SC-005 is an explicit connectivity test. |
+| A smoke test that silently passes because it cannot reach a private API | The smoke test goes through the frontend (D7). |
 | A secret leaks into the bundle or the repo | OIDC + managed identity; the existing bundle/secret scans (SC-002) stay in CI. |
 | Deployment is not reversible | SHA tags + App Service slots; rollback is a re-deploy (SC-006). |
 | The migration is run against the wrong target | The migration keeps `--target`; the runbook requires the Cosmos URI and a `--dry-run` first. |
-| ServiceNow outage blocks a request | Timeout + `502`; the triggering action is never silently lost. |
-| Cost overrun (Cosmos) | Tier chosen in the spike; serverless/vCore autoscale documented in `operations.md`. |
+| Cost overrun (Cosmos, private endpoints, plan tier) | Tier chosen in the spike; the private endpoint is one resource; the plan tier is an open question. |
 
 ## Phase Plan (hand-off to `/speckit.tasks`)
 
 - **Phase 0 — Spike**: create a Cosmos account (vCore and RU-based), run the API + migration
-  against each, record what breaks. **Decides open question 1.**
-- **Phase 1 — Infra as code**: `infra/bicep` for ACR, identities, App Services, Cosmos;
-  `ensure-collections.ts`.
-- **Phase 2 — Release workflow**: `release.yml` (build → push → deploy), OIDC, smoke test.
+  against each, record what breaks. **Decides open question 2.**
+- **Phase 1 — Network and infra as code**: `infra/bicep` for the VNet, subnets, private DNS zone,
+  private endpoint, ACR, identities, App Services, Cosmos; `ensure-collections.ts`.
+- **Phase 2 — Release workflow**: `release.yml` (build → push → deploy), OIDC, smoke test via the
+  frontend.
 - **Phase 3 — Cosmos migration**: adapt `tools/migration` if needed; ordered run; reconcile.
-- **Phase 4 — ServiceNow module**: server module + client seam + controller + DTOs + UI api +
-  tests.
+- **Phase 4 — Private-backend verification**: SC-005 (public request refused; frontend path
+  works).
 - **Phase 5 — Docs and ops**: `README` § Deployment, `docs/operations.md` (Cosmos backup/DR,
-  release/rollback, ServiceNow runbook), `AGENTS.md`.
+  release/rollback, the private topology), `AGENTS.md`.
 
 ## Post-Design Constitution Re-check
 
-Re-evaluated after the design above: still passes. The only new abstraction (the ServiceNow
-provider seam) mirrors an existing one; the migration stays reversible (Principle V) because the
-legacy Firebase copy is untouched and Cosmos is a new target; and no secret is introduced into the
-repository or the bundle.
+Re-evaluated after the design above: still passes. The plan adds no application code and no
+abstraction; it strengthens the security posture (Principle I, Security constraints) rather than
+weakening it; and the migration stays reversible (Principle V) because the legacy Firebase copy is
+untouched and Cosmos is a new target.

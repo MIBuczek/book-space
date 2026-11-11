@@ -1,10 +1,10 @@
-# Data Model: Azure Deployment and ServiceNow Integration
+# Data Model: Azure Deployment (Cosmos DB, App Services, Internal Backend)
 
 This feature adds **no application domain entities**. The domain model is unchanged
 (`specs/001-booking-platform-rewrite/data-model.md`). What this document fixes is the
 **deployment-side model**: the Cosmos database shape, its index and partition decisions, and the
-one new external record (a ServiceNow record). It is the reference the migration order (research
-R2) and the infra-as-code are checked against.
+network topology's data-carrying pieces. It is the reference the migration order (research R2) and
+the infra-as-code are checked against.
 
 ## 1. Cosmos database
 
@@ -50,7 +50,21 @@ idempotently, **before** the seed and the migration write.
 Steps 1–2 are `ensure-collections.ts`; step 3 is the existing seed; step 4 is the existing tool;
 step 5 is the existing reconciliation. Re-running 1–4 is idempotent.
 
-## 4. Backup / DR (operations)
+## 4. Network topology (the data-carrying pieces)
+
+The topology is not domain data, but it carries the request's "internal backend" requirement, so
+it is modelled here and in `contracts/network.md`:
+
+| Piece | Purpose |
+|-------|---------|
+| VNet + two subnets | one for the backend's private endpoint, one for the frontend's VNet integration (must differ) |
+| Private DNS zone (`privatelink.azurewebsites.net`) | resolves the backend host name to the private IP for the frontend |
+| Backend private endpoint | inbound private access; public access disabled |
+| Frontend VNet integration | outbound access from the frontend to the backend |
+
+No application data flows through these; they carry the API's own traffic.
+
+## 5. Backup / DR (operations)
 
 | Aspect | On a self-managed `mongod` | On Cosmos DB |
 |--------|----------------------------|--------------|
@@ -61,14 +75,8 @@ step 5 is the existing reconciliation. Re-running 1–4 is idempotent.
 `docs/operations.md` (T060) gains a Cosmos section recording this. The tool is unchanged; the
 operator gains a second, platform-level restore path.
 
-## 5. ServiceNow record (external, not stored by default)
-
-- **Not** a domain entity and **not** persisted in Cosmos unless a later task requires it.
-- The API returns `{number, sysId}` to the caller; the ServiceNow instance is the system of record.
-- If a future task wants a local audit row (who raised what, when), that is a **new** decision and
-  a new collection, not part of this feature.
-
 ## 6. No schema changes to the application
 
 The Mongoose schemas, the DTOs and the HTTP contract are unchanged. This feature changes **where**
-the data lives and **how** it is deployed, not **what** it is.
+the data lives, **how** it is deployed, and **who can reach the backend** — not **what** the data
+is.

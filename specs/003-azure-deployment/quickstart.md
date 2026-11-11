@@ -1,15 +1,15 @@
-# Quickstart: Azure Deployment and ServiceNow Integration
+# Quickstart: Azure Deployment (Cosmos DB, App Services, Internal Backend)
 
 Two runbooks: **local** (prove the code against Cosmos before touching Azure) and **deploy**
-(prove the pipeline). Both are checklists, not prose, so a run is repeatable.
+(prove the pipeline and the private topology). Both are checklists, so a run is repeatable.
 
 ## A. Local — the API against Cosmos DB
 
 Prerequisites: an Azure subscription with permission to create a Cosmos DB account, and the
 repository's tooling (`npx yarn`, `nx`).
 
-1. **Create the account.** Cosmos DB for MongoDB. Choose the tier per the Phase 0 spike
-   (vCore recommended — research R5). Note the connection string.
+1. **Create the account.** Cosmos DB for MongoDB. Choose the tier per the Phase 0 spike (vCore
+   recommended — research R5). Note the connection string.
 2. **Create the database and indexes *before* any data** (research R2):
 
    ```bash
@@ -54,10 +54,13 @@ npx nx run migration:run -- --source ./legacy-export --target "$COSMOS_URI"
 #    A non-zero exit code stops the cut-over.
 ```
 
+If Cosmos is **private** (open question 3), run this from a machine with VNet access (a VNet-joined
+job or a jump box), or add a temporary firewall rule for the operator's IP (research R10).
+
 ## C. Azure — provision the infrastructure
 
 ```bash
-# One-time: an OIDC federated identity so GitHub can log in without a secret (research R6).
+# One-time: an OIDC federated identity so GitHub can log in without a secret (research R7).
 # Then:
 az deployment group create \
   --resource-group "$RG" \
@@ -65,26 +68,38 @@ az deployment group create \
   --parameters infra/bicep/params/prod.bicepparam
 ```
 
-Provisioned: the container registry, the two App Services (Linux, container), the managed
-identities (`AcrPull` on the registry), and the Cosmos account. Fill the App Service settings from
-`contracts/deployment.md` § 3–4; put credentials in Key Vault references.
+Provisioned (all from code — FR-012): the container registry, the two App Services (Linux,
+container), the managed identities (`AcrPull` on the registry), the Cosmos account, the **VNet and
+its two subnets**, the **private endpoint** on the backend (public access disabled), the
+**private DNS zone** and its link, and the frontend's **VNet integration**. Fill the App Service
+settings from `contracts/deployment.md` § 3–4; put credentials in Key Vault references.
 
 ## D. Release — build, push, deploy
 
 1. Merge to `main`.
 2. `release.yml` runs: builds both images, pushes `book-space-{server,ui}:<sha>`, updates both App
    Services to that tag.
-3. Verify: the UI loads and the API answers on the App Service hosts; `GET /api/buildings` returns
-   twelve facilities.
+3. **Verify through the frontend** (the backend is private — plan § D7):
+
+   ```bash
+   # The whole chain in one request: frontend → proxy → VNet → private endpoint → API → Cosmos
+   curl -sS https://app-book-space-ui.azurewebsites.net/api/buildings | jq length   # 12
+   ```
+
 4. **Rollback**: re-deploy the previous `<sha>` tag to both apps (SC-006).
 
-## E. ServiceNow
+## E. Verify the private backend (US3, SC-005)
 
-1. Set `SERVICENOW_ENDPOINT`, `SERVICENOW_TABLE`, and `SERVICENOW_USER`/`SERVICENOW_PASSWORD`
-   (or `SERVICENOW_TOKEN`) as App Service settings (Key Vault references preferred).
-2. From the UI, trigger the action; confirm the record number is shown.
-3. Unset `SERVICENOW_ENDPOINT` and confirm the action answers **`502`** (never a silent success).
-4. Confirm the built bundle contains no ServiceNow value: `node tools/scan-bundle.js dist/apps/ui`.
+```bash
+# 1. Public internet — must NOT reach the app (connection refused, or a platform 403; never 200):
+curl -sS -o /dev/null -w '%{http_code}\n' https://app-book-space-api.azurewebsites.net/api/buildings
+# 2. Through the frontend — must return 12:
+curl -sS https://app-book-space-ui.azurewebsites.net/api/buildings | jq length
+# 3. Inside the VNet (jump box / VNet-joined job) — must return 200:
+curl -sS -o /dev/null -w '%{http_code}\n' https://app-book-space-api.azurewebsites.net/api/buildings
+```
+
+Check 1 is the acceptance test for US3; check 2 proves the chain works.
 
 ## F. Definition of done
 
@@ -93,5 +108,7 @@ identities (`AcrPull` on the registry), and the Cosmos account. Fill the App Ser
 - [ ] The API runs against Cosmos; the twelve facilities and the migrated bookings are present.
 - [ ] Reconciliation (`SC-003`) reports zero loss and zero broken references; a re-run is
       idempotent.
-- [ ] ServiceNow works end-to-end from the UI, and fails visibly when unconfigured.
-- [ ] `docs/operations.md` records the Cosmos backup/restore and the rollback step.
+- [ ] The backend's public access is **disabled** and a public request does not reach it (SC-005).
+- [ ] The frontend reaches the backend over the private path (the proxied `/api` call succeeds).
+- [ ] `docs/operations.md` records the Cosmos backup/restore, the rollback step and the private
+      topology.

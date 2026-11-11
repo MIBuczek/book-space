@@ -1,4 +1,4 @@
-# Research: Azure Deployment and ServiceNow Integration
+# Research: Azure Deployment (Cosmos DB, App Services, Internal Backend)
 
 **Date**: 2026-11-08 | **Plan**: [plan.md](./plan.md) | **Spec**: [spec.md](./spec.md)
 
@@ -107,7 +107,42 @@ decision is locked on the evidence, not on this recommendation alone.
 
 ---
 
-## R6 — GitHub Actions → Azure with OIDC (no stored secret)
+## R6 — The backend is private; a private endpoint and VNet integration use different subnets
+
+**Decision**: the backend App Service has **public network access disabled** and a **private
+endpoint**; the frontend keeps public inbound and gets **VNet integration** on a **separate
+subnet** to reach the backend. A **private DNS zone** is linked to the VNet.
+
+**Evidence** (Microsoft Learn, *Use Private Endpoints for Apps*):
+- "When you use a private endpoint for your app, you can: Secure your app when you configure the
+  private endpoint and disable public network access, which eliminates public exposure."
+- "The private endpoint is only used for incoming traffic to your app. Outgoing traffic doesn't use
+  the private endpoint. You can inject outgoing traffic to your network in a different subnet
+  through the virtual network integration feature."
+- "The virtual network integration feature can't use the same subnet as the private endpoint."
+- "Private endpoints are available for Windows and Linux apps, containerized or not, hosted on the
+  following App Service plans: **Basic**, Standard, PremiumV2, PremiumV3, PremiumV4, IsolatedV2,
+  Functions Premium."
+
+**Evidence** (Microsoft Learn, *Integrate your app with an Azure virtual network*):
+- "Virtual network integration gives your app access to resources in your virtual network, but it
+  doesn't grant inbound private access to your app… Refer to private endpoint for inbound private
+  access."
+- "When all traffic routing is enabled, all outbound traffic is sent into your virtual network."
+
+**Repository facts that make this the right shape**:
+- The frontend already proxies `/api` (`apps/ui/nginx.conf.template`, upstream `API_UPSTREAM`), so
+  the frontend is **already the only caller** of the API — making the backend private is a
+  networking change, not an app change.
+- The API's own guards (`AuthGuard('jwt')`, `RolesGuard`, `OptionalJwtAuthGuard`) stay exactly as
+  they are (FR-011); the private path is additional.
+
+**Consequence**: US3 is a `network.bicep` + `private-endpoint.bicep` concern. The plan tier must be
+**Basic or higher**; slots (for warm swap) need **Standard or higher**.
+
+---
+
+## R7 — GitHub Actions → Azure with OIDC (no stored secret)
 
 **Decision**: the release workflow authenticates with a **federated identity credential**; no
 Azure client secret is stored in the repository.
@@ -123,7 +158,7 @@ posture; the plan chooses OIDC because it is strictly better and is the document
 
 ---
 
-## R7 — App Service pulls from ACR with a managed identity
+## R8 — App Service pulls from ACR with a managed identity
 
 **Decision**: both App Services pull images from ACR using a managed identity (`AcrPull`), not a
 registry username/password.
@@ -136,7 +171,7 @@ authority, and it can be scoped to a single registry.
 
 ---
 
-## R8 — App Service vs Container Apps
+## R9 — App Service vs Container Apps
 
 **Decision**: **App Service** (the request's choice). Container Apps is noted as the alternative
 if scale-to-zero or Dapr-style features are wanted.
@@ -155,28 +190,22 @@ developer machine — recorded as an option, not a requirement.
 
 ---
 
-## R9 — ServiceNow integration shape: server-side, mirroring the mail transport
+## R10 — The private backend constrains the deployment's own checks and the migration
 
-**Decision**: a `servicenow/` module with an `IServiceNowClient` seam, an unconfigured
-implementation that throws, an HTTP implementation using `fetch` with a timeout, and a controller
-guarded like the rest of the API. The UI calls the backend only.
+**Decision**: the post-deploy smoke test goes **through the frontend**; the migration run needs
+VNet access if Cosmos is also private.
 
-**Evidence (repository pattern)**: `notification/mail/mail-transport.ts` already defines exactly
-this shape — an `IMailTransport` seam, an `UnconfiguredMailTransport` that throws, and an
-`HttpMailTransport` that POSTs with a timeout and maps a non-2xx/timeout to a failure. The
-ServiceNow client copies it so the codebase has **one** outbound-provider pattern.
+**Evidence (derived from R6)**: with public access disabled, a `curl` from the GitHub runner cannot
+reach the backend. The frontend's proxied path proves the whole chain in one request:
+frontend → proxy → VNet → private endpoint → API → Cosmos. If Cosmos is private (open question 3),
+the migration job needs VNet integration or a temporary operator-IP firewall rule.
 
-**Evidence (security)**: `SC-007` and `tools/scan-bundle.js` forbid a credential in the client
-bundle. A browser→ServiceNow call would need the credential in the bundle, so it is excluded by
-construction.
-
-**ServiceNow API fact**: the Table API creates a record with `POST /api/now/table/{table}` and
-returns the created record (including `sys_id`). The exact auth (basic vs OAuth) is an open
-question; the client supports basic auth first, with a token option.
+**Consequence**: the smoke test (plan § D7) and the migration runbook (quickstart) are written for
+a private backend from the start.
 
 ---
 
-## R10 — Cosmos backup/DR changes the operations runbook
+## R11 — Cosmos backup/DR changes the operations runbook
 
 **Decision**: the backup/restore runbook (`docs/operations.md`, T060) is re-pointed at Cosmos.
 
@@ -191,7 +220,7 @@ self-managed `mongod`.
 
 ---
 
-## R11 — The migration tool needs no rewrite, only a target and an order
+## R12 — The migration tool needs no rewrite, only a target and an order
 
 **Decision**: `tools/migration` is unchanged in shape. Its `--target` points at Cosmos, and the
 runbook enforces the R2 order (collections + indexes first).
@@ -210,10 +239,14 @@ rehearsal (the T043 flow).
 - Microsoft Learn — *Azure Cosmos DB for MongoDB: 6.0 / 7.0 Supported Features and Syntax*.
 - Microsoft Learn — *Azure Cosmos DB for MongoDB: Indexing* (unique-index-on-empty, `$regex`
   scan).
+- Microsoft Learn — *Use Private Endpoints for Apps* (private endpoint, public access off, subnet
+  separation, plan tiers).
+- Microsoft Learn — *Integrate your app with an Azure virtual network* (VNet integration is
+  outbound only; private endpoint is inbound).
 - Microsoft Learn — *Compare Azure container options* (App Service vs Container Apps).
 - Microsoft Learn — *Deploy a custom container to Azure App Service* (managed-identity pull).
 - Microsoft Learn — *Connect to Azure from GitHub Actions with OpenID Connect*.
 - Repository: `apps/server/src/app/app.module.ts`, `config/env.validation.ts`,
   `users/schemas/user.schema.ts`, `buildings/schemas/building.schema.ts`,
-  `notification/mail/mail-transport.ts`, `tools/migration/src/lib/cli.ts`, `.github/workflows/ci.yml`,
+  `apps/ui/nginx.conf.template`, `tools/migration/src/lib/cli.ts`, `.github/workflows/ci.yml`,
   `apps/server/Dockerfile`, `apps/ui/Dockerfile`, `README.md` § Deployment.
