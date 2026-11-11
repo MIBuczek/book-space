@@ -707,6 +707,8 @@ describe('BookingsTableComponent', () => {
     expect(fixture.componentInstance.canArchiveBookings()).toBe(false);
     expect(element(fixture).textContent).not.toContain('Zatwierdź');
     expect(element(fixture).textContent).not.toContain('Archiwizuj');
+    // The applicant notification is administrator-only (FR-052), so it hides with the rest.
+    expect(element(fixture).textContent).not.toContain('Powiadom wnioskującego');
   });
 
   it('offers the approve action to a caller with the capability', async () => {
@@ -721,5 +723,35 @@ describe('BookingsTableComponent', () => {
 
     expect(element(fixture).textContent).toContain('Zatwierdź');
     expect(element(fixture).textContent).toContain('Archiwizuj');
+  });
+
+  it('notifies the applicant for the booking the action names (FR-052)', async () => {
+    const fixture = await render([booking({_id: 'b1', accepted: true})], []);
+
+    pressButton(fixture, 'Powiadom wnioskującego');
+
+    const request = httpMock.expectOne('/api/notifications/booking');
+    expect(request.request.method).toBe('POST');
+    // Only the booking and the audience travel; the server resolves the recipient and the
+    // approved/rejected wording from the stored booking.
+    expect(request.request.body).toEqual({bookingId: 'b1', audience: 'APPLICANT'});
+    request.flush({status: 'sent'});
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(element(fixture).textContent).toContain('Powiadomienie zostało wysłane');
+  });
+
+  it('surfaces a failed applicant notification rather than swallowing it (FR-036)', async () => {
+    const fixture = await render([booking({_id: 'b1'})], []);
+
+    pressButton(fixture, 'Powiadom wnioskującego');
+
+    const request = httpMock.expectOne('/api/notifications/booking');
+    request.flush({message: 'provider down'}, {status: 502, statusText: 'Bad Gateway'});
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(element(fixture).textContent).toContain('Nie udało się wysłać powiadomienia');
   });
 });

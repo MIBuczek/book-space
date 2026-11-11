@@ -1,16 +1,24 @@
 import * as Validator from 'class-validator';
 
 /** The audiences a booking notification can address (contracts/openapi.yaml). */
-const NOTIFICATION_AUDIENCES = ['FACILITY', 'STAFF'] as const;
+const NOTIFICATION_AUDIENCES = ['FACILITY', 'STAFF', 'APPLICANT'] as const;
 type TNotificationAudience = (typeof NOTIFICATION_AUDIENCES)[number];
 
 /**
- * The body of `POST /notifications/booking` (FR-032, FR-033).
+ * The body of `POST /notifications/booking` (FR-032, FR-033, FR-052).
  *
  * `audience` is the operator's opt-in: `FACILITY` notifies the facility the booking is for
- * (FR-032), `STAFF` notifies the SISK inbox that a public request arrived (FR-033). The
- * recipient address is never taken from the body — it is resolved server-side from the
- * booking's facility or from configuration — so a caller cannot redirect a notification.
+ * (FR-032), `STAFF` notifies the SISK inbox that a public request arrived (FR-033), and
+ * `APPLICANT` notifies the person who requested the booking that it was approved or rejected
+ * (FR-052, T062). The recipient address is never taken from the body — it is resolved
+ * server-side from the booking's facility, from configuration, or from the booking's own
+ * `personEmail` — so a caller cannot redirect a notification.
+ *
+ * `APPLICANT` is administrator-only, the same rule the approve/reject routes carry: it is the
+ * decision notification for a booking an administrator has just decided, so a non-administrator
+ * is refused rather than allowed to mail the requestor on an administrator's behalf. The
+ * controller enforces it (it needs the authenticated role, which the body cannot be trusted to
+ * name); this comment records *why* the audience exists.
  */
 export class BookingNotificationDto {
   @Validator.IsString()
@@ -18,7 +26,7 @@ export class BookingNotificationDto {
   bookingId!: string;
 
   @Validator.IsIn(NOTIFICATION_AUDIENCES as unknown as string[], {
-    message: 'Audience must be FACILITY or STAFF'
+    message: 'Audience must be FACILITY, STAFF or APPLICANT'
   })
   audience!: TNotificationAudience;
 }

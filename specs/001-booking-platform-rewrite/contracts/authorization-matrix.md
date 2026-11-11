@@ -56,6 +56,7 @@ is now configuration.
 | Reschedule a single slot | ❌ | ✅ | ✅ | ✅ | `RecordOpenItem` (`hasRight = isAdmin \|\| isEmployee`) |
 | See bookings awaiting approval filter | ❌ | ❌ | ❌ | ✅ | `Bookings.tsx` (`user?.isAdmin`) |
 | See the conflict counter | ❌ | ❌ | ❌ | ✅ | `Bookings.tsx` |
+| Notify the applicant of the decision (`POST /notifications/booking`, `APPLICANT`) | ❌ | ❌ | ❌ | ✅ | New (FR-052, T062); administrator-only in the controller, matching the approve/reject routes |
 | Read clients | ❌ | ❌ | ✅ | ✅ | `adminSeeContentCredentials` — **enforced (T025)**: `ClientController` is `@Roles('OFFICE','ADMIN')` |
 | Create/update/delete clients | ❌ | ❌ | ❌ | ✅ | `Clients.tsx` (`adminCredentials`) — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
 | Read facilities and employees | ❌ | ✅ | ✅ | ✅ | `Building.tsx`, `hasRightsToSeeContent` — **enforced (T025)**: the single read and the writes are `@Roles('EMPLOYEE','OFFICE','ADMIN')` and `@Roles('ADMIN')` respectively |

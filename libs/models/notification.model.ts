@@ -26,4 +26,22 @@ interface IMessageRequest {
   recipient?: string;
 }
 
-export {IMessageRequest};
+/**
+ * The audiences `POST /notifications/booking` can address (contracts/openapi.yaml).
+ *
+ * `FACILITY` and `STAFF` are the legacy booking notifications (FR-032, FR-033). `APPLICANT`
+ * is the decision notification (FR-052, T062): it tells the requestor their booking was
+ * approved or rejected. The server narrows `APPLICANT` to an administrator, matching the
+ * approve/reject routes, so a non-administrator is refused with `403`.
+ */
+const NOTIFICATION_AUDIENCES = ['FACILITY', 'STAFF', 'APPLICANT'] as const;
+type TNotificationAudience = (typeof NOTIFICATION_AUDIENCES)[number];
+
+/** The body of `POST /notifications/booking`; the recipient is resolved server-side. */
+interface IBookingNotificationRequest {
+  bookingId: string;
+  audience: TNotificationAudience;
+}
+
+export {IMessageRequest, NOTIFICATION_AUDIENCES};
+export type {TNotificationAudience, IBookingNotificationRequest};
