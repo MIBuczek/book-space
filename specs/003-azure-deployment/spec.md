@@ -1,4 +1,4 @@
-# Feature Specification: Azure Deployment (Cosmos DB, App Services, Internal Backend)
+# Feature Specification: Azure Deployment (Azure DocumentDB, App Services, Internal Backend)
 
 **Feature Branch**: `003-azure-deployment`
 
@@ -20,7 +20,8 @@ is a self-managed MongoDB reached through `DB_URI`.
 
 This feature changes three things, and nothing else:
 
-1. The **runtime database** becomes **Azure Cosmos DB for MongoDB**, and the migration tool
+1. The **runtime database** becomes **Azure DocumentDB** (the MongoDB-compatible vCore
+   service), and the migration tool
    (`tools/migration`) writes into it. `DB_URI` remains the single configuration seam, so the API
    code is unchanged; only the deployment and the migration target move.
 2. The two containers are hosted on **Azure App Service (Linux, containers)** with images in
@@ -34,17 +35,36 @@ deployment feature, not a rewrite.
 
 ## Clarifications
 
-### Session 2026-11-08
+### Session 2026-11-08 (round 1)
 
 - Q: "BE service should be internal and just FE can call it" — what does "internal" mean? →
   **A: the backend is not publicly reachable.** It is exposed on a **private endpoint** inside an
   Azure virtual network with public network access disabled; the frontend app is the only caller,
   reaching it through **VNet integration**. The browser calls the frontend (same origin `/api`),
-  and the frontend proxies to the backend. This is the reading the requirement supports and it is
-  recorded as open question 1 in case a lighter option (access restrictions by the frontend's
-  outbound IP) is preferred.
-- Q: Which Cosmos DB API? → **A: the MongoDB API** (`*.mongo.cosmos.azure.com`), so the driver and
-  `DB_URI` stay as they are. The tier (RU-based vs vCore) is an open question resolved by a spike.
+  and the frontend proxies to the backend.
+- Q: Which Cosmos DB API? → **A: the MongoDB API**, so the driver and `DB_URI` stay as they are.
+
+### Session 2026-11-08 (round 2 — the five answers)
+
+All five open questions are answered; they are decisions now, not open items.
+
+1. **How private is the backend?** → **Private endpoint** (public access disabled). Not the
+   lighter IP access-restriction variant.
+2. **Cosmos tier?** → **vCore**. Note: vCore is now its own service, **Azure DocumentDB**
+   (`Microsoft.DocumentDB/mongoClusters`), formerly "vCore-based Azure Cosmos DB for MongoDB". It
+   is a real MongoDB (wire protocol 5.0–8.0), so the RU-based constraints (unique index only on an
+   empty collection; a case-insensitive `$regex` scan) **do not apply**, and `explain()` works as
+   on `mongod`.
+3. **Is the database private too?** → **Yes.** Azure DocumentDB gets a **private endpoint** with
+   public access disabled, reached over Private Link. Consequence: the migration run needs VNet
+   access (a VNet-joined job or a jump box), not a workstation.
+4. **App Service plan tier and slots?** → **Yes** — a plan with deployment slots, so the tier is
+   **Standard or higher** (PremiumV3 recommended for production). The private endpoint needs
+   Basic+, which this satisfies.
+5. **Custom domain and TLS, and region?** → **Yes** — the frontend is served on a **custom
+   domain** with a **TLS certificate** (an App Service managed certificate). The **region** is the
+   operator's choice for data residency; the plan defaults to **Poland Central** (the
+   municipality is SISK, Siechnice) and records it as a parameter, not a hard-coded value.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -72,28 +92,27 @@ respond. Re-running the workflow deploys the same commit idempotently.
 
 ---
 
-### User Story 2 - Run the booking platform on Azure Cosmos DB for MongoDB (Priority: P2)
+### User Story 2 - Run the booking platform on Azure DocumentDB (Priority: P2)
 
-The runtime database is Azure Cosmos DB for MongoDB. The API connects with the same `DB_URI`
-contract; the migration tool (T043, #47) writes the legacy data into Cosmos DB and reconciles.
+The runtime database is Azure DocumentDB. The API connects with the same `DB_URI` contract;
+the migration tool (T043, #47) writes the legacy data into it and reconciles.
 
 **Why this priority**: it is the data half of the deployment. It can be done after the compute
-move, and it is the riskiest because of Cosmos compatibility limits.
+move, and it is the riskiest because of DocumentDB compatibility limits.
 
-**Independent Test**: point `DB_URI` at a Cosmos account, boot the API, and run the existing
+**Independent Test**: point `DB_URI` at a DocumentDB cluster, boot the API, and run the existing
 integration suites against it (or a representative subset); the booking read, the unique
 `{city, property}` facility key and the client search all behave as on a real `mongod`.
 
 **Acceptance Scenarios**:
 
-1. **Given** an empty Cosmos database, **When** the reference seed and the migration run, **Then**
+1. **Given** an empty DocumentDB database, **When** the reference seed and the migration run, **Then**
    the twelve facilities, clients, users and bookings are present and every booking's `clientId`
    and `place` resolve (`SC-003`).
 2. **Given** the `{city, property}` unique rule, **When** a second facility with the same key is
-   inserted, **Then** the write is refused (the unique index is enforced on Cosmos).
+   inserted, **Then** the write is refused (the unique index is enforced on DocumentDB).
 3. **Given** a public or staff booking search, **When** the search term is used, **Then** it
-   returns the same rows as on `mongod` (correctness first; performance is measured, see the
-   open question on the search scan).
+   returns the same rows as on `mongod`.
 4. **Given** the migration is re-run, **When** it completes, **Then** it is idempotent and the
    reconciliation counts are unchanged.
 
@@ -138,41 +157,43 @@ frontend) succeeds.
 
 ### Edge Cases
 
-- **Cosmos unique-index ordering.** RU-based Cosmos can only create a unique index while the
-  collection is **empty**, and `mongorestore` needs `--noIndexRestore`. The seed and the migration
-  must therefore run **after** the collections and their unique indexes exist. The plan owns the
-  order.
-- **Case-insensitive search on RU-based Cosmos.** A `$regex` with the `i` option forces a
-  collection scan. The client/booking search must keep returning correct rows; its cost is
-  measured and, if it matters, addressed (see open questions).
-- **Multi-document transactions.** Cosmos supports them only within a single, non-sharded
-  collection. The application uses none today; the plan forbids introducing a cross-collection
-  transaction.
-- **`explain('queryPlanner')` assertions.** The server's index tests assert the planner picks an
-  index; that behaviour is a `mongod` property. Those tests stay on `mongodb-memory-server`; a
-  Cosmos-specific check is a separate, opt-in suite.
+- **Azure DocumentDB compatibility.** vCore is 99.03 % MongoDB-compatible; the small set of
+  unsupported administrative operators is assessed in the Phase 0 spike (the migration extension's
+  compatibility assessment). The repo's own features — unique indexes, `explain()`, aggregation —
+  are supported.
+- **A private database and the migration.** With Azure DocumentDB behind a private endpoint, the
+  migration run needs VNet access (a VNet-joined job or a jump box), not a workstation. The runbook
+  owns this.
 - **A private backend and the deployment's own checks.** The release workflow's post-deploy smoke
-  test cannot reach a private API from the public internet; it must run from inside the VNet (or
-  from the frontend), or the check must target the frontend's proxied path.
-- **A private backend and the migration.** If Cosmos is also private, the migration run needs VNet
-  access (a job with VNet integration, or a temporary operator-IP rule).
-- **Sharded vs unsharded.** A sharded Cosmos collection makes every unique index compound with the
-  shard key. The collections are small; the plan defaults to **unsharded** unless a volume
-  threshold is crossed.
-- **App Service plan tier.** A private endpoint needs **Basic or higher**; slots (for warm swap)
-  need Standard or higher. The tier is an open question.
-- **Secret rotation.** The Cosmos connection string is rotated by updating the App Service setting
-  (or Key Vault), not by rebuilding the image.
+  test cannot reach a private API from the public internet; it goes through the frontend's proxied
+  path (one request proves the whole chain).
+- **Two private endpoints, two DNS zones.** The backend app and the database each have a private
+  endpoint with its own private DNS zone (`privatelink.azurewebsites.net` and
+  `privatelink.mongocluster.cosmos.azure.com`). The frontend's VNet integration resolves both; a
+  missing zone link is the classic "it works from the portal but not from the app" failure.
+- **Sharded vs unsharded.** Most DocumentDB workloads need no sharding below multiple terabytes.
+  The collections are small; the plan starts **unsharded**.
+- **Deployment slots and the private endpoint.** A slot is a separate app with its own private
+  endpoint (they cannot be shared). The plan either provisions a slot endpoint per environment or
+  deploys slot-less; this is a Phase 1 decision recorded in the params file.
+- **Custom domain and certificate.** The managed certificate needs the DNS record to be in place
+  and the domain verified before it issues; a stuck certificate is almost always a DNS
+  propagation issue, not an App Service one.
+- **Secret rotation.** The DocumentDB connection string is rotated by updating the App Service
+  setting (or Key Vault), not by rebuilding the image.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The runtime database MUST be **Azure Cosmos DB for MongoDB**, addressed through the
-  existing `DB_URI` connection-string contract, with no change to the API's data-access code.
-- **FR-002**: The migration tool (`tools/migration`) MUST write into Cosmos DB through the same
-  `--target` connection string it already accepts, with no code change beyond what Cosmos
-  compatibility requires.
+- **FR-001**: The runtime database MUST be **Azure DocumentDB (MongoDB-compatible vCore)**,
+  addressed through the existing `DB_URI` connection-string contract, with no change to the API's
+  data-access code. (vCore was formerly "vCore-based Azure Cosmos DB for MongoDB".)
+- **FR-002**: The migration tool (`tools/migration`) MUST write into the database through the same
+  `--target` connection string it already accepts, with no code change beyond what the
+  compatibility assessment requires.
+- **FR-002a**: The database MUST be reachable **only privately** — a **private endpoint** with
+  public access disabled. The migration and any operator tool therefore need VNet access.
 - **FR-003**: The backend (NestJS) and the frontend (Angular/nginx) MUST each be deployed as a
   **container on Azure App Service (Linux)**.
 - **FR-004**: Container images MUST be built by CI and stored in **Azure Container Registry**,
@@ -200,8 +221,15 @@ frontend) succeeds.
   deploy.
 - **FR-014**: The release MUST be **reversible**: re-deploying a previous image tag restores the
   previous revision without a code change.
-- **FR-015**: The Cosmos compatibility constraints (unique-index creation order, single-collection
-  transactions, `$regex` scan behaviour) MUST be honoured and recorded.
+- **FR-015**: The deployment MUST use an App Service plan with **deployment slots** (Standard or
+  higher; PremiumV3 recommended), so a release can swap warm and roll back without downtime.
+- **FR-016**: The frontend MUST be served on a **custom domain over TLS** (an App Service managed
+  certificate), with the DNS record and the certificate part of the infrastructure as code.
+- **FR-017**: The **region** MUST be a deployment parameter (default **Poland Central**), not a
+  hard-coded value, so the data-residency choice is explicit.
+- **FR-018**: The Azure DocumentDB **compatibility assessment** (the migration extension) MUST be
+  run before the migration, and any unsupported operator it reports MUST be resolved or recorded
+  as an accepted deviation.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -211,7 +239,7 @@ frontend) succeeds.
 - **Virtual network** — holds the backend's **private endpoint** subnet and the frontend's **VNet
   integration** subnet (they must be different subnets), plus the private DNS zone link.
 - **Release workflow** — the GitHub Actions job that builds, pushes and deploys on `main`.
-- **Cosmos DB account** — the MongoDB-API account holding the `book_space` database.
+- **Azure DocumentDB cluster** — the MongoDB-compatible cluster holding the `book_space` database.
 
 ## Success Criteria *(mandatory)*
 
@@ -219,12 +247,12 @@ frontend) succeeds.
 
 - **SC-001**: A merge to `main` results in both applications serving the new revision with **zero
   manual steps** and **no stored Azure credential** in the repository.
-- **SC-002**: The CI client-bundle secret scan passes on the deployed UI: **no** Cosmos, JWT or
-  mail credential is present in `dist/apps/ui`.
-- **SC-003**: After the migration to Cosmos DB, reconciliation reports **zero data loss and zero
+- **SC-002**: The CI client-bundle secret scan passes on the deployed UI: **no** database, JWT
+  or mail credential is present in `dist/apps/ui`.
+- **SC-003**: After the migration to Azure DocumentDB, reconciliation reports **zero data loss and zero
   broken references** (the existing `SC-003`), and a re-run is idempotent.
 - **SC-004**: The booking read, the `{city, property}` unique rule and the client search return the
-  same results on Cosmos DB as on `mongod` for the same data.
+  same results on Azure DocumentDB as on `mongod` for the same data.
 - **SC-005**: A request to the backend's public host name from the public internet **does not
   reach the application**; the same request through the frontend succeeds.
 - **SC-006**: Rolling back a release is possible by re-deploying the previous image tag (App
@@ -232,31 +260,33 @@ frontend) succeeds.
 
 ## Assumptions
 
-- The Azure subscription, resource group, region and naming are provided by the operator; the plan
-  names placeholders and does not invent a subscription.
-- The Cosmos DB **MongoDB API** is the chosen API (not the SQL/Core API, not Gremlin).
-- The frontend app remains the public surface; the users' browsers reach it directly.
+- The Azure subscription, resource group and naming are provided by the operator; the plan names
+  placeholders and does not invent a subscription. The **region is a parameter** (FR-017), default
+  Poland Central.
+- The **MongoDB-compatible API** is the chosen API (Azure DocumentDB / vCore), not the SQL/Core API
+  and not Gremlin.
+- The frontend app remains the public surface; the users' browsers reach it directly on the custom
+  domain.
 - The images built by the existing Dockerfiles are the deployment units; no new runtime is
   introduced.
-- `main` is the release branch; `dev` (if used) deploys to a non-production slot/environment.
+- `main` is the release branch; a non-production environment deploys to a **slot**.
 
-## Open Questions
+## Decisions (all previously-open questions are answered)
 
-1. **How private is the backend?** The plan recommends a **private endpoint with public access
-   disabled** (FR-008). A lighter alternative is **access restrictions** that allow only the
-   frontend's outbound IP addresses; it is cheaper but weaker (a shared App Service outbound IP is
-   not a strong boundary). Confirm which.
-2. **Cosmos tier: RU-based (serverless/provisioned) or vCore?** RU-based is cheaper and scales to
-   zero but constrains unique indexes (empty-collection creation) and scans on case-insensitive
-   `$regex`. vCore is a real MongoDB (5.0–7.0) and supports everything, at a higher floor cost.
-   **Resolution**: a spike (T100/T101) against a real account, recording which of the repo's
-   features break. The plan recommends **vCore** for fidelity.
-3. **Is Cosmos private too?** If the database is behind a private endpoint, the migration run and
-   any operator tool need VNet access. If it is public (firewall-restricted), the migration can run
-   from a workstation.
-4. **App Service plan tier and slots?** A private endpoint needs **Basic+**; warm-swap slots need
-   **Standard+**. This sets cost and the rollback story.
-5. **Custom domain and TLS?** Whether the platform is served on a SISK host name, and who owns the
-   certificate.
-6. **Region and data residency?** The municipality's data is personal data; the region choice is a
-   compliance decision.
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | How private is the backend? | **Private endpoint**, public access disabled (FR-008) |
+| 2 | Database tier? | **Azure DocumentDB (vCore)** — real MongoDB, so the RU-based constraints do not apply |
+| 3 | Is the database private too? | **Yes** — private endpoint + Private Link (FR-002a) |
+| 4 | App Service plan and slots? | **Standard or higher** (PremiumV3 recommended), with **deployment slots** (FR-015) |
+| 5 | Custom domain, TLS and region? | **Custom domain + managed TLS certificate** (FR-016); **region is a parameter**, default Poland Central (FR-017) |
+
+**Consequence of decision 2**: because the tier is vCore, the two RU-based constraints that shaped
+the first draft of this plan (unique index only on an empty collection; a case-insensitive `$regex`
+collection scan) **no longer apply**. The migration ordering still creates collections and indexes
+before data as good practice, but it is no longer a hard requirement, and the search does not need
+a scan workaround. `explain()` works as on `mongod`, so the index tests' intent carries over.
+
+**Consequence of decision 3**: the migration cannot run from an arbitrary workstation. It runs from
+a VNet-joined job (a Container Apps Job with VNet integration, an Azure VM jump box, or a temporary
+firewall rule for the operator's IP — the last only for a short, recorded window).

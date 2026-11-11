@@ -3,7 +3,7 @@
 The contract between the running application and its Azure environment. It names **what each app
 needs**, **where it comes from**, and **what must never happen**. The images are already
 environment-driven (`apps/server/Dockerfile`, `apps/ui/Dockerfile`), so this contract is the
-existing one, made explicit and extended for Cosmos.
+existing one, made explicit and extended for Azure DocumentDB.
 
 ## 1. Images
 
@@ -28,7 +28,7 @@ Required:
 
 | Setting | Notes |
 |---------|-------|
-| `DB_URI` | The **Cosmos DB for MongoDB** connection string (`mongodb://…@<acct>.mongo.cosmos.azure.com:10255/…` or the vCore equivalent). Must match `/^mongodb(\+srv)?:\/\//` (`env.validation.ts`). |
+| `DB_URI` | The **Azure DocumentDB** connection string: `mongodb+srv://<user>:<pass>@<cluster>.global.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retrywrites=false&maxIdleTimeMS=120000`. Must match `/^mongodb(\+srv)?:\/\//` (`env.validation.ts`). |
 | `JWT_SECRET` | ≥ 32 characters; validated at boot. |
 
 Optional (each unset disables the feature rather than breaking boot):
@@ -61,36 +61,40 @@ bundle is not tied to a host name (FR-010).
 > integration. If `API_UPSTREAM` were a public host name, the proxy would fail — this is the
 > failure mode to check first if the UI loads but its data calls do not.
 
-## 5. Cosmos DB
+## 5. Database (Azure DocumentDB)
 
-- **API**: MongoDB API (`*.mongo.cosmos.azure.com`), so `DB_URI` and the driver are unchanged
-  (research R1).
-- **Tier**: decided by the Phase 0 spike (vCore recommended — research R5).
+- **Service**: **Azure DocumentDB** — the MongoDB-compatible vCore service
+  (`Microsoft.DocumentDB/mongoClusters`), wire protocol 5.0–8.0, so `DB_URI` and the driver are
+  unchanged (research R1).
 - **Database**: `book_space`; collections `users`, `clients`, `buildings`, `bookings`
   (`bookedTimes` embedded).
-- **Collections and unique indexes are created while empty**, before any seed or migration write
-  (research R2; `infra/scripts/ensure-collections.ts`).
-- **Sharding**: off by default. A sharded collection makes every unique index compound with the
-  shard key, which would change the `{city, property}` index; the data volume does not require it.
-- **Transactions**: none cross a collection boundary (research R4).
-- **Network**: whether Cosmos is public (firewall-restricted) or private is open question 3. If
-  private, the migration run needs VNet access (research R10).
+- **Indexes**: created by `infra/scripts/ensure-collections.ts` idempotently, before any seed or
+  migration write (good practice; the tier does not require an empty collection — research R2).
+- **Sharding**: off at this volume. The data does not require it (research R1).
+- **Transactions**: none cross a collection boundary.
+- **Network**: **private** — a private endpoint with public access disabled (research R3). The
+  migration run therefore needs VNet access (research R11).
+- **Connection string options**: the tier's string carries `retrywrites=false` and
+  `authMechanism=SCRAM-SHA-256`; Mongoose, the migration tool and the backup tool must all use the
+  same string.
 
 ## 6. Release contract
 
 - `ci.yml` (lint, unit tests, build, secret scan) is the **merge gate**, unchanged.
-- `release.yml` runs on `push: main` only. It builds → pushes to ACR → updates both App Services
-  to the new SHA tag.
+- `release.yml` runs on `push: main` only. It builds → pushes to ACR → deploys to the **staging
+  slot** → smoke-tests → **swaps** into production (FR-015).
 - Azure authentication is **OIDC** (federated identity); **no Azure secret is stored** (FR-005,
-  research R7).
-- **Rollback** = re-deploy the previous SHA tag to both apps (SC-006).
+  research R5).
+- **Rollback** = swap the slot back, or re-deploy a previous SHA tag (SC-006).
 - A failed build stops the workflow **before** any app is updated, so a release is all-or-nothing.
 - The **smoke test goes through the frontend** (plan § D7), because the backend is private.
+- The frontend is served on a **custom domain over TLS** (FR-016); the certificate is an App
+  Service managed certificate.
 
 ## 7. Non-negotiable invariants
 
 1. No credential in the client bundle (`SC-007`; CI's `scan-bundle.js`).
 2. No credential committed to the repository (`scan-secrets.js`).
 3. No long-lived Azure credential in GitHub.
-4. The backend has **no public inbound** (`contracts/network.md`).
+4. The backend **and the database** have **no public inbound** (`contracts/network.md`).
 5. The legacy Firebase project stays intact until reconciliation passes (Constitution V).
