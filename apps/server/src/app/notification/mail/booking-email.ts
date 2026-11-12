@@ -1,7 +1,7 @@
 import {IBookedTime} from '@models/booked-time.model';
 import {displayValue, formatDate, formatTime} from '../../reporting/csv/display';
 import {renderTemplate, TTemplateVariables} from '../templates/render';
-import {NOTIFICATION_TEMPLATES, TTemplateId} from '../templates/templates';
+import {DEFAULT_TENANT_NAME, NOTIFICATION_TEMPLATES, TTemplateId} from '../templates/templates';
 
 /**
  * The booking fields a notification e-mail reads. Structural, so the formatter is testable
@@ -48,10 +48,14 @@ const joinSlots = (bookedTimes: IBookedTime[], separator: string): string =>
  *
  * An empty optional field is normalised to `undefined` so the renderer drops its block rather
  * than rendering a labelled blank line.
+ *
+ * `tenantName` signs the applicant e-mails (FR-033); it comes from configuration and falls back
+ * to `Book Space`, so the brand is a deployment setting rather than a literal in the template.
  */
 const bookingVariables = (
   booking: INotifiableBooking,
-  buildingEmail?: string
+  buildingEmail?: string,
+  tenantName: string = DEFAULT_TENANT_NAME
 ): TTemplateVariables => ({
   building: displayValue(booking.place.place),
   city: displayValue(booking.place.city),
@@ -65,15 +69,17 @@ const bookingVariables = (
   parsedBookingTime: joinSlots(booking.bookedTimes, buildingEmail !== undefined ? '\n' : ' / '),
   message: booking.comments || undefined,
   buildingEmail,
+  tenantName,
 });
 
 /** The subject and body of a booking notification, rendered from its template. */
 const bookingEmail = (
   booking: INotifiableBooking,
   templateId: TTemplateId,
-  buildingEmail?: string
+  buildingEmail?: string,
+  tenantName: string = DEFAULT_TENANT_NAME
 ): {subject: string; text: string} =>
-  renderTemplate(NOTIFICATION_TEMPLATES[templateId], bookingVariables(booking, buildingEmail));
+  renderTemplate(NOTIFICATION_TEMPLATES[templateId], bookingVariables(booking, buildingEmail, tenantName));
 
 export {flatBookingTime, joinSlots, bookingVariables, bookingEmail};
 export type {INotifiableBooking};

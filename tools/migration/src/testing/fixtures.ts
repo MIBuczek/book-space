@@ -83,9 +83,9 @@ const legacyExport: ILegacyExport = {
       discount: '10%',
       accepted: true,
       archive: false,
-      createdBy: 'office@sisk-siechnice.pl',
+      createdBy: 'office@example.com',
       createdAt: '2025-11-02T10:00:00.000Z',
-      modifiedBy: 'admin@sisk-siechnice.pl',
+      modifiedBy: 'admin@example.com',
       modifiedAt: '2025-11-03T11:00:00.000Z',
       bookingTime: [
         {
@@ -135,7 +135,7 @@ const legacyExport: ILegacyExport = {
   users: [
     {
       _id: 'user-admin',
-      email: 'Admin@SISK-Siechnice.pl',
+      email: 'Admin@Example.com',
       name: 'Michał Hoffman',
       isAdmin: true,
       isEmployee: false,
@@ -143,7 +143,7 @@ const legacyExport: ILegacyExport = {
     },
     {
       _id: 'user-office',
-      email: 'office@sisk-siechnice.pl',
+      email: 'office@example.com',
       name: 'Katarzyna Zielińska',
       isOffice: true,
       city: 'siechnice',
@@ -151,7 +151,7 @@ const legacyExport: ILegacyExport = {
     },
     {
       _id: 'user-employee',
-      email: 'employee@sisk-siechnice.pl',
+      email: 'employee@example.com',
       name: 'Tomasz',
       city: 'radwanice',
       building: ['kort_1'],

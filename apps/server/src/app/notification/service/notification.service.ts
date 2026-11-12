@@ -31,7 +31,7 @@ export class NotificationService {
   ) {}
 
   /**
-   * Sends a booking notification to the facility, to SISK staff, or to the applicant
+   * Sends a booking notification to the facility, to tenant staff, or to the applicant
    * (FR-032, FR-033, FR-052).
    *
    * The recipient is resolved server-side: the facility address from the facility record, the
@@ -96,7 +96,12 @@ export class NotificationService {
     }
 
     const templateId = booking.accepted ? 'booking-approved' : 'booking-rejected';
-    const {subject, text} = bookingEmail(booking, templateId);
+    const {subject, text} = bookingEmail(
+      booking,
+      templateId,
+      undefined,
+      this.configService.get<string>('TENANT_NAME')
+    );
 
     await this.send({to: recipient, subject, text}, {
       bookingId: String(booking._id),
@@ -111,12 +116,12 @@ export class NotificationService {
    * Two shapes, told apart by `recipient`:
    *
    * - **without `recipient`** it is the public contact form (FR-034) and the message goes to
-   *   the SISK inbox from configuration;
+   *   the tenant inbox from configuration;
    * - **with `recipient`** it is the Facilities-tab message to a facility employee (FR-041).
    *   That path is *staff only* and the address must be a facility's contact address.
    *
    * The allow-list is the fix for issue #124. `recipient` used to be sent to directly, so the
-   * public route — which requires no credential — would deliver the SISK-branded
+   * public route — which requires no credential — would deliver the tenant-branded
    * `employee-message` template to any syntactically valid address a caller named: an open
    * relay. Now the address is only honoured when the caller is authenticated staff (`isPublic`
    * is `false`) and the address matches a facility's stored `email`. A public caller who sends
@@ -126,16 +131,16 @@ export class NotificationService {
    * The outbound quota (FR-050) is checked after the recipient resolves and before the
    * transport is called, so a message that would exceed the per-recipient cap is a `429` that
    * never reaches the provider — the send that would have cost the operator money does not
-   * happen. The quota counts the *resolved* recipient, so the SISK inbox and each facility
+   * happen. The quota counts the *resolved* recipient, so the tenant inbox and each facility
    * address each have their own ceiling.
    */
   async sendMessage(request: MessageDto, isPublic: boolean): Promise<{status: string}> {
     const recipient = request.recipient
       ? await this.resolveEmployeeRecipient(request.recipient, isPublic)
-      : this.configService.get<string>('SISK_CONTACT_EMAIL');
+      : this.configService.get<string>('TENANT_STAFF_EMAIL');
 
     if (!recipient) {
-      throw new BadGatewayException('The contact mailbox is not configured (set SISK_CONTACT_EMAIL)');
+      throw new BadGatewayException('The contact mailbox is not configured (set TENANT_STAFF_EMAIL)');
     }
 
     this.quota.assertAllowed(recipient);
@@ -191,7 +196,7 @@ export class NotificationService {
    *
    * A facility notification needs the facility's contact address; a booking whose facility is
    * missing or has no address cannot be notified, which is a `404` rather than a silent no-op.
-   * The staff audience needs the configured SISK inbox; without it the send is refused, because
+   * The staff audience needs the configured tenant inbox; without it the send is refused, because
    * "notify staff" with no address would otherwise report success for a message that went
    * nowhere.
    */
@@ -200,9 +205,9 @@ export class NotificationService {
     booking: INotifiableBooking & {_id?: unknown}
   ): Promise<string> {
     if (audience === STAFF_AUDIENCE) {
-      const staff = this.configService.get<string>('SISK_CONTACT_EMAIL');
+      const staff = this.configService.get<string>('TENANT_STAFF_EMAIL');
       if (!staff) {
-        throw new BadGatewayException('The staff mailbox is not configured (set SISK_CONTACT_EMAIL)');
+        throw new BadGatewayException('The staff mailbox is not configured (set TENANT_STAFF_EMAIL)');
       }
       return staff;
     }

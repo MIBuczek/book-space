@@ -20,7 +20,7 @@ const capabilitiesFor = (role: TUserRole, summaryDenied: boolean): IUserCapabili
   const isStaff = isAdmin || isOffice || role === 'EMPLOYEE';
 
   return {
-    // `siskEmployeeCredentials` — every recognised role. The Calendar and Bookings tabs.
+    // every recognised role. The Calendar and Bookings tabs.
     staff: isStaff,
     // `adminSeeContentCredentials` — the Clients and Facilities tabs.
     canSeeClientsTab: isAdmin || isOffice,

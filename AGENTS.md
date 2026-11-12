@@ -1442,7 +1442,7 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   before `transport.send` means a message that would exceed the cap is a `429` that never reaches
   the provider.
 - **`MessageDto.recipient` is allow-listed, and that is the fix for the open relay (#124).** The
-  public route (no credential) would otherwise deliver the SISK-branded `employee-message`
+  public route (no credential) would otherwise deliver the tenant-branded `employee-message`
   template to any syntactically valid address a caller named. It is honoured only when the caller
   is authenticated staff (`request.isPublic === false`) *and* the address matches a facility's
   stored contact address: a public caller that names one gets `403`, a staff caller whose address
@@ -1455,3 +1455,36 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
 - **Every free-text field on a public route carries an explicit server-side `maxLength`.** The
   DTO is the boundary (`422`) and the contract documents the same bound; an unbounded value is
   what reaches an index and a report. `comments` is bounded at 525 (FR-047).
+- **The previous tenant's brand is gone from shipped source, and a scan keeps it gone (T264,
+  #189).** `SISK`/`SISK Siechnice` was replaced by `Book Space` and the previous tenant's
+  contact details by placeholders, across identifiers (`SISK_CONTACT_EMAIL` →
+  `TENANT_STAFF_EMAIL`, `siskUrl` → `websiteUrl`, `COPY.contact.siskWebsiteUrl` →
+  `websiteUrl`), user-facing copy (`libs/copy`), the e-mail signature and defaults
+  (`DEFAULT_CREATED_BY`, `DEFAULT_SUMMARY_DENY_LIST`, the bootstrap-admin surname) and the test
+  fixtures (`@sisk.pl` → `@example.com`). `tools/scan-brand.js` fails CI on a `SISK` token in
+  `apps`/`libs`/`tools`; it does **not** read `README.md`, `AGENTS.md` or `specs/`, because the
+  legacy provenance deliberately stays there. The match is case-sensitive on `SISK` (not
+  lowercase `sisk`), so the *identifier* rename is the other half of the guard — a
+  `siskWebsiteUrl` would slip through the token check and is caught only by the rename.
+  `siechnice` is **not** a brand token: it is the city the twelve reference facilities sit in
+  (`CITIES`, `facility-seed.ts` and their fixtures), which is real business data.
+- **The Summary deny-list default is empty, and that is a behaviour change.** The legacy default
+  named a real person at the previous tenant (`mkulakowski@umsiechnice.pl`), so it is both a
+  privacy leak in a generic product and a meaningless restriction for any other deployment.
+  `DEFAULT_SUMMARY_DENY_LIST` is `''` now; an operator who wants the old restriction sets
+  `SUMMARY_DENY_LIST`. The reporting integration spec had relied on the default and now sets the
+  variable explicitly in `beforeAll` (before `createMongoTestContext()`, because
+  `ReportingController` reads it through `ConfigService`), which is the shape any spec asserting
+  the restriction needs.
+- **A required template placeholder is a deployment setting, not a literal (FR-033).** The
+  applicant e-mails' signature is `{{tenantName}}`, supplied from `TENANT_NAME` (falling back to
+  `DEFAULT_TENANT_NAME`), rather than the previous literal brand. Because the renderer throws on
+  an unsupplied required placeholder, the fallback lives in `bookingVariables` — a template that
+  named `{{tenantName}}` while no caller supplied it would fail every send, which is the guard
+  working, not a bug. `bookingEmail(booking, templateId, buildingEmail?, tenantName?)` threads
+  it; the facility/staff variants ignore it (they declare no `{{tenantName}}`).
+- **The licence is proprietary, and the repository is private (decision, #189).**
+  `package.json` carries `"license": "UNLICENSED"` and `"author": "Gecko Web Services"`, and
+  `LICENSE` states "© 2026 Gecko Web Services. All rights reserved." The footer renders the same
+  copyright (`COPY.footer.copyright`). Do not relicense to an OSS identifier without the owner's
+  decision; `private: true` already keeps the package out of any registry.

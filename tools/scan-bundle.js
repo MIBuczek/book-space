@@ -33,9 +33,8 @@ const PATTERNS = [
   {name: 'bearer access token literal', re: /accessToken/},
   // The legacy mail provider key. The rewrite reads it from the environment server-side.
   {name: 'mail provider API key', re: /MAIL_PROVIDER_API_KEY/},
-  // A Gmail address is not an intentional public contact detail for this application: the
-  // published contacts are on the `sisk-siechnice.pl` domain, so a Gmail address in the
-  // bundle is either a leaked operator address or a copied configuration.
+  // A Gmail address is not an intentional public contact detail for this application: a Gmail
+  // address in the bundle is either a leaked operator address or a copied configuration.
   {name: 'Gmail address', re: /[A-Za-z0-9._%+-]+@gmail\.com/},
 ];
 

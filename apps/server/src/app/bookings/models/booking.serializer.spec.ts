@@ -13,7 +13,7 @@ const fullBooking = () => ({
   clientId: 'c1',
   nick: 'Rezerwacja',
   personName: 'Jan Kowalski',
-  personCompany: 'SISK',
+  personCompany: 'Klub Sportowy',
   personEmail: 'jan@example.com',
   personPhone: '500100200',
   month: 3,
@@ -66,7 +66,7 @@ describe('serializePublicBooking', () => {
     // not one of them.
     const result = serializePublicBooking(fullBooking());
 
-    expect(result.personCompany).toBe('SISK');
+    expect(result.personCompany).toBe('Klub Sportowy');
   });
 
   it('removes the clientId so an anonymous caller cannot correlate bookings to a client', () => {

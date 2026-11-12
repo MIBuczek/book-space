@@ -44,7 +44,7 @@ describe('notifications over HTTP', () => {
     // factory read these at boot.
     process.env.MAIL_ENDPOINT = mailEndpoint;
     process.env.MAIL_FROM = 'bookings@example.com';
-    process.env.SISK_CONTACT_EMAIL = 'biuro@example.com';
+    process.env.TENANT_STAFF_EMAIL = 'biuro@example.com';
 
     ctx = await createMongoTestContext();
     bookingModel = ctx.app.get(getModelToken('Booking'));
@@ -135,7 +135,7 @@ describe('notifications over HTTP', () => {
       expect(String(sent[0].text)).toContain('Jan Kowalski');
     });
 
-    it('sends to the SISK inbox for the staff audience', async () => {
+    it('sends to the tenant inbox for the staff audience', async () => {
       const token = await signIn('office@example.com', 'OFFICE');
       const bookingId = await createBooking();
 
@@ -245,7 +245,7 @@ describe('notifications over HTTP', () => {
   });
 
   describe('POST /notifications/message', () => {
-    it('delivers a public contact-form message to the SISK inbox', async () => {
+    it('delivers a public contact-form message to the tenant inbox', async () => {
       const response = await post('/notifications/message', {
         person: 'Anna Nowak',
         email: 'anna@example.com',

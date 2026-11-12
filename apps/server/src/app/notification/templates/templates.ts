@@ -51,6 +51,16 @@ const TEMPLATE_IDS = [
 type TTemplateId = (typeof TEMPLATE_IDS)[number];
 
 /**
+ * The name that signs the applicant e-mails when `TENANT_NAME` is not configured.
+ *
+ * The signature is a required `{{tenantName}}` placeholder rather than a literal, so the brand
+ * is a deployment setting (FR-033) and not baked into a template. This constant is the fallback
+ * the service supplies when the variable is unset, so a template and its variable set cannot
+ * drift apart and an unconfigured deployment still signs its mail.
+ */
+const DEFAULT_TENANT_NAME = 'Book Space';
+
+/**
  * The two booking variants are kept distinct rather than merged into one formatter.
  *
  * The legacy code had two near-identical builders and the difference is a real contract:
@@ -120,7 +130,7 @@ const NOTIFICATION_TEMPLATES: Record<TTemplateId, INotificationTemplate> = {
       '{{#message}}\nWiadomość: {{message}}\n{{/message}}',
       '\n',
       'Pozdrawiamy,\n',
-      'SISK Siechnice\n',
+      '{{tenantName}}\n',
     ].join(''),
   },
   'booking-rejected': {
@@ -142,7 +152,7 @@ const NOTIFICATION_TEMPLATES: Record<TTemplateId, INotificationTemplate> = {
       '{{#message}}\nWiadomość: {{message}}\n{{/message}}',
       '\n',
       'Pozdrawiamy,\n',
-      'SISK Siechnice\n',
+      '{{tenantName}}\n',
     ].join(''),
   },
   'contact-message': {
@@ -167,5 +177,5 @@ const NOTIFICATION_TEMPLATES: Record<TTemplateId, INotificationTemplate> = {
   },
 };
 
-export {NOTIFICATION_TEMPLATES, TEMPLATE_IDS};
+export {NOTIFICATION_TEMPLATES, TEMPLATE_IDS, DEFAULT_TENANT_NAME};
 export type {INotificationTemplate, TTemplateId};

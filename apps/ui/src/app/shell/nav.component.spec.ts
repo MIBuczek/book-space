@@ -63,7 +63,7 @@ describe('NavComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(text).toContain('Administracja');
-    expect(text).toContain('admin@sisk.pl');
+    expect(text).toContain('admin@example.com');
     expect(text).toContain('Wyloguj');
   });
 

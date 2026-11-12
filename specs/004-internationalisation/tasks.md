@@ -67,6 +67,15 @@
 
 ## Phase 5 — De-branding (User Story 2)
 
+> **Status (issue #189).** The *static* de-branding landed as a standalone slice before the i18n
+> layer: the previous tenant's brand is gone from shipped source (identifiers, UI copy, e-mail
+> signature, defaults and fixtures) and `tools/scan-brand.js` guards it in CI. That covers
+> **T253**, **T254**, **T255**, **T256** and the rename half of **T250**
+> (`SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`, `TENANT_NAME` added). What remains here is the
+> *configurable* design — the tenant model and `GET /api/tenant` (**T251**) and the UI reading
+> the tenant rather than the hardcoded `Book Space` values (**T252**) — plus the rest of
+> **T250** (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`).
+
 - [ ] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
       `TENANT_PRIVACY_URL`; rename `SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`; update
       `.env.example`.

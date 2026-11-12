@@ -43,13 +43,22 @@ class EnvironmentVariables {
   MAIL_FROM?: string;
 
   /**
-   * The SISK inbox that staff notifications and contact-form messages are delivered to
+   * The tenant name that brands outbound e-mail (FR-033). Optional: unset falls back to
+   * `Book Space` in `notification/templates/templates.ts`, so a deployment that does not set it
+   * still sends a correctly-branded signature rather than a blank one.
+   */
+  @IsOptional()
+  @IsString()
+  TENANT_NAME?: string;
+
+  /**
+   * The tenant inbox that staff notifications and contact-form messages are delivered to
    * (FR-033, FR-034). Optional: a route that needs it and finds it unset answers `502` rather
    * than reporting a send that went nowhere.
    */
   @IsOptional()
   @IsString()
-  SISK_CONTACT_EMAIL?: string;
+  TENANT_STAFF_EMAIL?: string;
 }
 
 /**

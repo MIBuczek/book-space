@@ -89,7 +89,7 @@ describe('NotificationService', () => {
     });
 
     it('resolves the staff address from configuration', async () => {
-      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+      config.set('TENANT_STAFF_EMAIL', 'biuro@example.com');
       bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
 
       await service.notifyBooking({bookingId: 'b1', audience: 'STAFF'});
@@ -126,7 +126,7 @@ describe('NotificationService', () => {
 
       await service.notifyBooking({bookingId: 'b1', audience: 'APPLICANT'});
 
-      // The address is the booking's own personEmail, never the facility or the SISK inbox.
+      // The address is the booking's own personEmail, never the facility or the tenant inbox.
       expect(buildingModel.findOne).not.toHaveBeenCalled();
       expect(sent[0].to).toBe('jan@example.com');
     });
@@ -158,7 +158,7 @@ describe('NotificationService', () => {
 
     it('maps a transport failure to 502 and logs it with the booking', async () => {
       bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
-      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+      config.set('TENANT_STAFF_EMAIL', 'biuro@example.com');
       // Rebuild with a failing transport.
       const module = await Test.createTestingModule({
         providers: [
@@ -186,7 +186,7 @@ describe('NotificationService', () => {
       // 200 or a bare 500. It is mapped through `errorStatus`, which reads the driver's own
       // status when it carries one and falls back to 500.
       bookingModel.findOne.mockReturnValue({lean: () => Promise.reject(new Error('Cast to ObjectId failed'))});
-      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+      config.set('TENANT_STAFF_EMAIL', 'biuro@example.com');
 
       await expect(service.notifyBooking({bookingId: 'nonsense', audience: 'STAFF'})).rejects.toThrow(
         'Cast to ObjectId failed'
@@ -194,7 +194,7 @@ describe('NotificationService', () => {
     });
 
     it('omits the facility contact line for the staff audience', async () => {
-      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+      config.set('TENANT_STAFF_EMAIL', 'biuro@example.com');
       bookingModel.findOne.mockReturnValue({lean: () => Promise.resolve(booking)});
 
       await service.notifyBooking({bookingId: 'b1', audience: 'STAFF'});
@@ -233,8 +233,8 @@ describe('NotificationService', () => {
   });
 
   describe('sendMessage', () => {
-    it('delivers to the SISK inbox by default', async () => {
-      config.set('SISK_CONTACT_EMAIL', 'biuro@example.com');
+    it('delivers to the tenant inbox by default', async () => {
+      config.set('TENANT_STAFF_EMAIL', 'biuro@example.com');
       await service.sendMessage({person: 'Anna', email: 'anna@example.com', message: 'Pytanie'}, true);
       expect(sent[0].to).toBe('biuro@example.com');
       expect(sent[0].text).toContain('Pytanie');

@@ -35,7 +35,7 @@ describe('SignInComponent', () => {
 
   const fill = (
     fixture: ReturnType<typeof TestBed.createComponent<SignInComponent>>,
-    email = 'admin@sisk.pl',
+    email = 'admin@example.com',
     password = 'secret'
   ) => {
     const inputs = Array.from(
@@ -56,7 +56,7 @@ describe('SignInComponent', () => {
     submit(fixture);
 
     const request = httpMock.expectOne('/api/auth/sign-in');
-    expect(request.request.body).toEqual({ email: 'admin@sisk.pl', password: 'secret' });
+    expect(request.request.body).toEqual({ email: 'admin@example.com', password: 'secret' });
     request.flush({ user, token: 'token-1' });
     fixture.detectChanges();
 
@@ -102,7 +102,7 @@ describe('SignInComponent', () => {
 
   it('rejects a too-short password before making a request', () => {
     const fixture = render();
-    fill(fixture, 'admin@sisk.pl', 'abcde');
+    fill(fixture, 'admin@example.com', 'abcde');
     submit(fixture);
     fixture.detectChanges();
 
@@ -125,7 +125,7 @@ describe('SignInComponent', () => {
 
   it('rejects an over-long password', () => {
     const fixture = render();
-    fill(fixture, 'admin@sisk.pl', 'a'.repeat(31));
+    fill(fixture, 'admin@example.com', 'a'.repeat(31));
     submit(fixture);
     fixture.detectChanges();
 
@@ -156,7 +156,7 @@ describe('SignInComponent', () => {
 
   it('clears a previous failure message when a new attempt is submitted', () => {
     const fixture = render();
-    fill(fixture, 'admin@sisk.pl', 'secret');
+    fill(fixture, 'admin@example.com', 'secret');
     submit(fixture);
     httpMock.expectOne('/api/auth/sign-in').flush({}, { status: 401, statusText: 'Unauthorized' });
     fixture.detectChanges();

@@ -50,7 +50,7 @@ export const makeUser = (
   overrides: Partial<IAuthenticatedUser> = {}
 ): IAuthenticatedUser => ({
   _id: 'u1',
-  email: `${role.toLowerCase()}@sisk.pl`,
+  email: `${role.toLowerCase()}@example.com`,
   firstName: 'Ada',
   lastName: 'Staff',
   role,
@@ -61,12 +61,12 @@ export const makeUser = (
 
 /** A signed-in administrator with every capability. */
 export const adminUser = (): IAuthenticatedUser =>
-  makeUser('ADMIN', {email: 'admin@sisk.pl', capabilities: fullCapabilities()});
+  makeUser('ADMIN', {email: 'admin@example.com', capabilities: fullCapabilities()});
 
 /** A signed-in office user: the Clients, Facilities and Summary tabs, no writes. */
 export const officeUser = (): IAuthenticatedUser =>
   makeUser('OFFICE', {
-    email: 'office@sisk.pl',
+    email: 'office@example.com',
     capabilities: makeCapabilities({
       canSeeClientsTab: true,
       canSeeFacilitiesTab: true,
@@ -76,4 +76,4 @@ export const officeUser = (): IAuthenticatedUser =>
 
 /** A signed-in employee: the staff baseline only. */
 export const employeeUser = (): IAuthenticatedUser =>
-  makeUser('EMPLOYEE', {email: 'employee@sisk.pl'});
+  makeUser('EMPLOYEE', {email: 'employee@example.com'});

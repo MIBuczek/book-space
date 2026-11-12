@@ -67,9 +67,10 @@ const NAV = {
 const FOOTER = {
   ariaLabel: 'Informacje',
   privacy: 'Polityka prywatności',
-  site: 'Strona SISK',
+  site: 'Strona Book Space',
   meta: (version: string): string =>
-    `SISK Siechnice — system rezerwacji · Wersja aplikacji ${version}`,
+    `Book Space — system rezerwacji · Wersja aplikacji ${version}`,
+  copyright: '© 2026 Gecko Web Services',
 } as const;
 
 /** The admin shell, its tabs and the placeholder body (FR-004). */
@@ -428,23 +429,23 @@ const CONTACT = {
   officeHeading: 'Biuro / Adres korespondencyjny',
   bookingHeading: 'Osoba do kontaktu w sprawie rezerwacji',
   registeredOffice: {
-    name: 'Siechnicka Inwestycyjna Spółka Komunalna sp. z o.o.',
-    address: 'ul. Jana Pawła II 12, 55-011 Siechnice',
+    name: 'Book Space',
+    address: '—',
   },
   office: {
-    address: 'ul. Księżnej Anny z Przemyślidów 6a, 55-011 Siechnice',
-    phone: '71 889 00 23',
-    phoneHref: 'tel:+48718890023',
-    email: 'biuro@sisk-siechnice.pl',
-    website: 'www.sisk-siechnice.pl',
-    websiteHref: 'https://www.sisk-siechnice.pl/',
+    address: '—',
+    phone: '—',
+    phoneHref: 'tel:',
+    email: 'kontakt@book-space.example',
+    website: 'book-space.example',
+    websiteHref: 'https://book-space.example/',
   },
   bookingContact: {
-    name: 'Michał Hoffman',
-    role: 'Kierownik obsługi obiektów sportowych i rekreacyjnych',
-    phone: '691 113 592',
-    phoneHref: 'tel:+48691113592',
-    email: 'michal.hoffman@sisk-siechnice.pl',
+    name: '—',
+    role: '—',
+    phone: '—',
+    phoneHref: 'tel:',
+    email: 'kontakt@book-space.example',
   },
   hours: [
     {day: 'poniedziałek', hours: '08:00 - 14:00'},
@@ -453,10 +454,9 @@ const CONTACT = {
     {day: 'czwartek', hours: '08:00 - 16:00'},
     {day: 'piątek', hours: '08:00 - 14:00'},
   ],
-  privacyPolicyUrl: 'https://www.sisk-siechnice.pl/polityka-prywatnosci',
-  siskWebsiteUrl: 'https://www.sisk-siechnice.pl/',
-  rodoClauseUrl:
-    'https://www.sisk-siechnice.pl/wp-content/uploads/2019/09/Klauzula-informacyjna-do-formularza-kontaktowego-SISK.pdf',
+  privacyPolicyUrl: 'https://book-space.example/polityka-prywatnosci',
+  websiteUrl: 'https://book-space.example/',
+  rodoClauseUrl: 'https://book-space.example/klauzula-informacyjna.pdf',
 } as const;
 
 /** The cookie notice (FR-039, FR-040). */

@@ -43,7 +43,7 @@ describe('parseArgs', () => {
       email: 'a@b.com',
       password: 'secret1',
       firstName: 'Administrator',
-      lastName: 'SISK',
+      lastName: 'Administrator',
     });
   });
 
@@ -116,7 +116,7 @@ describe('run', () => {
       email: 'admin@example.com',
       password: 'secret1',
       firstName: 'Administrator',
-      lastName: 'SISK',
+      lastName: 'Administrator',
     },
   };
 

@@ -76,7 +76,7 @@ const parseArgs = (argv: string[], env: Record<string, string | undefined>): ICl
       email: flags.get('email') ?? '',
       password: password ?? '',
       firstName: flags.get('first-name') ?? 'Administrator',
-      lastName: flags.get('last-name') ?? 'SISK',
+      lastName: flags.get('last-name') ?? 'Administrator',
     },
   };
 };
