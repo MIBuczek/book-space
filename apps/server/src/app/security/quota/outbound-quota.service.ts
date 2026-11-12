@@ -10,7 +10,7 @@ import {StructuredHttpException} from '../../config/structured-http-exception';
  * messages one *address* may receive. They are different controls: a script behind rotating
  * IPs, or simply one that stays just under the request limit, can still drive the module as a
  * relay, and the recipient is the resource being abused. Counting per recipient means the
- * SISK inbox and every facility employee address has its own ceiling, so a flood aimed at one
+ * tenant inbox and every facility employee address has its own ceiling, so a flood aimed at one
  * address cannot be spread across callers.
  *
  * The check runs inside `NotificationService` *before* the transport is called, so a message

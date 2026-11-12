@@ -18,8 +18,13 @@ describe('reporting over HTTP', () => {
   let userModel: {create: (doc: Record<string, unknown>) => Promise<unknown>};
 
   const PASSWORD = 'correct horse battery';
+  const DENIED_EMAIL = 'denied@example.com';
 
   beforeAll(async () => {
+    // The deny-list default is empty (the legacy default named a real person at the previous
+    // tenant), so the restriction has to be configured explicitly. Set before the app is
+    // created, because `ReportingController` reads the variable through `ConfigService`.
+    process.env.SUMMARY_DENY_LIST = DENIED_EMAIL;
     ctx = await createMongoTestContext();
     bookingModel = ctx.app.get(getModelToken('Booking'));
     clientModel = ctx.app.get(getModelToken('Client'));
@@ -27,6 +32,7 @@ describe('reporting over HTTP', () => {
   }, 120_000);
 
   afterAll(async () => {
+    delete process.env.SUMMARY_DENY_LIST;
     await ctx?.close();
   });
 
@@ -255,8 +261,8 @@ describe('reporting over HTTP', () => {
   });
 
   describe('the Summary deny-list (FR-006)', () => {
-    it('refuses the legacy account on both routes', async () => {
-      const token = await signIn('mkulakowski@umsiechnice.pl', 'ADMIN');
+    it('refuses the denied account on both routes', async () => {
+      const token = await signIn(DENIED_EMAIL, 'ADMIN');
       const clientId = await createClient();
 
       const summary = await get(`/reporting/summary?clientId=${clientId}&${range}`, token);

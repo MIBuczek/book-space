@@ -1,7 +1,8 @@
 {
   "name": "book-space",
   "version": "1.0.0",
-  "license": "MIT",
+  "license": "UNLICENSED",
+  "author": "Gecko Web Services",
   "scripts": {
     "start:ui": "nx serve ui",
     "start:server": "nx serve server",

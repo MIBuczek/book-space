@@ -42,7 +42,7 @@ describe('archive dump and restore', () => {
     if (!db) {
       throw new Error('no db');
     }
-    await db.collection('users').insertOne({_id: new ObjectId(), email: 'a@sisk.pl', role: 'ADMIN'});
+    await db.collection('users').insertOne({_id: new ObjectId(), email: 'a@example.com', role: 'ADMIN'});
     await db.collection('clients').insertOne({_id: new ObjectId(), name: 'Klient', type: 'COMPANY', nip: '123-456-32-18'});
     await db.collection('buildings').insertOne({_id: new ObjectId(), city: 'Siechnice', property: 'hala', sizes: ['FULL']});
     await db.collection('bookings').insertOne({

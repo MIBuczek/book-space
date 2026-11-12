@@ -6,11 +6,11 @@
  * documented value without restating it, and so the one place the values are decided is
  * this file. The two audit defaults are the ones the legacy *read* mapper itself supplied
  * (`parseFirebaseBookingData` in `api-functions.ts`): a booking written before the audit
- * fields existed was shown as created by the SISK office account and modified by `Unknown`.
+ * fields existed was shown as created by the tenant office account and modified by `Unknown`.
  */
 
 /** `createdBy` for a booking whose legacy document carries none. */
-const DEFAULT_CREATED_BY = 'michal.hoffman@sisk-siechnice.pl';
+const DEFAULT_CREATED_BY = 'migrated@example.com';
 
 /** `modifiedBy` for a booking whose legacy document carries none. */
 const DEFAULT_MODIFIED_BY = 'Unknown';

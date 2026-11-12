@@ -1,10 +1,10 @@
 import {DEFAULT_SUMMARY_DENY_LIST, isSummaryDenied, parseDenyList} from './deny-list';
 
 describe('parseDenyList', () => {
-  it('defaults to the legacy account when unset or blank', () => {
-    expect(parseDenyList(undefined)).toEqual([DEFAULT_SUMMARY_DENY_LIST]);
-    expect(parseDenyList('   ')).toEqual([DEFAULT_SUMMARY_DENY_LIST]);
-    expect(DEFAULT_SUMMARY_DENY_LIST).toBe('mkulakowski@umsiechnice.pl');
+  it('defaults to an empty list when unset or blank', () => {
+    expect(parseDenyList(undefined)).toEqual([]);
+    expect(parseDenyList('   ')).toEqual([]);
+    expect(DEFAULT_SUMMARY_DENY_LIST).toBe('');
   });
 
   it('splits, trims and lower-cases a comma-separated list', () => {
@@ -17,11 +17,11 @@ describe('parseDenyList', () => {
 });
 
 describe('isSummaryDenied', () => {
-  const list = parseDenyList('mkulakowski@umsiechnice.pl');
+  const list = parseDenyList('denied@example.com');
 
   it('denies the listed account, case-insensitively', () => {
-    expect(isSummaryDenied('mkulakowski@umsiechnice.pl', list)).toBe(true);
-    expect(isSummaryDenied('MKulakowski@UMSiechnice.pl', list)).toBe(true);
+    expect(isSummaryDenied('denied@example.com', list)).toBe(true);
+    expect(isSummaryDenied('Denied@Example.com', list)).toBe(true);
   });
 
   it('allows an account that is not listed', () => {
@@ -33,6 +33,6 @@ describe('isSummaryDenied', () => {
   });
 
   it('denies nobody when the list is empty', () => {
-    expect(isSummaryDenied('mkulakowski@umsiechnice.pl', [])).toBe(false);
+    expect(isSummaryDenied('denied@example.com', [])).toBe(false);
   });
 });

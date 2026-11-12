@@ -37,7 +37,7 @@ describe('public endpoint abuse protection over HTTP', () => {
     process.env.NOTIFICATION_QUOTA = String(QUOTA);
     process.env.MAIL_ENDPOINT = `http://127.0.0.1:${port}/send`;
     process.env.MAIL_FROM = 'bookings@example.com';
-    process.env.SISK_CONTACT_EMAIL = 'biuro@example.com';
+    process.env.TENANT_STAFF_EMAIL = 'biuro@example.com';
 
     ctx = await createMongoTestContext();
   }, 120_000);
@@ -54,7 +54,7 @@ describe('public endpoint abuse protection over HTTP', () => {
     delete process.env.NOTIFICATION_QUOTA;
     delete process.env.MAIL_ENDPOINT;
     delete process.env.MAIL_FROM;
-    delete process.env.SISK_CONTACT_EMAIL;
+    delete process.env.TENANT_STAFF_EMAIL;
   });
 
   beforeEach(async () => {

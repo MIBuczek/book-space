@@ -23,7 +23,7 @@ import {HoneypotGuard} from '../../security/honeypot/honeypot.guard';
  *   recipient only when the caller is staff *and* the address is a facility's contact address.
  *   That is what stops the route being an open relay (issue #124).
  * - `POST /notifications/booking` requires a staff role. It is the operator's opt-in to notify
- *   a facility or SISK staff about a booking (FR-032, FR-033); the recipient is resolved from
+ *   a facility or tenant staff about a booking (FR-032, FR-033); the recipient is resolved from
  *   the booking and configuration, never from the body. Its `APPLICANT` audience (FR-052,
  *   T062) is the decision notification, so it is narrowed to an administrator below — the same
  *   role the approve/reject routes carry — rather than left to any staff member.

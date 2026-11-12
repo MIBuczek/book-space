@@ -10,7 +10,7 @@ import {COPY} from './copy';
 describe('copy catalogue', () => {
   it('interpolates the version into the footer meta line', () => {
     expect(COPY.footer.meta('1.2.3')).toBe(
-      'SISK Siechnice — system rezerwacji · Wersja aplikacji 1.2.3'
+      'Book Space — system rezerwacji · Wersja aplikacji 1.2.3'
     );
   });
 

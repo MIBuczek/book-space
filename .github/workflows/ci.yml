@@ -198,6 +198,11 @@ jobs:
             exit 1
           fi
           node tools/scan-secrets.js
+      # Issue #189 removed the previous tenant's brand from shipped source. The scan reads the
+      # tree (not the built bundle), because an identifier such as `SISK_CONTACT_EMAIL` never
+      # reaches the client bundle and a bundle-only check would not see it.
+      - name: Fail if the previous tenant's brand reappears in source
+        run: node tools/scan-brand.js
 
   # Single required check for branch protection. It fails unless every job above
   # succeeded, which keeps the ruleset stable when jobs are added or renamed.

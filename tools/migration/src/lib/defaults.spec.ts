@@ -6,8 +6,8 @@ import {DEFAULT_CREATED_BY, DEFAULT_DISCOUNT, DEFAULT_MODIFIED_BY, DEFAULT_NICK}
  * the default, and this file pins what the default *is*.
  */
 describe('migration defaults', () => {
-  it('defaults createdBy to the SISK office account, as the legacy read mapper did', () => {
-    expect(DEFAULT_CREATED_BY).toBe('michal.hoffman@sisk-siechnice.pl');
+  it('defaults createdBy to the tenant office account, as the legacy read mapper did', () => {
+    expect(DEFAULT_CREATED_BY).toBe('migrated@example.com');
   });
 
   it('defaults modifiedBy to Unknown, as the legacy read mapper did', () => {

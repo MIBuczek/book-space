@@ -187,8 +187,8 @@ describe('migration transforms', () => {
         discount: '10%',
         accepted: true,
         archive: false,
-        createdBy: 'office@sisk-siechnice.pl',
-        modifiedBy: 'admin@sisk-siechnice.pl',
+        createdBy: 'office@example.com',
+        modifiedBy: 'admin@example.com',
       });
       expect(booking.createdAt?.toISOString()).toBe('2025-11-02T10:00:00.000Z');
       expect(booking.modifiedAt?.toISOString()).toBe('2025-11-03T11:00:00.000Z');
@@ -322,7 +322,7 @@ describe('migration transforms', () => {
     });
 
     it('lower-cases the e-mail, matching the target schema', () => {
-      expect(transformUser(legacyExport.users[0]).email).toBe('admin@sisk-siechnice.pl');
+      expect(transformUser(legacyExport.users[0]).email).toBe('admin@example.com');
     });
 
     it('maps the role flag and renames `building` to `buildings`', () => {

@@ -28,11 +28,11 @@ describe('AuthService', () => {
   it('stores the token and user on a successful sign-in', () => {
     const session = TestBed.inject(SessionStore);
     let emitted: unknown;
-    service.signIn({email: 'admin@sisk.pl', password: 'secret'}).subscribe((u) => (emitted = u));
+    service.signIn({email: 'admin@example.com', password: 'secret'}).subscribe((u) => (emitted = u));
 
     const request = httpMock.expectOne('/api/auth/sign-in');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({email: 'admin@sisk.pl', password: 'secret'});
+    expect(request.request.body).toEqual({email: 'admin@example.com', password: 'secret'});
     request.flush({user, token: 'token-1'});
 
     expect(emitted).toEqual(user);
@@ -42,7 +42,7 @@ describe('AuthService', () => {
 
   it('leaves the session empty when sign-in fails', () => {
     const session = TestBed.inject(SessionStore);
-    service.signIn({email: 'admin@sisk.pl', password: 'wrong'}).subscribe({error: () => undefined});
+    service.signIn({email: 'admin@example.com', password: 'wrong'}).subscribe({error: () => undefined});
 
     httpMock
       .expectOne('/api/auth/sign-in')

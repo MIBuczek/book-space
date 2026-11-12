@@ -4,7 +4,7 @@
  * One route serves two audiences, told apart by `recipient`:
  *
  * - **without `recipient`** it is the public contact form (FR-034) and the server delivers it
- *   to the configured SISK inbox;
+ *   to the configured tenant inbox;
  * - **with `recipient`** it is the Facilities-tab message to a selected facility employee
  *   (FR-041), delivered to that address.
  *
@@ -22,7 +22,7 @@ interface IMessageRequest {
   email: string;
   message: string;
   phone?: string;
-  /** The destination. Omitted for the public contact form, which goes to the SISK inbox. */
+  /** The destination. Omitted for the public contact form, which goes to the tenant inbox. */
   recipient?: string;
 }
 
