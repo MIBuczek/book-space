@@ -10,7 +10,7 @@ import {capabilitiesFor} from './capabilities';
  */
 describe('capabilitiesFor', () => {
   it('gives an employee the staff baseline and no tab beyond Calendar and Bookings', () => {
-    expect(capabilitiesFor('EMPLOYEE', false)).toEqual({
+    expect(capabilitiesFor('EMPLOYEE')).toEqual({
       staff: true,
       canSeeClientsTab: false,
       canSeeFacilitiesTab: false,
@@ -27,7 +27,7 @@ describe('capabilitiesFor', () => {
   });
 
   it('gives office the Clients, Facilities and Summary tabs, but no writes', () => {
-    expect(capabilitiesFor('OFFICE', false)).toEqual({
+    expect(capabilitiesFor('OFFICE')).toEqual({
       staff: true,
       canSeeClientsTab: true,
       canSeeFacilitiesTab: true,
@@ -44,24 +44,7 @@ describe('capabilitiesFor', () => {
   });
 
   it('gives an administrator every capability', () => {
-    const capabilities = capabilitiesFor('ADMIN', false);
+    const capabilities = capabilitiesFor('ADMIN');
     expect(Object.values(capabilities).every(Boolean)).toBe(true);
-  });
-
-  it('denies the Summary tab to a listed office account but keeps the other tabs', () => {
-    const capabilities = capabilitiesFor('OFFICE', true);
-
-    expect(capabilities.canSeeSummaryTab).toBe(false);
-    // The deny-list is specific to the Summary feature (FR-006); it must not become a
-    // blanket downgrade that also removes the Clients and Facilities tabs.
-    expect(capabilities.canSeeClientsTab).toBe(true);
-    expect(capabilities.canSeeFacilitiesTab).toBe(true);
-  });
-
-  it('denies the Summary tab to a listed administrator account too', () => {
-    // The legacy restriction ran before the role check (`summaryUserRestriction` returned
-    // false for the account regardless of role), so an administrator on the list is denied
-    // as well.
-    expect(capabilitiesFor('ADMIN', true).canSeeSummaryTab).toBe(false);
   });
 });

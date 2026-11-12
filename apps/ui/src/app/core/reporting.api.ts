@@ -35,7 +35,7 @@ const setIfPresent = (
  * server produced. The UI writes the text to a download, keeping the server the one place that
  * decides the file's content (R7).
  *
- * The endpoints are `OFFICE`/`ADMIN` and subject to the Summary deny-list (FR-006); the server
+ * The endpoints are `OFFICE`/`ADMIN` (FR-006); the server
  * enforces both, so the tab renders the controls the capabilities allow and the server refuses
  * anything else.
  */

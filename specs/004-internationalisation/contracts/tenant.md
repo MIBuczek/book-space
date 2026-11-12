@@ -59,8 +59,9 @@ interface ITenant {
 
 ## 5. The deny-list
 
-- `apps/server/src/app/reporting/deny-list.ts` no longer defaults to a person's address. An unset
-  `SUMMARY_DENY_LIST` denies **nobody**.
+- `apps/server/src/app/reporting/deny-list.ts` is **removed** (#195): the Summary restriction is
+  gone, not merely defaulted to empty. `canSeeSummaryTab` is office/administrator and nothing
+  else, and there is no `SUMMARY_DENY_LIST` variable.
 - This is a behaviour change (a fresh deployment denied one account before); it is recorded in the
   feature's tasks and in `AGENTS.md`.
 
@@ -69,8 +70,8 @@ interface ITenant {
 1. **No SISK value in the product.** The built UI bundle and the server source contain no
    `sisk`/`siechnice` (SC-002). Documentation provenance is exempt (decision 3); the facility
    sample data is exempt (decision 5).
-2. **No secret in the bundle.** The tenant values are public contact details; the staff inbox and
-   the deny-list stay server-side.
+2. **No secret in the bundle.** The tenant values are public contact details; the staff inbox
+   stays server-side.
 3. **A neutral default renders.** With no tenant configuration the app boots and renders the
    product name and no municipal links (SC-005).
 4. **Rebranding needs no rebuild.** A deployment changes settings; the bundle is unchanged.

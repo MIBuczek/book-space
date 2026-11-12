@@ -15,7 +15,7 @@ const USER_KEY = 'book-space.user';
  * The user is the API's `IAuthenticatedUser`, which carries the capabilities the
  * server resolved. Persisting them means the navigation renders correctly on the first
  * paint after a reload; `AuthService.restore()` refreshes them from `/auth/me` as soon as
- * the app starts, so a role or deny-list change is picked up without a re-sign-in.
+ * the app starts, so a role change is picked up without a re-sign-in.
  */
 @Injectable({ providedIn: 'root' })
 export class SessionStore {

@@ -208,7 +208,7 @@ honest.
 | `COPY.contact.website` / `siskWebsiteUrl` | `TENANT_WEBSITE_URL` | unset |
 | `COPY.contact.privacyPolicyUrl` | `TENANT_PRIVACY_URL` | unset |
 | `COPY.contact.*` staff address | `SISK_CONTACT_EMAIL` → **`TENANT_STAFF_EMAIL`** | required for the staff path, no default |
-| `DEFAULT_SUMMARY_DENY_LIST = 'mkulakowski@umsiechnice.pl'` | empty | deny nobody |
+| `SUMMARY_DENY_LIST` / `deny-list.ts` | removed entirely | no per-account exception (#195) |
 | template signature "SISK Siechnice" | `TENANT_NAME` | the product name |
 
 The env var **renames** `SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL` (FR-011: English naming, no

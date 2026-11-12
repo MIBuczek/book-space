@@ -7,7 +7,7 @@ import {admin, nav, signIn} from '../support/app.po';
  * The tabs come from the capabilities the API resolves (`GET /auth/me`, the sign-in body), not
  * from a role re-derived in the client, so this journey is what proves the server's answer
  * reaches the navigation. An employee sees the two staff tabs; an office account adds Clients,
- * Facilities and Summary; an administrator adds the same three (it is not on the deny-list).
+ * Facilities and Summary; an administrator adds the same three.
  */
 describe('US2 — staff authentication and role-based navigation', () => {
   beforeEach(() => {

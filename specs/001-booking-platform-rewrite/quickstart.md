@@ -15,7 +15,6 @@ PORT=3000
 DB_URI=mongodb://localhost:27017/book_space
 JWT_SECRET=<a long random value, at least 32 characters>
 SEED_REFERENCE_DATA=false
-SUMMARY_DENY_LIST=mkulakowski@umsiechnice.pl
 MAIL_ENDPOINT=
 MAIL_API_KEY=
 MAIL_FROM=rezerwacje@sisk-siechnice.pl
@@ -26,7 +25,7 @@ SISK_CONTACT_EMAIL=biuro@sisk-siechnice.pl
 with `apps/server/.env.example` as the template. The server validates `DB_URI` and
 `JWT_SECRET` at boot and refuses to start with a message naming what is wrong. Rotate the
 legacy MongoDB user and JWT secret if that has not already been done (research.md R3). The
-full key list, including the mail and deny-list variables, is in the
+full key list, including the mail variables, is in the
 [README](../README.md#configuration).
 
 ## Install and run

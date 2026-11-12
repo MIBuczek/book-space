@@ -909,10 +909,10 @@ components:
 
     UserCapabilities:
       description: >
-        What the signed-in account may do, resolved by the API from the stored role and
-        the Summary deny-list (FR-004, FR-006). It is a presentation aid — the client
-        derives its navigation from it, and every capability is also enforced on the
-        endpoint it names (FR-003). A client that ignores it gains nothing but a 403.
+        What the signed-in account may do, resolved by the API from the stored role
+        (FR-004, FR-006). It is a presentation aid — the client derives its navigation from
+        it, and every capability is also enforced on the endpoint it names (FR-003). A
+        client that ignores it gains nothing but a 403.
       type: object
       required:
         - staff
@@ -933,7 +933,7 @@ components:
         canSeeFacilitiesTab: {type: boolean, description: 'Office or administrator.'}
         canSeeSummaryTab:
           type: boolean
-          description: 'Office or administrator, minus any account on the Summary deny-list.'
+          description: 'Office or administrator.'
         canApproveBookings: {type: boolean}
         canArchiveBookings: {type: boolean}
         canFilterUnapproved: {type: boolean, description: 'The "awaiting approval" filter.'}

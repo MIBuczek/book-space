@@ -63,7 +63,6 @@ cp apps/server/.env.example apps/server/.env
 | `DB_URI`              | yes      | MongoDB connection string. Must start with `mongodb://` or `mongodb+srv://`. Use `mongodb://localhost:27017/book_space` for a local database.                            |
 | `JWT_SECRET`          | yes      | Signing key for the session token. **At least 32 characters.** Generate one with `openssl rand -base64 48`.                                                              |
 | `PORT`                | no       | Port the API listens on. Defaults to `3000`. The API always serves under the `/api` prefix.                                                                              |
-| `SUMMARY_DENY_LIST`   | no       | Comma-separated accounts denied the Summary feature (FR-006). Unset keeps the legacy default (`mkulakowski@umsiechnice.pl`). Set to an empty value for no restriction.   |
 | `SEED_REFERENCE_DATA` | no       | Set to the exact string `true` to upsert the twelve reference facilities on start-up. Off by default: the seed is authoritative and overwrites an administrator's edits. |
 | `MAIL_ENDPOINT`       | no       | HTTP endpoint the outbound-mail provider is POSTed to. Unset disables sending: a notification then fails visibly (`502`) rather than silently.                           |
 | `MAIL_API_KEY`        | no       | Bearer token sent to `MAIL_ENDPOINT`.                                                                                                                                    |
@@ -212,8 +211,7 @@ picks them.
 
 Environment variables for a deployment are the same keys as [Configuration](#configuration).
 At minimum set `DB_URI` and `JWT_SECRET`; set `MAIL_*` and `SISK_CONTACT_EMAIL` to enable
-notifications, and `SUMMARY_DENY_LIST` if the Summary restriction differs from the legacy
-default.
+notifications.
 
 ## Branch and release convention
 

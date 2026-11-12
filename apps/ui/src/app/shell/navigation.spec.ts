@@ -41,7 +41,7 @@ describe('visibleAdminTabs', () => {
     expect(labels(officeUser().capabilities)).not.toContain('Użytkownicy');
   });
 
-  it('drops Summary for a deny-listed office account but keeps the other tabs', () => {
+  it('drops Summary for an office account without the capability but keeps the other tabs', () => {
     const capabilities = makeCapabilities({
       canSeeClientsTab: true,
       canSeeFacilitiesTab: true,

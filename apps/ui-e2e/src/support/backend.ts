@@ -51,7 +51,7 @@ interface ISeedUser {
  * Three roles because US2 is about role-appropriate navigation: an employee sees the staff
  * tabs and nothing else, an office account sees the Clients and Facilities tabs, and an
  * administrator additionally sees the Summary tab and the approve/archive actions. The
- * office account is *not* on the Summary deny-list, so its Summary tab is present.
+ * office account has the Summary capability, so its Summary tab is present.
  */
 const USERS: readonly ISeedUser[] = [
   {email: 'admin@example.com', role: 'ADMIN'},

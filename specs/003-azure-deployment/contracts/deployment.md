@@ -36,7 +36,6 @@ Optional (each unset disables the feature rather than breaking boot):
 | Setting | Notes |
 |---------|-------|
 | `SEED_REFERENCE_DATA` | Exact string `true` to seed the twelve facilities; anything else leaves it off. |
-| `SUMMARY_DENY_LIST` | Comma-separated accounts denied the Summary tab. |
 | `MAIL_ENDPOINT`, `MAIL_API_KEY`, `MAIL_FROM` | Outbound mail; unset means a visible `502`. |
 | `SISK_CONTACT_EMAIL` | The SISK inbox for notifications. |
 | `PUBLIC_RATE_LIMIT`, `PUBLIC_RATE_LIMIT_WINDOW_MS`, `NOTIFICATION_QUOTA`, `NOTIFICATION_QUOTA_WINDOW_MS` | Abuse protection. |

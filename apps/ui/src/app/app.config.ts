@@ -34,7 +34,7 @@ export const appConfig: ApplicationConfig = {
     provideAppI18n(),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     // Revalidates a persisted session before the first route resolves: `/auth/me` refreshes
-    // the capabilities (a role or deny-list change reaches the navigation immediately) and
+    // the capabilities (a role change reaches the navigation immediately) and
     // discards a token the server no longer accepts. `restore()` completes rather than
     // errors, so a rejected token leaves the app on the public route instead of aborting
     // bootstrap and blanking the page.

@@ -22,11 +22,10 @@ interface IUser {
  * What the signed-in account may do, resolved by the API (FR-004, SC-001).
  *
  * The client drives its navigation and its action buttons from this rather than from the
- * role, so a rule that lives in server configuration — the Summary deny-list (FR-006) —
- * reaches the UI without being duplicated there, and a rule the server changes cannot leave
- * the menu advertising a tab the API will refuse. It is a presentation aid only: every one of
- * these is also enforced on the endpoint it names (FR-003), so a client that ignores this
- * object gains nothing but a `403`.
+ * role, so a server-side rule reaches the UI without being duplicated there, and a rule the
+ * server changes cannot leave the menu advertising a tab the API will refuse. It is a
+ * presentation aid only: every one of these is also enforced on the endpoint it names (FR-003),
+ * so a client that ignores this object gains nothing but a `403`.
  *
  * The tab flags follow the legacy navigation (`SideNav.tsx`), which is why
  * `canSeeFacilitiesTab` is office/administrator even though an employee may read the
@@ -40,7 +39,7 @@ interface IUserCapabilities {
   canSeeClientsTab: boolean;
   /** Office or administrator: the Facilities tab (legacy `adminSeeContentCredentials`). */
   canSeeFacilitiesTab: boolean;
-  /** Office or administrator, minus any account on the Summary deny-list (FR-006). */
+  /** Office or administrator. */
   canSeeSummaryTab: boolean;
   canApproveBookings: boolean;
   canArchiveBookings: boolean;

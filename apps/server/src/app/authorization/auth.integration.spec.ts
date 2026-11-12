@@ -251,24 +251,5 @@ describe('the auth module over HTTP', () => {
 
       expect(Object.values(body.capabilities).every(Boolean)).toBe(true);
     });
-
-    it('denies the summary capability to a deny-listed account', async () => {
-      // The deny-list is configuration (`SUMMARY_DENY_LIST`), read per request. This is
-      // the case the UI cannot reproduce for itself without duplicating a server rule.
-      process.env.SUMMARY_DENY_LIST = EMAIL;
-      try {
-        await seedUser({role: 'OFFICE'});
-        const {token} = await signIn();
-
-        const body = (await (await getMe(token)).json()) as {
-          capabilities: {canSeeSummaryTab: boolean; canSeeClientsTab: boolean};
-        };
-
-        expect(body.capabilities.canSeeSummaryTab).toBe(false);
-        expect(body.capabilities.canSeeClientsTab).toBe(true);
-      } finally {
-        delete process.env.SUMMARY_DENY_LIST;
-      }
-    });
   });
 });

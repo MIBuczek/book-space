@@ -5,10 +5,10 @@ import { COPY } from '@booking/copy';
  * The admin area's tabs and the capability each one needs.
  *
  * The legacy `SideNav.tsx` showed Calendar and Bookings to every staff member and the
- * Clients, Facilities and Summary tabs to office and administrators (`adminSeeContentCredentials`),
- * with Summary additionally subject to the deny-list. Those gates are the capability flags the
- * API resolves, so the tab list is derived from the capabilities rather than from the role —
- * a deny-listed office account loses Summary here without the client knowing why.
+ * Clients, Facilities and Summary tabs to office and administrators (`adminSeeContentCredentials`).
+ * Those gates are the capability flags the API resolves, so the tab list is derived from the
+ * capabilities rather than from the role — an office account without the Summary capability
+ * loses it here without the client knowing why.
  *
  * The labels are read from the shared copy catalogue (NFR-005, T061): the tab list is the
  * single declaration of a tab's path and capability, and its label comes from the catalogue

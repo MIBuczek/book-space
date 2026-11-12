@@ -5,11 +5,11 @@ import {createMongoTestContext, MongoTestContext} from '../../testing/mongo-test
  * Proves the reporting routes over real HTTP, against the real `AppModule`, a real MongoDB
  * and a real signed JWT.
  *
- * The unit specs assert the aggregation, the CSV row shape and the deny-list. What they cannot
- * show is that the routes are guarded by the role and the deny-list, that the CSV response
- * carries its content type and BOM, and that the range rule is enforced through the real
- * global `ValidationPipe` — a hand-built `plainToInstance` would not reproduce the pipe's
- * 422 behaviour, which is what the malformed-month cases turn on.
+ * The unit specs assert the aggregation and the CSV row shape. What they cannot show is that
+ * the routes are guarded by the role, that the CSV response carries its content type and BOM,
+ * and that the range rule is enforced through the real global `ValidationPipe` — a hand-built
+ * `plainToInstance` would not reproduce the pipe's 422 behaviour, which is what the
+ * malformed-month cases turn on.
  */
 describe('reporting over HTTP', () => {
   let ctx: MongoTestContext;
@@ -18,13 +18,8 @@ describe('reporting over HTTP', () => {
   let userModel: {create: (doc: Record<string, unknown>) => Promise<unknown>};
 
   const PASSWORD = 'correct horse battery';
-  const DENIED_EMAIL = 'denied@example.com';
 
   beforeAll(async () => {
-    // The deny-list default is empty (the legacy default named a real person at the previous
-    // tenant), so the restriction has to be configured explicitly. Set before the app is
-    // created, because `ReportingController` reads the variable through `ConfigService`.
-    process.env.SUMMARY_DENY_LIST = DENIED_EMAIL;
     ctx = await createMongoTestContext();
     bookingModel = ctx.app.get(getModelToken('Booking'));
     clientModel = ctx.app.get(getModelToken('Client'));
@@ -32,7 +27,6 @@ describe('reporting over HTTP', () => {
   }, 120_000);
 
   afterAll(async () => {
-    delete process.env.SUMMARY_DENY_LIST;
     await ctx?.close();
   });
 
@@ -257,26 +251,6 @@ describe('reporting over HTTP', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toContain('text/csv');
-    });
-  });
-
-  describe('the Summary deny-list (FR-006)', () => {
-    it('refuses the denied account on both routes', async () => {
-      const token = await signIn(DENIED_EMAIL, 'ADMIN');
-      const clientId = await createClient();
-
-      const summary = await get(`/reporting/summary?clientId=${clientId}&${range}`, token);
-      expect(summary.status).toBe(403);
-
-      const csv = await get(`/reporting/summary.csv?${range}`, token);
-      expect(csv.status).toBe(403);
-    });
-
-    it('permits another administrator', async () => {
-      const token = await signIn('admin@example.com', 'ADMIN');
-      const clientId = await createClient();
-      const response = await get(`/reporting/summary?clientId=${clientId}&${range}`, token);
-      expect(response.status).toBe(200);
     });
   });
 });

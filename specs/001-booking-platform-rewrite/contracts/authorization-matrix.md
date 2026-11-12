@@ -9,10 +9,9 @@ Legend: **A** = administrator, **O** = office, **E** = employee, **P** = public 
 ## The capability object the client reads (FR-004)
 
 The client does not re-derive these rules from the role. The API resolves them per request and
-returns them as `capabilities` on the sign-in body and on `GET /auth/me` (T033), so a rule that
-lives in server configuration — the Summary deny-list (FR-006) — reaches the UI without being
-duplicated there, and a capability the server changes cannot leave the menu advertising a tab
-the API will refuse. `apps/server/src/app/authorization/capabilities.ts` is the single
+returns them as `capabilities` on the sign-in body and on `GET /auth/me` (T033), so a rule the
+server owns reaches the UI without being duplicated there, and a capability the server changes
+cannot leave the menu advertising a tab the API will refuse. `apps/server/src/app/authorization/capabilities.ts` is the single
 derivation; `libs/models/user.model.ts` declares the shape; `contracts/openapi.yaml`
 (`UserCapabilities`) is the contract.
 
@@ -21,7 +20,7 @@ derivation; `libs/models/user.model.ts` declares the shape; `contracts/openapi.y
 | `staff` | ✅ | ✅ | ✅ | `siskEmployeeCredentials` — the Calendar and Bookings tabs |
 | `canSeeClientsTab` | ❌ | ✅ | ✅ | `adminSeeContentCredentials` |
 | `canSeeFacilitiesTab` | ❌ | ✅ | ✅ | `adminSeeContentCredentials` |
-| `canSeeSummaryTab` | ❌ | ✅ | ✅ | `summaryUserRestriction`, minus the deny-list |
+| `canSeeSummaryTab` | ❌ | ✅ | ✅ | `summaryUserRestriction` |
 | `canApproveBookings` | ❌ | ❌ | ✅ | `adminCredentials` |
 | `canArchiveBookings` | ❌ | ❌ | ✅ | `adminCredentials` |
 | `canFilterUnapproved` | ❌ | ❌ | ✅ | `Bookings.tsx` (`user?.isAdmin`) |
@@ -37,9 +36,9 @@ the facility list); `canSendFacilityMessages` is every staff member even though 
 *write* routes are administrator-only. The tab and the action are the stricter gate in each
 case, and the endpoint stays as wide as the flow needs.
 
-`capabilitiesFor` is a pure function of `(role, summaryDenied)`. The deny-list is read from
-`SUMMARY_DENY_LIST` (default `mkulakowski@umsiechnice.pl`) so the hardcoded account in note 5
-is now configuration.
+`capabilitiesFor` is a pure function of `role` alone (open question 3, #195). The legacy
+per-account Summary restriction is removed: `canSeeSummaryTab` is office/administrator and
+nothing else.
 
 ## Role table
 
@@ -63,7 +62,6 @@ is now configuration.
 | Read the facility list (city, sizes, options) | ✅ | ✅ | ✅ | ✅ | `getBookingDataForUser` / `Calender.tsx` — the public calendar's selectors and the booking form's size options (FR-007, T034). `GET /buildings` is `OptionalJwtAuthGuard`; an anonymous caller receives a redacted facility (no `email`/`phone`/`employees`/`street`/`zipCode`). The contact details and employee list above stay staff-only |
 | Create/update/delete facilities | ❌ | ❌ | ❌ | ✅ | `adminSeeContentCredentials` gate on the tab — **enforced (T025)**: write routes are `@Roles('ADMIN')` |
 | Generate summary reports | ❌ | ❌ | ✅ | ✅ | `summaryUserRestriction` |
-| Generate summary reports (denied account) | ❌ | ❌ | ❌ | ❌ | `mkulakowski@umsiechnice.pl` |
 | Read/update users | ❌ | ❌ | ❌ | ✅ | `UsersController` (`AuthGuard('jwt')` + `RolesGuard`, `@Roles('ADMIN')`) |
 | Send a contact message | ✅ | ✅ | ✅ | ✅ | `FormMessage` |
 | Send a message to a facility employee | ❌ | ✅ | ✅ | ✅ | `Building.tsx` |
@@ -106,13 +104,12 @@ is now configuration.
    `booking-ownership.integration.spec.ts` proves the owner/non-owner/administrator split over
    real HTTP against real signed tokens; it also covers the `ObjectId` id the acting user
    actually carries, which a string-only unit test would not.
-5. ~~**`summaryUserRestriction` is a hardcoded account.**~~ **Resolved (T033).** It is now the
-   `SUMMARY_DENY_LIST` environment variable, read per request by
-   `capabilitiesFor(role, summaryDenied)`; the default remains
-   `mkulakowski@umsiechnice.pl` so behaviour is unchanged until an operator sets it. The
-   denial applies before the role check — a listed administrator loses `canSeeSummaryTab`
-   too — matching the legacy helper, which returned `false` for the account regardless of
-   role.
+5. ~~**`summaryUserRestriction` is a hardcoded account.**~~ **Resolved (T033, then removed by
+   open question 3, #195).** T033 first made it the `SUMMARY_DENY_LIST` environment variable;
+   the restriction has since been removed entirely, because the account belonged to a person no
+   longer with the tenant. `canSeeSummaryTab` is office/administrator only, and there is no
+   per-account exception — a configured deny-list would be a privilege decision that cannot be
+   reasoned about from the role alone.
 6. ~~**Public calendar visibility.** A public visitor sees a booking's `nick`, defaulting to
    "Rezerwacja", while staff see `person`. The API MUST NOT return `personName`,
    `personEmail`, `personPhone`, `comments` or `clientId` to a public caller — the legacy
@@ -175,7 +172,7 @@ administrator's change to an account would not appear until the token expired.
 **The client revalidates on start, and the capabilities come with it (T033).** `AuthService.restore()`
 calls `/auth/me` from an app initializer before the first route resolves, so a token the server
 no longer accepts is discarded at start-up rather than on the first click, and a role or
-deny-list change is reflected in the navigation without a re-sign-in. `/auth/me` returns no
+role change is reflected in the navigation without a re-sign-in. `/auth/me` returns no
 token, so the restore replaces the stored user and keeps the token; a restore that cleared it
 would sign the caller out by refreshing them. The initializer completes rather than errors when
 the token is rejected, because a throwing initializer aborts bootstrap and blanks the page.

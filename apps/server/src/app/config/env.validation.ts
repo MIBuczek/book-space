@@ -13,17 +13,6 @@ class EnvironmentVariables {
   JWT_SECRET!: string;
 
   /**
-   * Accounts denied the Summary feature (FR-006), comma-separated. Optional: unset means the
-   * legacy default account (see `reporting/deny-list.ts`), so an existing deployment keeps the
-   * restriction it had. A string, not a boolean — a boolean field here would be coerced with
-   * `Boolean(value)` under `enableImplicitConversion`, where `Boolean('false')` is `true` (the
-   * same trap the query DTOs document).
-   */
-  @IsOptional()
-  @IsString()
-  SUMMARY_DENY_LIST?: string;
-
-  /**
    * The outbound-mail provider settings (FR-035). All optional: with no endpoint and no sender
    * the notification module installs a transport that fails every send, so a missing
    * configuration is a surfaced failure rather than a silently dropped message. The endpoint is

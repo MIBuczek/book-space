@@ -74,7 +74,7 @@ default so an unconfigured deployment renders (SC-005).
 | `TENANT_WEBSITE_URL` | `www.sisk-siechnice.pl` | unset → the link is hidden |
 | `TENANT_PRIVACY_URL` | the SISK privacy-policy URL | unset → the link is hidden |
 | `TENANT_STAFF_EMAIL` (renamed from `SISK_CONTACT_EMAIL`) | the SISK inbox | required only for the staff path; no default |
-| (removed) `SUMMARY_DENY_LIST` default | `mkulakowski@umsiechnice.pl` | empty → deny nobody |
+| (removed) `SUMMARY_DENY_LIST` | `mkulakowski@umsiechnice.pl` | the whole deny-list is removed (#195) |
 
 The facility seed is **sample data** and stays as it is (decision 5); it carries no SISK brand and
 is not a tenant setting.
@@ -89,7 +89,7 @@ Only the values a visitor may see cross to the UI:
 | `contactEmail` | the contact page |
 | `websiteUrl`, `privacyUrl` | the footer links |
 
-The staff inbox and the deny-list are **server-only** and never reach the bundle (they are not
+The staff inbox is **server-only** and never reaches the bundle (they are not
 secrets, but they are not public either; keeping them server-side keeps the bundle clean and the
 secret scan trivially green).
 

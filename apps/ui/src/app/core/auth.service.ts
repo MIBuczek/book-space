@@ -47,7 +47,7 @@ export class AuthService {
    *
    * Called from an app initializer so the session is revalidated before the first route
    * resolves: a token that has expired or belongs to a deactivated account is discarded
-   * here, and a role or deny-list change is reflected in the navigation immediately. It
+   * here, and a role change is reflected in the navigation immediately. It
    * completes rather than errors when the token is rejected — `errorInterceptor` already
    * clears the session and routes to sign-in, and an initializer that threw would abort
    * bootstrap and blank the page.

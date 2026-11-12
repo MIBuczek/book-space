@@ -148,7 +148,7 @@ export default {
       lines: 80,
     },
     // The reports module is the third SC-008 module, added with T026–T029. It is the summary
-    // aggregation, the CSV column contract and the deny-list; like the two groups above it takes
+    // aggregation and the CSV column contract; like the two groups above it takes
     // its files out of `global`, so the global figure is measured *without* them — every file
     // here measures at least 97%, so the exclusion lowers the global number, and the global
     // floor below was re-derived from the per-file rows rather than read from the report's

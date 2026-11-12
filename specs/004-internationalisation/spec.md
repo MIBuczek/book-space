@@ -24,7 +24,7 @@ This feature does the translation itself, and removes the municipality's brandin
 2. An **English translation** is added alongside the Polish one.
 3. A **language switch** lets a user choose the language, and the choice persists.
 4. Every **SISK-specific reference is removed** from the product — the brand, the contact
-   addresses, the default deny-list — so the platform is a generic, unbranded booking system
+   addresses, the per-account deny-list — so the platform is a generic, unbranded booking system
    whose tenant is supplied by configuration.
 5. **Naming is English throughout**: code identifiers, keys, filenames, environment variables
    and route paths are English (they already largely are); the Polish that remains is *content*,
@@ -49,7 +49,7 @@ HTTP contract or the domain rules.
   translation files. A Polish word in `pl.json` is correct; a Polish word in a `.ts` identifier
   is not.
 - Q: How far does "remove all info about SISK" go? → **A: the product.** The brand, the contact
-  e-mail/website/privacy-policy URLs, the default deny-list address and the notification
+  e-mail/website/privacy-policy URLs, the deny-list address and the notification
   signature become **configuration** with neutral defaults. The repository *documentation*
   (`README.md`, `AGENTS.md`, `specs/`) keeps the legacy provenance; the facility **sample data**
   is exempt (decision 5).
@@ -120,8 +120,8 @@ links.
    footer shows the product name and no SISK link, and the contact page shows no SISK address.
 3. **Given** the notification templates, **When** a notification is sent, **Then** the signature
    is the configured tenant name, not "SISK Siechnice".
-4. **Given** the default Summary deny-list, **When** no override is set, **Then** no specific
-   person's address is denied (the legacy default is removed).
+4. **Given** the Summary feature, **When** it resolves access, **Then** no per-account
+   deny-list exists at all (the legacy restriction is removed, #195).
 5. **Given** the facility sample data, **When** it runs, **Then** it carries no SISK brand (the
    twelve facilities themselves may remain).
 
@@ -195,8 +195,8 @@ switch to it — the keys that exist render, the rest fall back to the default, 
   provenance.
 - **FR-008**: The facility **sample data** (the twelve facilities) MAY remain as it is; it carries
   no SISK brand. It is sample data, not a tenant identity.
-- **FR-009**: The default Summary deny-list MUST NOT name a specific person; an unset value denies
-  nobody.
+- **FR-009**: The Summary deny-list MUST be removed entirely — access is decided by role
+  (`OFFICE`/`ADMIN`) alone, with no per-account exception (#195).
 - **FR-010**: Notification templates MUST sign with the configured tenant name, not a hardcoded
   one.
 - **FR-011**: Code identifiers, translation keys, filenames, environment variables and route
