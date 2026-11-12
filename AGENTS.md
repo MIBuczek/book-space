@@ -1144,12 +1144,14 @@ Three things that are easy to get wrong:
   immutable once the booking is done. The predicate lives in `retention.ts` and the tool re-checks
   every candidate against it, so the database filter is an optimisation and can only make the tool
   read more, never delete a record the rule rejects.
-- **A retention cutoff is a calendar subtraction, not a millisecond offset.** `now - years * 365
-  * 24 * 3600 * 1000` drifts a day or two per leap year and moves the boundary;
-  `setFullYear(getFullYear() - years)` is what a retention policy means. The boundary is strict
-  (`<`), so a booking exactly on the cutoff is kept — a record kept a moment past its window is
-  recoverable, one deleted a moment early is not. The leap-day case (29 Feb minus five years
-  rolls to 1 Mar in JavaScript) is pinned by a named test rather than left to be discovered.
+- **A retention cutoff is a calendar subtraction, not a millisecond offset.** `now - months * 30
+  * 24 * 3600 * 1000` drifts and moves the boundary; `setMonth(getMonth() - months)` is what a
+  retention policy means. The window is expressed in **months** (`DEFAULT_RETENTION_MONTHS = 11`,
+  `--retention-months`) because eleven months is not a whole number of years — a `setFullYear`
+  subtraction cannot represent it (#198). The boundary is strict (`<`), so a booking exactly on
+  the cutoff is kept — a record kept a moment past its window is recoverable, one deleted a
+  moment early is not. The rollover cases (31 Jan minus a month rolls to 3 Mar; 29 Feb minus
+  whole months rolls forward) are pinned by named tests rather than left to be discovered.
 - **A purge exports before it deletes.** `--export` writes the removed documents to an archive so
   a purged booking can still be produced if a question is asked; that export is the difference
   between retention and data loss. The `skipped` counter (filter matches the predicate refused)

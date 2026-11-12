@@ -18,33 +18,35 @@
  */
 
 /**
- * The default retention window, in years, after the booking's last slot day.
+ * The default retention window, in months, after the booking's last slot day.
  *
- * Five years is the window a municipal entity can defend for booking history that underpins
- * published summaries: long enough to answer a dispute or an audit across the whole period a
- * report can cover, short enough that the collection does not grow without bound. It is a
- * default, not a constant — `--retention-years` overrides it and the operations runbook names
- * the value in force.
+ * Eleven months is a full annual reporting cycle plus a month of overlap: long enough to answer
+ * a dispute across the whole period a report can cover, and no longer than the tenant keeps any
+ * other record. The window is a default, not a constant — `--retention-months` overrides it and
+ * the operations runbook names the value in force.
+ *
+ * The window is expressed in months, not years, because eleven months is not a whole number of
+ * years: a year-based subtraction cannot represent it (open question 7 revision, #198).
  */
-const DEFAULT_RETENTION_YEARS = 5;
+const DEFAULT_RETENTION_MONTHS = 11;
 
 /**
  * The instant before which a booking's last slot must fall for the record to be purgeable.
  *
- * Subtracting whole years is done on the calendar (`setFullYear`), not by milliseconds: a year
- * is not 365 days, so `now - years * 365 * 24 * 3600 * 1000` drifts by a day or two per leap
- * year and would move the boundary. The cutoff is compared as an instant, matching how
- * `bookedTimes[].day` is stored.
+ * Subtracting whole months is done on the calendar (`setMonth`), not by milliseconds: a month is
+ * not a fixed number of days, so an arithmetic subtraction would drift and move the boundary.
+ * The cutoff is compared as an instant, matching how `bookedTimes[].day` is stored.
  *
- * The one case a calendar subtraction does not have an answer for is a leap day minus a whole
- * number of years, and JavaScript rolls it forward (29 Feb 2024 minus five years is 1 Mar 2019,
- * not 28 Feb). The boundary check is strict (`<`) so a booking whose last slot sits exactly on
- * the cutoff is kept, which is the safe direction: a record kept a moment past its window is
- * recoverable, a record deleted a moment early is not.
+ * The one case a calendar subtraction does not have an answer for is a month with no matching
+ * day, and JavaScript rolls it forward: 31 Jan minus one month is 3 Mar in a non-leap year (there
+ * is no 31 Feb), just as 29 Feb minus a whole number of years rolls to 1 Mar. The boundary check
+ * is strict (`<`) so a booking whose last slot sits exactly on the cutoff is kept, which is the
+ * safe direction: a record kept a moment past its window is recoverable, a record deleted a
+ * moment early is not.
  */
-const retentionCutoff = (now: Date, years: number): Date => {
+const retentionCutoff = (now: Date, months: number): Date => {
   const cutoff = new Date(now.getTime());
-  cutoff.setFullYear(cutoff.getFullYear() - years);
+  cutoff.setMonth(cutoff.getMonth() - months);
   return cutoff;
 };
 
@@ -108,5 +110,5 @@ const purgeFilter = (cutoff: Date): Record<string, unknown> => ({
   bookedTimes: {$not: {$elemMatch: {day: {$gte: cutoff}}}},
 });
 
-export {retentionCutoff, lastSlotDay, isPurgeable, purgeFilter, DEFAULT_RETENTION_YEARS};
+export {retentionCutoff, lastSlotDay, isPurgeable, purgeFilter, DEFAULT_RETENTION_MONTHS};
 export type {IRetentionCandidate};

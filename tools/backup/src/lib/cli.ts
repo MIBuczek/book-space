@@ -3,7 +3,7 @@ import {EJSON} from 'bson';
 import {dumpDatabase, restoreDatabase, requireDatabase, BACKUP_COLLECTIONS} from './archive';
 import {purgeArchivedBookings} from './purge';
 import type {IPurgeReport} from './purge';
-import {retentionCutoff, DEFAULT_RETENTION_YEARS} from './retention';
+import {retentionCutoff, DEFAULT_RETENTION_MONTHS} from './retention';
 import {formatBackup, formatRestore, formatPurge} from './report';
 
 /**
@@ -14,7 +14,7 @@ import {formatBackup, formatRestore, formatPurge} from './report';
  *   backup         --source <uri> --out <dir>
  *   restore        --target <uri> --from <dir>
  *   verify-restore --source <uri> --target <uri>
- *   purge          --target <uri> [--retention-years N] [--dry-run] [--export <dir>]
+ *   purge          --target <uri> [--retention-months N] [--dry-run] [--export <dir>]
  *
  * `verify-restore` is the acceptance criterion the issue states as "a restore that has never
  * been tested is not a backup": it dumps the source, restores into the scratch target and
@@ -32,7 +32,7 @@ interface IParsedCommand {
 }
 
 const COMMANDS = new Set(['backup', 'restore', 'verify-restore', 'purge']);
-const VALUE_FLAGS = new Set(['source', 'target', 'out', 'from', 'retention-years', 'export']);
+const VALUE_FLAGS = new Set(['source', 'target', 'out', 'from', 'retention-months', 'export']);
 const BOOLEAN_FLAGS = new Set(['dry-run']);
 
 /**
@@ -137,12 +137,12 @@ const run = async (parsed: IParsedCommand, dependencies: IBackupDependencies): P
 
   // purge
   const target = requiredFlag(flags, 'target', command);
-  const years = parseRetentionYears(flags);
+  const months = parseRetentionMonths(flags);
   const dryRun = flags.get('dry-run') === true;
   const exportDir = flags.get('export');
   const connection = await dependencies.connect(target);
   try {
-    const cutoff = retentionCutoff(new Date(), years);
+    const cutoff = retentionCutoff(new Date(), months);
     const report = await purgeArchivedBookings(connection, cutoff, {
       dryRun,
       exportDir: typeof exportDir === 'string' ? exportDir : undefined,
@@ -166,13 +166,20 @@ const run = async (parsed: IParsedCommand, dependencies: IBackupDependencies): P
 const purgeExitCode = (report: IPurgeReport, dryRun: boolean): number =>
   dryRun || report.purged === report.purgeable ? 0 : 1;
 
-const parseRetentionYears = (flags: Map<string, string | true>): number => {
-  const raw = flags.get('retention-years');
+/**
+ * The retention window in months for a purge run.
+ *
+ * Months, not years: the default is eleven months, which is not a whole number of years, so a
+ * `--retention-years` flag could not express the default (#198). The flag is a whole number of
+ * months; anything else is an error rather than a silent fallback to the default.
+ */
+const parseRetentionMonths = (flags: Map<string, string | true>): number => {
+  const raw = flags.get('retention-months');
   if (raw === undefined) {
-    return DEFAULT_RETENTION_YEARS;
+    return DEFAULT_RETENTION_MONTHS;
   }
   if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
-    throw new Error('--retention-years needs a whole number');
+    throw new Error('--retention-months needs a whole number');
   }
   return Number(raw);
 };
@@ -240,5 +247,5 @@ const verifyRestore = async (
 const canonical = (document: Record<string, unknown>): string =>
   EJSON.stringify(document, {relaxed: false});
 
-export {parseArgs, run, parseRetentionYears, verifyRestore, purgeExitCode};
+export {parseArgs, run, parseRetentionMonths, verifyRestore, purgeExitCode};
 export type {IParsedCommand, IBackupDependencies};
