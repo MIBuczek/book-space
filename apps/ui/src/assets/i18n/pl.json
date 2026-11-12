@@ -1,0 +1,551 @@
+{
+  "common": {
+    "yes": "Tak",
+    "no": "Nie",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "edit": "Edytuj",
+    "remove": "Usuń",
+    "close": "Zamknij",
+    "pageSize": "Na stronę",
+    "phonePrefix": "tel. ",
+    "dash": "—",
+    "noValue": "[Brak]",
+    "backToCalendar": "Powrót do kalendarza rezerwacji"
+  },
+  "nav": {
+    "ariaLabel": "Nawigacja",
+    "calendar": "Kalendarz",
+    "bookingRequest": "Rezerwacja",
+    "contact": "Kontakt",
+    "admin": "Administracja",
+    "signIn": "Zaloguj",
+    "signOut": "Wyloguj",
+    "language": "Język"
+  },
+  "footer": {
+    "ariaLabel": "Informacje",
+    "privacy": "Polityka prywatności",
+    "site": "Strona {{tenant}}",
+    "meta": "{{tenant}} — system rezerwacji · Wersja aplikacji {{version}}",
+    "copyright": "© 2026 Gecko Web Services"
+  },
+  "admin": {
+    "sectionsAria": "Sekcje panelu",
+    "signOut": "Wyloguj",
+    "tabs": {
+      "calendar": "Kalendarz",
+      "bookings": "Rezerwacje",
+      "clients": "Najemcy",
+      "facilities": "Obiekty",
+      "summary": "Podsumowanie",
+      "users": "Użytkownicy"
+    },
+    "placeholder": {
+      "title": "Administracja",
+      "body": "Ta sekcja jest w budowie (T036–T039)."
+    }
+  },
+  "calendar": {
+    "title": "Kalendarz rezerwacji obiektów",
+    "city": "Miasto",
+    "facility": "Obiekt",
+    "facilityPlaceholder": "Wybierz obiekt",
+    "viewAria": "Widok",
+    "views": {
+      "week": "Tydzień",
+      "day": "Dzień",
+      "list": "Lista",
+      "month": "Miesiąc"
+    },
+    "previous": "Poprzedni",
+    "today": "Dzisiaj",
+    "next": "Następny",
+    "chooseFacility": "Wybierz obiekt, aby zobaczyć kalendarz.",
+    "loading": "Wczytywanie rezerwacji…",
+    "loadError": "Nie udało się wczytać rezerwacji.",
+    "empty": "Brak rezerwacji w wybranym okresie.",
+    "detailsAria": "Szczegóły rezerwacji",
+    "detailsTitle": "Szczegóły rezerwacji",
+    "fields": {
+      "name": "Nazwa",
+      "day": "Dzień",
+      "hours": "Godziny",
+      "size": "Rozmiar",
+      "status": "Status"
+    },
+    "staffFields": {
+      "client": "Klient",
+      "email": "E-mail",
+      "phone": "Telefon"
+    },
+    "defaultLabel": "Rezerwacja",
+    "status": {
+      "done": "Zakończona",
+      "accepted": "Zatwierdzona",
+      "pending": "Oczekująca"
+    },
+    "weekdays": [
+      "pon",
+      "wt",
+      "śr",
+      "czw",
+      "pt",
+      "sob",
+      "nie"
+    ],
+    "months": [
+      "styczeń",
+      "luty",
+      "marzec",
+      "kwiecień",
+      "maj",
+      "czerwiec",
+      "lipiec",
+      "sierpień",
+      "wrzesień",
+      "październik",
+      "listopad",
+      "grudzień"
+    ],
+    "publicNotice": "W kalendarzu są widoczne tylko zatwierdzone przez administratora rezerwacje."
+  },
+  "bookingRequest": {
+    "title": "Prośba o rezerwację",
+    "success": "Dziękujemy. Twoja prośba o rezerwację została wysłana i oczekuje na zatwierdzenie.",
+    "legends": {
+      "facility": "Obiekt",
+      "requester": "Rezerwujący",
+      "slots": "Terminy",
+      "extras": "Dodatkowe opcje wynajmu"
+    },
+    "city": "Miasto",
+    "facility": "Obiekt",
+    "facilityPlaceholder": "Wybierz obiekt",
+    "size": "Rozmiar",
+    "type": "Typ",
+    "nick": "Nazwa w kalendarzu",
+    "personName": "Imię i nazwisko",
+    "personCompany": "Nazwa firmy",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "payment": "Płatność",
+    "discount": "Rabat (opcjonalnie)",
+    "comments": "Dodatkowe informacje",
+    "day": "Dzień",
+    "fromHour": "Od godziny",
+    "toHour": "Do godziny",
+    "addSlot": "Dodaj termin",
+    "cyclical": "Rezerwacja cykliczna",
+    "untilDay": "Do dnia",
+    "noSlots": "Nie dodano jeszcze żadnego terminu.",
+    "removeLastSlot": "Usuń ostatni termin",
+    "overlapWarning": "Niektóre godziny rezerwacji konfliktują ze sobą ({{day}}).",
+    "lights": "Oświetlenie",
+    "toilets": "Zaplecze sanitarne",
+    "addExtra": "Dodaj opcję",
+    "noExtras": "Nie dodano żadnych dodatkowych opcji.",
+    "rodo": "Akceptuję klauzulę informacyjną RODO",
+    "rodoLink": "Klauzula informacyjna o przetwarzaniu danych osobowych.",
+    "website": "Strona internetowa",
+    "submit": "Wyślij prośbę o rezerwację",
+    "endBeforeStart": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia.",
+    "seriesBackwards": "Data zakończenia serii nie może być wcześniejsza niż jej początek.",
+    "chooseFacility": "Wybierz obiekt.",
+    "sendValidation": "Nie udało się wysłać prośby. Sprawdź dane i spróbuj ponownie.",
+    "sendGeneric": "Nie udało się wysłać prośby. Spróbuj ponownie później."
+  },
+  "bookings": {
+    "title": "Lista rezerwacji",
+    "city": "Miasto",
+    "facility": "Obiekt",
+    "facilityPlaceholder": "Wybierz obiekt",
+    "period": "Okres",
+    "search": "Wyszukaj rezerwację",
+    "unapproved": "Pokaż rezerwacje do zaakceptowania",
+    "showDetails": "Pokaż szczegóły rezerwacji",
+    "chooseFacility": "Wybierz obiekt, aby zobaczyć rezerwacje.",
+    "loading": "Wczytywanie rezerwacji…",
+    "loadError": "Nie udało się wczytać rezerwacji.",
+    "caption": "Rezerwacje",
+    "empty": "Nie ma żadnej rezerwacji w bazie danych.",
+    "details": {
+      "tenant": "Najemca:",
+      "club": "Klub:",
+      "payment": "Płatność:",
+      "message": "Wiadomość:"
+    },
+    "slotColumns": {
+      "day": "Dzień",
+      "hours": "Godziny",
+      "status": "Status",
+      "participants": "Uczestnicy",
+      "actions": "Akcje"
+    },
+    "resolvedSlot": "Slot rozliczony",
+    "reschedule": "Przenieś",
+    "resolve": "Rozlicz",
+    "approve": "Zatwierdź",
+    "unapprove": "Odwołaj",
+    "archive": "Archiwizuj",
+    "unarchive": "Przywróć",
+    "conflicts": "Aktualna liczba konfliktów między rezerwacjami: {{count}}",
+    "approveWarning": "Rezerwacja konfliktuje z innymi rezerwacjami. Czy chcesz ją zatwierdzić mimo to?",
+    "approveAnyway": "Zatwierdź mimo konfliktu",
+    "modals": {
+      "reschedule": "Przenieś slot",
+      "resolve": "Rozlicz slot",
+      "edit": "Edytuj rezerwację",
+      "delete": "Usuń rezerwację"
+    },
+    "deleteConfirm": "Czy na pewno chcesz usunąć tą rezerwację?",
+    "fields": {
+      "nick": "Nazwa w kalendarzu",
+      "personName": "Imię i nazwisko",
+      "phone": "Telefon"
+    },
+    "resolveFields": {
+      "status": "Status",
+      "participants": "Uczestnicy",
+      "comments": "Komentarz"
+    },
+    "hours": {
+      "from": "Od",
+      "to": "Do"
+    },
+    "columns": {
+      "nick": "Nazwa klienta",
+      "personPhone": "Telefon",
+      "personEmail": "E-mail",
+      "accepted": "Zakceptowana",
+      "conflict": "Konflikty"
+    },
+    "statusLabels": {
+      "INITIAL": "Nie rozpoczęta",
+      "DONE": "Zakończona",
+      "CANCELED": "Rezygnacja"
+    },
+    "fromBeginning": "Od początku",
+    "conflict": "Konflikt",
+    "notifyApplicant": "Powiadom wnioskującego",
+    "notifySent": "Powiadomienie zostało wysłane do wnioskującego.",
+    "notifyFailure": "Nie udało się wysłać powiadomienia. Spróbuj ponownie później."
+  },
+  "clients": {
+    "title": "Lista klientów",
+    "search": "Wyszukaj klienta",
+    "add": "Dodaj klienta",
+    "loading": "Wczytywanie klientów…",
+    "loadError": "Nie udało się wczytać klientów.",
+    "caption": "Klienci",
+    "empty": "Nie ma żadnego klienta w bazie danych.",
+    "editTitle": "Edytuj klienta",
+    "createTitle": "Dodaj klienta",
+    "deleteTitle": "Usuń klienta",
+    "deleteConfirm": "Czy na pewno chcesz usunąć klienta {{name}}?",
+    "fields": {
+      "type": "Typ",
+      "nameCompany": "Nazwa firmy",
+      "namePerson": "Imię i nazwisko",
+      "nick": "Nazwa w kalendarzu (opcjonalnie)",
+      "contactPerson": "Osoba kontaktowa",
+      "phone": "Telefon",
+      "email": "E-mail",
+      "street": "Ulica",
+      "city": "Miasto",
+      "zipCode": "Kod pocztowy",
+      "nip": "NIP",
+      "active": "Klient aktywny"
+    },
+    "typeLabels": {
+      "INDIVIDUAL": "Osoba prywatna",
+      "COMPANY": "Firma"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "contactPerson": "Osoba kontaktowa",
+      "phone": "Telefon",
+      "email": "E-mail",
+      "city": "Miasto",
+      "status": "Status"
+    },
+    "active": {
+      "yes": "Aktywny",
+      "no": "Nieaktywny"
+    },
+    "deleteConflict": "Nie można usunąć tego klienta, ponieważ odwołuje się do niego rezerwacja. Zamiast tego dezaktywuj klienta.",
+    "deleteFailure": "Nie udało się usunąć klienta. Spróbuj ponownie później.",
+    "saveFailure": "Nie udało się zapisać klienta. Spróbuj ponownie później."
+  },
+  "users": {
+    "title": "Użytkownicy",
+    "add": "Dodaj użytkownika",
+    "loading": "Wczytywanie użytkowników…",
+    "loadError": "Nie udało się wczytać użytkowników.",
+    "caption": "Użytkownicy",
+    "empty": "Nie ma żadnego użytkownika w bazie danych.",
+    "editTitle": "Edytuj użytkownika",
+    "createTitle": "Dodaj użytkownika",
+    "deactivateTitle": "Dezaktywuj użytkownika",
+    "deactivate": "Dezaktywuj",
+    "deactivateConfirm": "Czy na pewno chcesz dezaktywować konto {{firstName}} {{lastName}}? Konto nie będzie mogło się zalogować, ale pozostanie widoczne w historii rezerwacji.",
+    "fields": {
+      "firstName": "Imię",
+      "lastName": "Nazwisko",
+      "email": "E-mail",
+      "password": "Hasło",
+      "recheckPassword": "Powtórz hasło",
+      "role": "Rola",
+      "city": "Miasto",
+      "active": "Konto aktywne"
+    },
+    "passwordPlaceholderEdit": "Zostaw puste, aby nie zmieniać",
+    "assignmentsLegend": "Przypisane obiekty",
+    "columns": {
+      "name": "Imię i nazwisko",
+      "email": "E-mail",
+      "role": "Rola",
+      "city": "Miasto",
+      "status": "Status"
+    },
+    "roleLabels": {
+      "ADMIN": "Administrator",
+      "OFFICE": "Biuro",
+      "EMPLOYEE": "Pracownik"
+    },
+    "active": {
+      "yes": "Aktywne",
+      "no": "Nieaktywne"
+    },
+    "saveFailure": "Nie udało się zapisać użytkownika. Spróbuj ponownie później.",
+    "deactivateConflict": "Nie można dezaktywować tego konta.",
+    "deactivateFailure": "Nie udało się dezaktywować konta. Spróbuj ponownie później."
+  },
+  "facilities": {
+    "title": "Obiekty sportowe",
+    "city": "Miejscowość",
+    "facility": "Obiekt",
+    "loading": "Wczytywanie obiektów…",
+    "loadError": "Nie udało się wczytać obiektów.",
+    "detailsHeading": "Dane o obiekcie",
+    "detailsAria": "Dane o obiekcie",
+    "employeesHeading": "Pracownicy",
+    "employeesAria": "Pracownicy",
+    "employeesCaption": "Pracownicy",
+    "employeesEmpty": "Ten obiekt nie ma przypisanych pracowników.",
+    "employeeColumn": "Pracownik",
+    "messageAction": "Wiadomość",
+    "messageHeading": "Wyślij wiadomość pracownikowi",
+    "messageAria": "Wyślij wiadomość pracownikowi",
+    "messagePerson": "Pracownik",
+    "messageEmail": "E-mail",
+    "messageBody": "Wiadomość",
+    "send": "Wyślij",
+    "noFacilities": "Nie ma obiektów w tej miejscowości.",
+    "sent": "Wiadomość została wysłana pomyślnie",
+    "sendValidation": "Popraw dane i spróbuj ponownie.",
+    "sendFailure": "Nie udało się wysłać wiadomości. Spróbuj ponownie później.",
+    "details": {
+      "city": "Miejscowość",
+      "name": "Nazwa obiektu",
+      "phone": "Telefon kontaktowy",
+      "email": "E-mail",
+      "sizes": "Powierzchnie",
+      "lighting": "Oświetlenie",
+      "toilets": "Toalety",
+      "status": "Status"
+    },
+    "active": {
+      "yes": "Aktywny",
+      "no": "Nieaktywny"
+    }
+  },
+  "summary": {
+    "title": "Podsumowanie najmów",
+    "client": "Wybrany klient",
+    "clientPlaceholder": "Wybierz",
+    "fromMonth": "Od miesiąca",
+    "toMonth": "Do miesiąca",
+    "fromBeginning": "Podsumowanie od początku",
+    "generate": "Generuj podsumowanie",
+    "clear": "Wyczyść",
+    "downloadAll": "Pobierz raport wszystkich klientów [.csv]",
+    "loading": "Wczytywanie podsumowania…",
+    "loadError": "Nie udało się wygenerować podsumowania.",
+    "reportAria": "Raport podsumowania",
+    "reportTitle": "Raport najmów za okres",
+    "empty": "Aby zobaczyć podsumowanie, wybierz klienta oraz miesiąc.",
+    "downloadClient": "Pobierz plik [.csv]",
+    "print": "Wyświetl szczegóły [.pdf]",
+    "booking": {
+      "building": "Budynek",
+      "size": "Wynajmowana powierzchnia",
+      "discount": "Udzielony rabat",
+      "payment": "Metoda płatności",
+      "extraOptions": "Dodatkowe opcje",
+      "selectedOptions": "Wybrane opcje",
+      "comments": "Dodatkowe informacje"
+    },
+    "slot": {
+      "day": "Dzień",
+      "hours": "Godziny",
+      "participants": "Liczba uczestników",
+      "status": "Status",
+      "comments": "Uwagi"
+    },
+    "rangeError": {
+      "missing": "Wybierz miesiąc początkowy i końcowy.",
+      "inverted": "Miesiąc początkowy nie może być późniejszy niż końcowy."
+    },
+    "fromBeginningText": "od początku",
+    "clientDetail": {
+      "name": "Imię i nazwisko",
+      "type": "Typ",
+      "contactPerson": "Osoba kontaktowa",
+      "phone": "Telefon",
+      "email": "E-mail",
+      "street": "Ulica",
+      "city": "Miasto",
+      "zipCode": "Kod pocztowy",
+      "nip": "NIP",
+      "nick": "Nick"
+    },
+    "csvFilename": {
+      "clientFallback": "Raport clienta.csv",
+      "all": "Wszyscy klienci"
+    }
+  },
+  "signIn": {
+    "title": "Zaloguj się",
+    "email": "E-mail",
+    "password": "Hasło",
+    "submit": "Zaloguj się",
+    "invalid": "Nieprawidłowy e-mail lub hasło",
+    "genericFailure": "Logowanie nie powiodło się. Spróbuj ponownie."
+  },
+  "contact": {
+    "registeredOfficeHeading": "Dane teleadresowe",
+    "hoursHeading": "Godziny przyjęć interesantów:",
+    "officeHeading": "Biuro / Adres korespondencyjny",
+    "bookingHeading": "Osoba do kontaktu w sprawie rezerwacji",
+    "registeredOffice": {
+      "name": "Book Space",
+      "address": "—"
+    },
+    "office": {
+      "address": "—",
+      "phone": "—",
+      "phoneHref": "tel:",
+      "email": "kontakt@book-space.example",
+      "website": "book-space.example",
+      "websiteHref": "https://book-space.example/"
+    },
+    "bookingContact": {
+      "name": "—",
+      "role": "—",
+      "phone": "—",
+      "phoneHref": "tel:",
+      "email": "kontakt@book-space.example"
+    },
+    "hours": [
+      {
+        "day": "poniedziałek",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "wtorek",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "środa",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "czwartek",
+        "hours": "08:00 - 16:00"
+      },
+      {
+        "day": "piątek",
+        "hours": "08:00 - 14:00"
+      }
+    ],
+    "privacyPolicyUrl": "https://book-space.example/polityka-prywatnosci",
+    "websiteUrl": "https://book-space.example/",
+    "rodoClauseUrl": "https://book-space.example/klauzula-informacyjna.pdf"
+  },
+  "cookieNotice": {
+    "ariaLabel": "Pliki cookies",
+    "heading": "Pliki Cookies",
+    "text": "Serwis wykorzystuje pliki cookies. Korzystając ze strony wyrażasz zgodę na wykorzystywanie plików cookies.",
+    "learnMore": "Dowiedz się więcej.",
+    "accept": "Ok, rozumiem"
+  },
+  "notFound": {
+    "title": "Strona nie istnieje",
+    "code": "Błąd 404"
+  },
+  "shared": {
+    "pagination": {
+      "ariaLabel": "Paginacja",
+      "previous": "Poprzednia",
+      "next": "Następna",
+      "status": "Strona {{page}} z {{count}}"
+    },
+    "table": {
+      "empty": "Brak danych.",
+      "actions": "Akcje"
+    }
+  },
+  "serverError": {
+    "title": "Mamy obecnie problem z serwerem",
+    "fallback": "Serwer jest niedostępny.",
+    "prompt": "Zapraszamy do kontaktu telefonicznego lub napisz do nas wiadomość."
+  },
+  "errors": {
+    "generic": "Popraw dane i spróbuj ponownie.",
+    "fieldInvalid": "Nieprawidłowa wartość."
+  },
+  "validation": {
+    "nameRange": "Nazwa musi mieć od {{min}} do {{max}} znaków",
+    "nickRange": "Nazwa w kalendarzu musi mieć od {{min}} do {{max}} znaków",
+    "contactPersonRange": "Osoba kontaktowa musi mieć od {{min}} do {{max}} znaków",
+    "phoneRange": "Telefon musi mieć od {{min}} do {{max}} znaków",
+    "streetRange": "Ulica musi mieć od {{min}} do {{max}} znaków",
+    "cityRange": "Miasto musi mieć od {{min}} do {{max}} znaków",
+    "zipCodeRule": "Kod pocztowy musi mieć {{length}} znaków (cyfry, kropki, ukośniki, myślniki)",
+    "nipRequired": "NIP jest wymagany dla firmy ({{min}}–{{max}} znaków, cyfry, kropki, ukośniki, myślniki)",
+    "nipNotIndividual": "NIP nie dotyczy osoby prywatnej",
+    "emailInvalid": "Podaj poprawny adres e-mail",
+    "passwordRange": "Hasło musi mieć od {{min}} do {{max}} znaków",
+    "firstNameRange": "Imię musi mieć od {{min}} do {{max}} znaków",
+    "lastNameRange": "Nazwisko musi mieć od {{min}} do {{max}} znaków",
+    "passwordsMismatch": "Hasła muszą być identyczne",
+    "cityRequired": "Miasto jest wymagane dla każdej roli poza administratorem",
+    "personNameRange": "Imię i nazwisko musi mieć od {{min}} do {{max}} znaków",
+    "personCompanyMax": "Nazwa firmy może mieć maksymalnie {{max}} znaków",
+    "commentsMax": "Uwagi mogą mieć maksymalnie {{max}} znaków",
+    "discountInvalid": "Rabat musi być wartością procentową, np. 10%",
+    "personRequired": "Wybierz pracownika",
+    "messageRequired": "Wiadomość nie może być pusta",
+    "emailRequired": "E-mail jest wymagany",
+    "emailAt": "E-mail musi zawierać @",
+    "emailRange": "E-mail musi mieć od {{min}} do {{max}} znaków",
+    "passwordRequired": "Hasło jest wymagane"
+  },
+  "labels": {
+    "clientType": {
+      "INDIVIDUAL": "Osoba prywatna",
+      "COMPANY": "Firma"
+    },
+    "payment": {
+      "TRANSFER": "Przelew",
+      "CASH": "Gotówka",
+      "FREE": "Bezpłatne"
+    },
+    "role": {
+      "ADMIN": "Administrator",
+      "OFFICE": "Biuro",
+      "EMPLOYEE": "Pracownik"
+    }
+  }
+}

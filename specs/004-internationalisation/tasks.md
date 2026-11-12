@@ -19,34 +19,36 @@
 
 **Purpose**: the library, the provider and the data. Blocks everything else.
 
-- [ ] **T210** `libs/i18n` project: `project.json` (test/lint, like `libs/copy`), `jest.config.ts`,
+- [x] **T210** `libs/i18n` project: `project.json` (test/lint, like `libs/copy`), `jest.config.ts`,
       `src/index.ts`, `src/lib/languages.ts` (the list + default + storage key).
-- [ ] **T211** [P] `src/lib/language.store.ts`: a signal store (`language()`, `set()`,
+- [x] **T211** [P] `src/lib/language.store.ts`: a signal store (`language()`, `set()`,
       `available()`), persisting to `localStorage`.
-- [ ] **T212** [P] `src/lib/translate.providers.ts`: `provideAppI18n()` wrapping
+- [x] **T212** [P] `src/lib/translate.providers.ts`: `provideAppI18n()` wrapping
       `provideTranslateService` + the HTTP loader + the initializer.
-- [ ] **T213** Add `@ngx-translate/core` and `@ngx-translate/http-loader` to `package.json`
+- [x] **T213** Add `@ngx-translate/core` and `@ngx-translate/http-loader` to `package.json`
       (Angular-22-compatible); `yarn install`.
-- [ ] **T214** Generate `apps/ui/src/assets/i18n/pl.json` from `libs/copy`'s `COPY` (a mechanical
+- [x] **T214** Generate `apps/ui/src/assets/i18n/pl.json` from `libs/copy`'s `COPY` (a mechanical
       transform, grouped by surface, `{{param}}` for the interpolations).
-- [ ] **T215** Translate `pl.json` into `apps/ui/src/assets/i18n/en.json`.
-- [ ] **T216** Wire `provideAppI18n()` into `apps/ui/src/app/app.config.ts`.
-- [ ] **T217** Specs for `libs/i18n`: the store (set/persist/validate), the provider, and
+- [x] **T215** Translate `pl.json` into `apps/ui/src/assets/i18n/en.json`.
+- [x] **T216** Wire `provideAppI18n()` into `apps/ui/src/app/app.config.ts`.
+- [x] **T217** Specs for `libs/i18n`: the store (set/persist/validate), the provider, and
       `translations.spec.ts` (key completeness + interpolation — FR-006, SC-003).
 
 ## Phase 2 — The language switch (User Story 1)
 
-- [ ] **T220** `apps/ui/src/app/shell/language-switch.component.ts`: a labelled `<select>` bound
+- [x] **T220** `apps/ui/src/app/shell/language-switch.component.ts`: a labelled `<select>` bound
       to the store; accessible (aria-label, keyboard).
-- [ ] **T221** Host it in the shell (`apps/ui/src/app/app.component.ts` or the nav/footer).
-- [ ] **T222** Spec: switching changes the rendered DOM and persists (FR-003, FR-004, SC-001).
-- [ ] **T223** [P] Sync `document.documentElement.lang` with the active language (accessibility).
+- [x] **T221** Host it in the shell (`apps/ui/src/app/app.component.ts` or the nav/footer).
+- [x] **T222** Spec: switching changes the rendered DOM and persists (FR-003, FR-004, SC-001).
+- [x] **T223** [P] Sync `document.documentElement.lang` with the active language (accessibility).
 
 ## Phase 3 — Migrate the consumers (User Story 1)
 
 **Purpose**: replace every `COPY.x` read with a `translate` key. The compiler drives this.
 
-- [ ] **T230** Migrate the shell: `nav.component.ts`, `footer.component.ts`, `navigation.ts`.
+- [~] **T230** Migrate the shell: `nav.component.ts` and `footer.component.ts` are done
+      (with the language switch, T220–T223); `navigation.ts` moves with the admin frame (T232),
+      because `admin-shell.component.ts` renders its label.
 - [ ] **T231** [P] Migrate the public features: `public-calendar`, `booking-request`,
       `informational/*`.
 - [ ] **T232** [P] Migrate the admin features: `bookings`, `clients`, `users`, `facilities`,

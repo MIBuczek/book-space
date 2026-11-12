@@ -1,15 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
+import { provideTestI18n } from '../testing/i18n-testing';
 
 // Guards the harness and the shell layout. The starter's HttpClient wiring is
 // gone: the shell no longer talks to the API, so the spec asserts the four
 // layout slots render rather than a hard-coded message.
 describe('AppComponent', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideTestI18n()],
     }).compileComponents();
   });
 

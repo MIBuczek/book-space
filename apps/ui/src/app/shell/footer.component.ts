@@ -1,29 +1,34 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { APP_VERSION } from '@booking/version';
-import { COPY } from '@booking/copy';
 
 /**
  * The footer shared by every page (FR-039, issue #44).
  *
- * Carries the privacy-policy link, the Book Space site link and the application
- * version, as the legacy `Footer.tsx` did. The version is the same value the
- * server reports on `GET /api` (`@booking/version`), so an operator can match a
- * running UI to a deployed API build.
+ * Carries the privacy-policy link, the product site link and the application version, as the
+ * legacy `Footer.tsx` did. The version is the same value the server reports on `GET /api`
+ * (`@booking/version`), so an operator can match a running UI to a deployed API build.
  *
- * The copy is read from the shared catalogue (`@booking/copy`), which is the only
- * source of user-facing Polish text (NFR-005, T061); the version is interpolated
- * by `COPY.footer.meta`.
+ * The text is read through the translate pipe (FR-001), and the version and the tenant name are
+ * interpolation parameters, so the footer re-renders on a language switch. The site and privacy
+ * links are configuration values in the catalogue until the tenant endpoint lands (T252), which
+ * is why they are read with `instant` rather than bound to a component field.
  */
 @Component({
   selector: 'book-space-footer',
+  imports: [TranslatePipe],
   template: `
     <footer class="bs-footer">
-      <nav class="bs-footer__links" [attr.aria-label]="copy.ariaLabel">
-        <a [href]="privacyUrl" target="_blank" rel="noopener">{{ copy.privacy }}</a>
-        <a [href]="websiteUrl" target="_blank" rel="noopener">{{ copy.site }}</a>
+      <nav class="bs-footer__links" [attr.aria-label]="'footer.ariaLabel' | translate">
+        <a [href]="privacyUrl" target="_blank" rel="noopener">{{ 'footer.privacy' | translate }}</a>
+        <a [href]="websiteUrl" target="_blank" rel="noopener">
+          {{ 'footer.site' | translate: { tenant: brand } }}
+        </a>
       </nav>
-      <p class="bs-footer__meta">{{ meta }}</p>
-      <p class="bs-footer__copyright">{{ copyright }}</p>
+      <p class="bs-footer__meta">
+        {{ 'footer.meta' | translate: { tenant: brand, version: version } }}
+      </p>
+      <p class="bs-footer__copyright">{{ 'footer.copyright' | translate }}</p>
     </footer>
   `,
   styles: [
@@ -55,9 +60,11 @@ import { COPY } from '@booking/copy';
   ],
 })
 export class FooterComponent {
-  readonly copy = COPY.footer;
-  readonly meta = COPY.footer.meta(APP_VERSION);
-  readonly copyright = COPY.footer.copyright;
-  readonly privacyUrl = COPY.contact.privacyPolicyUrl;
-  readonly websiteUrl = COPY.contact.websiteUrl;
+  private readonly translate = inject(TranslateService);
+
+  /** The product name, an interpolation parameter until the tenant endpoint lands (T252). */
+  readonly brand = 'Book Space';
+  readonly version = APP_VERSION;
+  readonly privacyUrl = this.translate.instant('contact.privacyPolicyUrl');
+  readonly websiteUrl = this.translate.instant('contact.websiteUrl');
 }

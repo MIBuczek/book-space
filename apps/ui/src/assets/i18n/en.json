@@ -1,0 +1,551 @@
+{
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "remove": "Delete",
+    "close": "Close",
+    "pageSize": "Per page",
+    "phonePrefix": "tel. ",
+    "dash": "—",
+    "noValue": "[None]",
+    "backToCalendar": "Back to the booking calendar"
+  },
+  "nav": {
+    "ariaLabel": "Navigation",
+    "calendar": "Calendar",
+    "bookingRequest": "Booking request",
+    "contact": "Contact",
+    "admin": "Administration",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "footer": {
+    "ariaLabel": "Information",
+    "privacy": "Privacy policy",
+    "site": "{{tenant}} site",
+    "meta": "{{tenant}} — booking system · App version {{version}}",
+    "copyright": "© 2026 Gecko Web Services"
+  },
+  "admin": {
+    "sectionsAria": "Panel sections",
+    "signOut": "Sign out",
+    "tabs": {
+      "calendar": "Calendar",
+      "bookings": "Bookings",
+      "clients": "Clients",
+      "facilities": "Facilities",
+      "summary": "Summary",
+      "users": "Users"
+    },
+    "placeholder": {
+      "title": "Administration",
+      "body": "This section is under construction (T036–T039)."
+    }
+  },
+  "calendar": {
+    "title": "Facility booking calendar",
+    "city": "City",
+    "facility": "Facility",
+    "facilityPlaceholder": "Select a facility",
+    "viewAria": "View",
+    "views": {
+      "week": "Week",
+      "day": "Day",
+      "list": "List",
+      "month": "Month"
+    },
+    "previous": "Previous",
+    "today": "Today",
+    "next": "Next",
+    "chooseFacility": "Select a facility to see the calendar.",
+    "loading": "Loading bookings…",
+    "loadError": "Could not load the bookings.",
+    "empty": "No bookings in the selected period.",
+    "detailsAria": "Booking details",
+    "detailsTitle": "Booking details",
+    "fields": {
+      "name": "Name",
+      "day": "Day",
+      "hours": "Hours",
+      "size": "Size",
+      "status": "Status"
+    },
+    "staffFields": {
+      "client": "Client",
+      "email": "E-mail",
+      "phone": "Phone"
+    },
+    "defaultLabel": "Booking",
+    "status": {
+      "done": "Completed",
+      "accepted": "Approved",
+      "pending": "Pending"
+    },
+    "weekdays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "publicNotice": "Only bookings approved by an administrator are shown in the calendar."
+  },
+  "bookingRequest": {
+    "title": "Booking request",
+    "success": "Thank you. Your booking request has been sent and is awaiting approval.",
+    "legends": {
+      "facility": "Facility",
+      "requester": "Requester",
+      "slots": "Time slots",
+      "extras": "Additional rental options"
+    },
+    "city": "City",
+    "facility": "Facility",
+    "facilityPlaceholder": "Select a facility",
+    "size": "Size",
+    "type": "Type",
+    "nick": "Calendar name",
+    "personName": "Full name",
+    "personCompany": "Company name",
+    "email": "E-mail",
+    "phone": "Phone",
+    "payment": "Payment",
+    "discount": "Discount (optional)",
+    "comments": "Additional information",
+    "day": "Day",
+    "fromHour": "From hour",
+    "toHour": "To hour",
+    "addSlot": "Add a time slot",
+    "cyclical": "Recurring booking",
+    "untilDay": "Until day",
+    "noSlots": "No time slot has been added yet.",
+    "removeLastSlot": "Remove the last time slot",
+    "overlapWarning": "Some booking hours conflict with each other ({{day}}).",
+    "lights": "Lighting",
+    "toilets": "Sanitary facilities",
+    "addExtra": "Add an option",
+    "noExtras": "No additional options have been added.",
+    "rodo": "I accept the GDPR information clause",
+    "rodoLink": "Information clause on the processing of personal data.",
+    "website": "Website",
+    "submit": "Send the booking request",
+    "endBeforeStart": "The end hour must be later than the start hour.",
+    "seriesBackwards": "The series end date cannot be earlier than its start.",
+    "chooseFacility": "Select a facility.",
+    "sendValidation": "Could not send the request. Check the details and try again.",
+    "sendGeneric": "Could not send the request. Please try again later."
+  },
+  "bookings": {
+    "title": "Booking list",
+    "city": "City",
+    "facility": "Facility",
+    "facilityPlaceholder": "Select a facility",
+    "period": "Period",
+    "search": "Search bookings",
+    "unapproved": "Show bookings to approve",
+    "showDetails": "Show booking details",
+    "chooseFacility": "Select a facility to see the bookings.",
+    "loading": "Loading bookings…",
+    "loadError": "Could not load the bookings.",
+    "caption": "Bookings",
+    "empty": "There are no bookings in the database.",
+    "details": {
+      "tenant": "Tenant:",
+      "club": "Club:",
+      "payment": "Payment:",
+      "message": "Message:"
+    },
+    "slotColumns": {
+      "day": "Day",
+      "hours": "Hours",
+      "status": "Status",
+      "participants": "Participants",
+      "actions": "Actions"
+    },
+    "resolvedSlot": "Settled slot",
+    "reschedule": "Reschedule",
+    "resolve": "Settle",
+    "approve": "Approve",
+    "unapprove": "Withdraw",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "conflicts": "Current number of conflicts between bookings: {{count}}",
+    "approveWarning": "The booking conflicts with other bookings. Do you want to approve it anyway?",
+    "approveAnyway": "Approve despite the conflict",
+    "modals": {
+      "reschedule": "Reschedule slot",
+      "resolve": "Settle slot",
+      "edit": "Edit booking",
+      "delete": "Delete booking"
+    },
+    "deleteConfirm": "Are you sure you want to delete this booking?",
+    "fields": {
+      "nick": "Calendar name",
+      "personName": "Full name",
+      "phone": "Phone"
+    },
+    "resolveFields": {
+      "status": "Status",
+      "participants": "Participants",
+      "comments": "Comment"
+    },
+    "hours": {
+      "from": "From",
+      "to": "To"
+    },
+    "columns": {
+      "nick": "Client name",
+      "personPhone": "Phone",
+      "personEmail": "E-mail",
+      "accepted": "Approved",
+      "conflict": "Conflicts"
+    },
+    "statusLabels": {
+      "INITIAL": "Not started",
+      "DONE": "Completed",
+      "CANCELED": "Cancelled"
+    },
+    "fromBeginning": "From the beginning",
+    "conflict": "Conflict",
+    "notifyApplicant": "Notify the applicant",
+    "notifySent": "The notification has been sent to the applicant.",
+    "notifyFailure": "Could not send the notification. Please try again later."
+  },
+  "clients": {
+    "title": "Client list",
+    "search": "Search clients",
+    "add": "Add client",
+    "loading": "Loading clients…",
+    "loadError": "Could not load the clients.",
+    "caption": "Clients",
+    "empty": "There are no clients in the database.",
+    "editTitle": "Edit client",
+    "createTitle": "Add client",
+    "deleteTitle": "Delete client",
+    "deleteConfirm": "Are you sure you want to delete the client {{name}}?",
+    "fields": {
+      "type": "Type",
+      "nameCompany": "Company name",
+      "namePerson": "Full name",
+      "nick": "Calendar name (optional)",
+      "contactPerson": "Contact person",
+      "phone": "Phone",
+      "email": "E-mail",
+      "street": "Street",
+      "city": "City",
+      "zipCode": "Postal code",
+      "nip": "Tax ID",
+      "active": "Active client"
+    },
+    "typeLabels": {
+      "INDIVIDUAL": "Individual",
+      "COMPANY": "Company"
+    },
+    "columns": {
+      "name": "Name",
+      "contactPerson": "Contact person",
+      "phone": "Phone",
+      "email": "E-mail",
+      "city": "City",
+      "status": "Status"
+    },
+    "active": {
+      "yes": "Active",
+      "no": "Inactive"
+    },
+    "deleteConflict": "This client cannot be deleted because a booking references it. Deactivate the client instead.",
+    "deleteFailure": "Could not delete the client. Please try again later.",
+    "saveFailure": "Could not save the client. Please try again later."
+  },
+  "users": {
+    "title": "Users",
+    "add": "Add user",
+    "loading": "Loading users…",
+    "loadError": "Could not load the users.",
+    "caption": "Users",
+    "empty": "There are no users in the database.",
+    "editTitle": "Edit user",
+    "createTitle": "Add user",
+    "deactivateTitle": "Deactivate user",
+    "deactivate": "Deactivate",
+    "deactivateConfirm": "Are you sure you want to deactivate the account {{firstName}} {{lastName}}? The account will not be able to sign in, but it will remain visible in the booking history.",
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "E-mail",
+      "password": "Password",
+      "recheckPassword": "Repeat password",
+      "role": "Role",
+      "city": "City",
+      "active": "Account active"
+    },
+    "passwordPlaceholderEdit": "Leave blank to keep unchanged",
+    "assignmentsLegend": "Assigned facilities",
+    "columns": {
+      "name": "Full name",
+      "email": "E-mail",
+      "role": "Role",
+      "city": "City",
+      "status": "Status"
+    },
+    "roleLabels": {
+      "ADMIN": "Administrator",
+      "OFFICE": "Office",
+      "EMPLOYEE": "Employee"
+    },
+    "active": {
+      "yes": "Active",
+      "no": "Inactive"
+    },
+    "saveFailure": "Could not save the user. Please try again later.",
+    "deactivateConflict": "This account cannot be deactivated.",
+    "deactivateFailure": "Could not deactivate the account. Please try again later."
+  },
+  "facilities": {
+    "title": "Sports facilities",
+    "city": "City",
+    "facility": "Facility",
+    "loading": "Loading facilities…",
+    "loadError": "Could not load the facilities.",
+    "detailsHeading": "Facility details",
+    "detailsAria": "Facility details",
+    "employeesHeading": "Employees",
+    "employeesAria": "Employees",
+    "employeesCaption": "Employees",
+    "employeesEmpty": "This facility has no assigned employees.",
+    "employeeColumn": "Employee",
+    "messageAction": "Message",
+    "messageHeading": "Send a message to the employee",
+    "messageAria": "Send a message to the employee",
+    "messagePerson": "Employee",
+    "messageEmail": "E-mail",
+    "messageBody": "Message",
+    "send": "Send",
+    "noFacilities": "There are no facilities in this city.",
+    "sent": "The message has been sent successfully",
+    "sendValidation": "Correct the details and try again.",
+    "sendFailure": "Could not send the message. Please try again later.",
+    "details": {
+      "city": "City",
+      "name": "Facility name",
+      "phone": "Contact phone",
+      "email": "E-mail",
+      "sizes": "Areas",
+      "lighting": "Lighting",
+      "toilets": "Toilets",
+      "status": "Status"
+    },
+    "active": {
+      "yes": "Active",
+      "no": "Inactive"
+    }
+  },
+  "summary": {
+    "title": "Rental summary",
+    "client": "Selected client",
+    "clientPlaceholder": "Select",
+    "fromMonth": "From month",
+    "toMonth": "To month",
+    "fromBeginning": "Summary from the beginning",
+    "generate": "Generate summary",
+    "clear": "Clear",
+    "downloadAll": "Download the report for all clients [.csv]",
+    "loading": "Loading summary…",
+    "loadError": "Could not generate the summary.",
+    "reportAria": "Summary report",
+    "reportTitle": "Rental report for the period",
+    "empty": "To see the summary, select a client and a month.",
+    "downloadClient": "Download the file [.csv]",
+    "print": "View details [.pdf]",
+    "booking": {
+      "building": "Building",
+      "size": "Rented area",
+      "discount": "Discount granted",
+      "payment": "Payment method",
+      "extraOptions": "Additional options",
+      "selectedOptions": "Selected options",
+      "comments": "Additional information"
+    },
+    "slot": {
+      "day": "Day",
+      "hours": "Hours",
+      "participants": "Number of participants",
+      "status": "Status",
+      "comments": "Notes"
+    },
+    "rangeError": {
+      "missing": "Select the start and end month.",
+      "inverted": "The start month cannot be later than the end month."
+    },
+    "fromBeginningText": "from the beginning",
+    "clientDetail": {
+      "name": "Full name",
+      "type": "Type",
+      "contactPerson": "Contact person",
+      "phone": "Phone",
+      "email": "E-mail",
+      "street": "Street",
+      "city": "City",
+      "zipCode": "Postal code",
+      "nip": "Tax ID",
+      "nick": "Nick"
+    },
+    "csvFilename": {
+      "clientFallback": "Client report.csv",
+      "all": "All clients"
+    }
+  },
+  "signIn": {
+    "title": "Sign in",
+    "email": "E-mail",
+    "password": "Password",
+    "submit": "Sign in",
+    "invalid": "Invalid e-mail or password",
+    "genericFailure": "Sign-in failed. Please try again."
+  },
+  "contact": {
+    "registeredOfficeHeading": "Contact details",
+    "hoursHeading": "Office hours for visitors:",
+    "officeHeading": "Office / Correspondence address",
+    "bookingHeading": "Contact person for bookings",
+    "registeredOffice": {
+      "name": "Book Space",
+      "address": "—"
+    },
+    "office": {
+      "address": "—",
+      "phone": "—",
+      "phoneHref": "tel:",
+      "email": "kontakt@book-space.example",
+      "website": "book-space.example",
+      "websiteHref": "https://book-space.example/"
+    },
+    "bookingContact": {
+      "name": "—",
+      "role": "—",
+      "phone": "—",
+      "phoneHref": "tel:",
+      "email": "kontakt@book-space.example"
+    },
+    "hours": [
+      {
+        "day": "Monday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Tuesday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Wednesday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Thursday",
+        "hours": "08:00 - 16:00"
+      },
+      {
+        "day": "Friday",
+        "hours": "08:00 - 14:00"
+      }
+    ],
+    "privacyPolicyUrl": "https://book-space.example/privacy-policy",
+    "websiteUrl": "https://book-space.example/",
+    "rodoClauseUrl": "https://book-space.example/information-clause.pdf"
+  },
+  "cookieNotice": {
+    "ariaLabel": "Cookies",
+    "heading": "Cookies",
+    "text": "This site uses cookies. By using the site you consent to the use of cookies.",
+    "learnMore": "Learn more.",
+    "accept": "OK, I understand"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "code": "Error 404"
+  },
+  "shared": {
+    "pagination": {
+      "ariaLabel": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "status": "Page {{page}} of {{count}}"
+    },
+    "table": {
+      "empty": "No data.",
+      "actions": "Actions"
+    }
+  },
+  "serverError": {
+    "title": "We are currently experiencing a server problem",
+    "fallback": "The server is unavailable.",
+    "prompt": "Please contact us by phone or send us a message."
+  },
+  "errors": {
+    "generic": "Correct the details and try again.",
+    "fieldInvalid": "Invalid value."
+  },
+  "validation": {
+    "nameRange": "The name must be between {{min}} and {{max}} characters",
+    "nickRange": "The calendar name must be between {{min}} and {{max}} characters",
+    "contactPersonRange": "The contact person must be between {{min}} and {{max}} characters",
+    "phoneRange": "The phone must be between {{min}} and {{max}} characters",
+    "streetRange": "The street must be between {{min}} and {{max}} characters",
+    "cityRange": "The city must be between {{min}} and {{max}} characters",
+    "zipCodeRule": "The postal code must be {{length}} characters (digits, dots, slashes, hyphens)",
+    "nipRequired": "A tax ID is required for a company ({{min}}–{{max}} characters, digits, dots, slashes, hyphens)",
+    "nipNotIndividual": "A tax ID does not apply to an individual",
+    "emailInvalid": "Enter a valid e-mail address",
+    "passwordRange": "The password must be between {{min}} and {{max}} characters",
+    "firstNameRange": "The first name must be between {{min}} and {{max}} characters",
+    "lastNameRange": "The last name must be between {{min}} and {{max}} characters",
+    "passwordsMismatch": "The passwords must be identical",
+    "cityRequired": "A city is required for every role except administrator",
+    "personNameRange": "The full name must be between {{min}} and {{max}} characters",
+    "personCompanyMax": "The company name can be at most {{max}} characters",
+    "commentsMax": "The comments can be at most {{max}} characters",
+    "discountInvalid": "The discount must be a percentage value, e.g. 10%",
+    "personRequired": "Select an employee",
+    "messageRequired": "The message cannot be empty",
+    "emailRequired": "E-mail is required",
+    "emailAt": "The e-mail must contain @",
+    "emailRange": "The e-mail must be between {{min}} and {{max}} characters",
+    "passwordRequired": "Password is required"
+  },
+  "labels": {
+    "clientType": {
+      "INDIVIDUAL": "Individual",
+      "COMPANY": "Company"
+    },
+    "payment": {
+      "TRANSFER": "Transfer",
+      "CASH": "Cash",
+      "FREE": "Free"
+    },
+    "role": {
+      "ADMIN": "Administrator",
+      "OFFICE": "Office",
+      "EMPLOYEE": "Employee"
+    }
+  }
+}

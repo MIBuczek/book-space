@@ -6,6 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../core/session.store';
 import { NavComponent } from './nav.component';
 import { adminUser, employeeUser } from '../../testing/fixtures';
+import { provideTestI18n } from '../../testing/i18n-testing';
 
 @Component({ selector: 'book-space-route-stub', template: '' })
 class RouteStubComponent {}
@@ -25,6 +26,7 @@ describe('NavComponent', () => {
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideTestI18n(),
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -55,6 +57,19 @@ describe('NavComponent', () => {
       'a[href="/booking-request"]'
     );
     expect(link?.textContent).toContain('Rezerwacja');
+  });
+
+  it('hosts the language switch, so it is reachable from every page', () => {
+    const fixture = render();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      'book-space-language-switch select'
+    );
+
+    expect(select).not.toBeNull();
+    expect(Array.from(select!.querySelectorAll('option')).map((o) => o.getAttribute('value'))).toEqual([
+      'pl',
+      'en',
+    ]);
   });
 
   it('offers the admin link and the user e-mail to an administrator', () => {

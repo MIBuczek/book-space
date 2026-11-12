@@ -1300,9 +1300,11 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `coverage/libs/booking-rules/coverage-summary.json` row) — a new library has to be added to
   *both* the run-many list and the summary-merge table or its coverage never reaches the gate.
   `libs/version` (`@booking/version`, T040) is the third: `ci.yml` now runs
-  `--projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy`
+  `--projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy,i18n`
   and prints each summary row. `libs/copy` (`@booking/copy`, T061) is the fourth of the
-  `libs/*` ones and the copy catalogue (below).
+  `libs/*` ones and the copy catalogue (below). `libs/i18n` (`@booking/i18n`, T210) is the
+  fifth and the runtime-translation layer (below) — it replaces `libs/copy` once every consumer
+  is migrated (T234).
 - **The build number is a task input, not just a task dependency.** `libs/version` stamps
   `git rev-list --count HEAD` into a gitignored `generated/build-number.ts`, and both apps swap
   it in through `fileReplacements`. Depending on `version:build` is *not* enough: Nx keys a
