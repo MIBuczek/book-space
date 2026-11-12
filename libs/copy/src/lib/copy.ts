@@ -212,13 +212,15 @@ const BOOKINGS = {
     `Aktualna liczba konfliktów między rezerwacjami: ${count}`,
   approveWarning: 'Rezerwacja konfliktuje z innymi rezerwacjami. Czy chcesz ją zatwierdzić mimo to?',
   approveAnyway: 'Zatwierdź mimo konfliktu',
+  remove: 'Usuń / Odrzuć',
   modals: {
     reschedule: 'Przenieś slot',
     resolve: 'Rozlicz slot',
     edit: 'Edytuj rezerwację',
-    delete: 'Usuń rezerwację',
+    delete: 'Usuń / Odrzuć rezerwację',
   },
-  deleteConfirm: 'Czy na pewno chcesz usunąć tą rezerwację?',
+  deleteConfirm:
+    'Czy na pewno chcesz usunąć tą rezerwację? Odrzucenie wniosku usuwa go bezpowrotnie.',
   fields: {nick: 'Nazwa w kalendarzu', personName: 'Imię i nazwisko', phone: 'Telefon'},
   resolveFields: {status: 'Status', participants: 'Uczestnicy', comments: 'Komentarz'},
   hours: {from: 'Od', to: 'Do'},

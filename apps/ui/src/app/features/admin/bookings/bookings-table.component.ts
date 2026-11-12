@@ -201,7 +201,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
               {{ common.edit }}
             </book-space-button>
             <book-space-button variant="danger" (pressed)="askDelete(row.booking)">
-              {{ common.remove }}
+              {{ copy.remove }}
             </book-space-button>
           </ng-template>
         </book-space-table>
@@ -340,7 +340,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         @if (deleteTarget()) {
           <p>{{ copy.deleteConfirm }}</p>
           <div class="bs-modal__actions">
-            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ common.remove }}</book-space-button>
+            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ copy.remove }}</book-space-button>
             <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ common.cancel }}</book-space-button>
           </div>
         }

@@ -255,6 +255,15 @@ the report vocabulary is the legacy Polish a business artefact prints. They are 
 guard in `apps/ui/src/app/features/admin/bookings/bookings-table.spec.ts`, which asserts each UI
 label equals `displayValue(status)`; that is the assertion the legacy app never had.
 
+**There is no `REJECTED` status, and none should be added (#196, spec.md §9 Q4).** The tenant's
+process is to remove a request it will not fulfil rather than keep a rejected record, so
+rejecting a booking is the staff delete (`DELETE /bookings/{_id}`, `AuthGuard('jwt')` +
+`assertCanModify`), not a status transition. The vocabulary above is therefore closed: the
+status is a property of a *slot* (`INITIAL | DONE | CANCELED`), never of the booking as a whole,
+and a `REJECTED` member would be the only whole-booking value. A deleted booking leaves no
+orphan reference — the document is gone, so the conflict counter and the public calendar cannot
+see it — which is what SC-003 requires.
+
 ---
 
 ## selectedExtraOptions (embedded) — [new]

@@ -1044,6 +1044,16 @@ Three things that are easy to get wrong:
   Do not "unify" by importing one map into the other: `libs/copy` is UI copy and `libs/reporting`
   is the server's report vocabulary, and the whole point is that each answers to a different
   audience.
+- **There is no `REJECTED` status: rejecting a request is the staff delete (#196, spec.md §9 Q4).**
+  The tenant removes a request it will not fulfil rather than keeping a rejected record, so
+  `DELETE /bookings/{_id}` (staff-only, `assertCanModify`) *is* the rejection — a hard delete, not
+  a status transition. `BOOKING_STATUSES` (`libs/models/booked-time.model.ts`) stays
+  `INITIAL | DONE | CANCELED`, and that enum describes a *slot*, so a `REJECTED` member would be
+  the only whole-booking value; `models-shape.spec.ts` asserts it is absent so a re-introduction
+  fails the build. The admin delete affordance is labelled "Usuń / Odrzuć" to name both readings.
+  A deleted booking leaves no orphan reference — the document is gone, so the conflict counter and
+  the public calendar cannot see it (SC-003); `conflicts.integration.spec.ts` pins that a rejected
+  booking disappears from the counter and its former conflict is unaffected.
 - **The printable report is the page, not a popup.** FR-030/T028 is satisfied by rendering the
   report in a `bs-printable` node and calling `window.print()`; `styles.scss` hides every other
   element under `@media print`. The legacy `PreviewPDF.tsx` opened a window at a hardcoded
