@@ -2,16 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { APP_VERSION } from '@booking/version';
 import { FooterComponent } from './footer.component';
-import { COPY } from '@booking/copy';
+import { provideTestI18n, testCatalogue } from '../../testing/i18n-testing';
 
-const PRIVACY_POLICY_URL = COPY.contact.privacyPolicyUrl;
-const WEBSITE_URL = COPY.contact.websiteUrl;
+const CONTACT = testCatalogue('pl')['contact'] as Record<string, string>;
 
 describe('FooterComponent', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [FooterComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideTestI18n()],
     }).compileComponents();
   });
 
@@ -35,7 +35,7 @@ describe('FooterComponent', () => {
 
   it('links to the privacy policy and the site', () => {
     const el = render();
-    expect(el.querySelector(`a[href="${PRIVACY_POLICY_URL}"]`)).not.toBeNull();
-    expect(el.querySelector(`a[href="${WEBSITE_URL}"]`)).not.toBeNull();
+    expect(el.querySelector(`a[href="${CONTACT['privacyPolicyUrl']}"]`)).not.toBeNull();
+    expect(el.querySelector(`a[href="${CONTACT['websiteUrl']}"]`)).not.toBeNull();
   });
 });

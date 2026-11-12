@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { COPY } from '@booking/copy';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth.service';
 import { SessionStore } from '../core/session.store';
 import { ButtonComponent } from '../shared/ui';
+import { LanguageSwitchComponent } from './language-switch.component';
 
 /**
  * The top navigation, shared by the public and admin areas.
@@ -13,14 +14,15 @@ import { ButtonComponent } from '../shared/ui';
  * redeploy. This is presentation, not enforcement: the server decides what a request may do
  * (constitution: server-side enforcement), so a hidden link is a courtesy, not a control.
  *
- * The labels come from the shared copy catalogue (NFR-005, T061), so no Polish text is
- * hardcoded in the template. The brand is the product name, not user-facing copy.
+ * The labels are translation keys (FR-001), so the navigation re-renders on a language switch
+ * without a rebuild. The language switch itself is hosted here, so it is reachable from every
+ * page including the sign-in one.
  */
 @Component({
   selector: 'book-space-nav',
-  imports: [RouterLink, RouterLinkActive, ButtonComponent],
+  imports: [RouterLink, RouterLinkActive, ButtonComponent, TranslatePipe, LanguageSwitchComponent],
   template: `
-    <nav class="bs-nav" [attr.aria-label]="copy.ariaLabel">
+    <nav class="bs-nav" [attr.aria-label]="'nav.ariaLabel' | translate">
       <a class="bs-nav__brand" routerLink="/">Book Space</a>
       <ul class="bs-nav__links">
         <li>
@@ -30,35 +32,36 @@ import { ButtonComponent } from '../shared/ui';
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: true }"
           >
-            {{ copy.calendar }}
+            {{ 'nav.calendar' | translate }}
           </a>
         </li>
         <li>
           <a routerLink="/booking-request" routerLinkActive="active" ariaCurrentWhenActive="page">
-            {{ copy.bookingRequest }}
+            {{ 'nav.bookingRequest' | translate }}
           </a>
         </li>
         <li>
           <a routerLink="/contact" routerLinkActive="active" ariaCurrentWhenActive="page">
-            {{ copy.contact }}
+            {{ 'nav.contact' | translate }}
           </a>
         </li>
         @if (session.capabilities()?.staff) {
           <li>
             <a routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">
-              {{ copy.admin }}
+              {{ 'nav.admin' | translate }}
             </a>
           </li>
         }
       </ul>
       <div class="bs-nav__session">
+        <book-space-language-switch />
         @if (session.isAuthenticated()) {
           <span class="bs-nav__user">{{ session.user()?.email }}</span>
           <book-space-button variant="secondary" (pressed)="signOut()">
-            {{ copy.signOut }}
+            {{ 'nav.signOut' | translate }}
           </book-space-button>
         } @else {
-          <a routerLink="/sign-in">{{ copy.signIn }}</a>
+          <a routerLink="/sign-in">{{ 'nav.signIn' | translate }}</a>
         }
       </div>
     </nav>
@@ -96,7 +99,6 @@ import { ButtonComponent } from '../shared/ui';
   ],
 })
 export class NavComponent {
-  readonly copy = COPY.nav;
   readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

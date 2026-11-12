@@ -20,7 +20,8 @@
     "contact": "Kontakt",
     "admin": "Administracja",
     "signIn": "Zaloguj",
-    "signOut": "Wyloguj"
+    "signOut": "Wyloguj",
+    "language": "Język"
   },
   "footer": {
     "ariaLabel": "Informacje",

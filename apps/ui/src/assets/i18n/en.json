@@ -20,7 +20,8 @@
     "contact": "Contact",
     "admin": "Administration",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "language": "Language"
   },
   "footer": {
     "ariaLabel": "Information",
@@ -84,7 +85,15 @@
       "accepted": "Approved",
       "pending": "Pending"
     },
-    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "weekdays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
     "months": [
       "January",
       "February",
@@ -439,11 +448,26 @@
       "email": "kontakt@book-space.example"
     },
     "hours": [
-      {"day": "Monday", "hours": "08:00 - 14:00"},
-      {"day": "Tuesday", "hours": "08:00 - 14:00"},
-      {"day": "Wednesday", "hours": "08:00 - 14:00"},
-      {"day": "Thursday", "hours": "08:00 - 16:00"},
-      {"day": "Friday", "hours": "08:00 - 14:00"}
+      {
+        "day": "Monday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Tuesday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Wednesday",
+        "hours": "08:00 - 14:00"
+      },
+      {
+        "day": "Thursday",
+        "hours": "08:00 - 16:00"
+      },
+      {
+        "day": "Friday",
+        "hours": "08:00 - 14:00"
+      }
     ],
     "privacyPolicyUrl": "https://book-space.example/privacy-policy",
     "websiteUrl": "https://book-space.example/",
