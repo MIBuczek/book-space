@@ -12,6 +12,7 @@ import {
   withEnabledBlockingInitialNavigation,
 } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { provideAppI18n } from '@booking/i18n';
 import { appRoutes } from './app.routes';
 import { AuthService } from './core/auth.service';
 import { authInterceptor } from './core/auth.interceptor';
@@ -27,6 +28,10 @@ export const appConfig: ApplicationConfig = {
       withEnabledBlockingInitialNavigation()
     ),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    // Runtime translations (FR-013): one build serves every language, and the stored choice is
+    // applied before the first route resolves so the first paint is translated rather than a
+    // flash of keys.
+    provideAppI18n(),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     // Revalidates a persisted session before the first route resolves: `/auth/me` refreshes
     // the capabilities (a role or deny-list change reaches the navigation immediately) and

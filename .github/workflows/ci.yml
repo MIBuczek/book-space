@@ -77,7 +77,7 @@ jobs:
       - run: yarn install --frozen-lockfile --non-interactive
 
       - name: Run unit tests
-        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy --configuration=ci
+        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy,i18n --configuration=ci
 
       # The threshold makes the build fail; this makes the number visible. The
       # original defect was that the reported figure (63.9%) was not the figure
@@ -95,6 +95,7 @@ jobs:
                               ["reporting", "coverage/libs/reporting/coverage-summary.json"],
                               ["version", "coverage/libs/version/coverage-summary.json"],
                               ["copy", "coverage/libs/copy/coverage-summary.json"],
+                              ["i18n", "coverage/libs/i18n/coverage-summary.json"],
                               ["migration", "coverage/tools/migration/coverage-summary.json"],
                               ["bootstrap-admin", "coverage/tools/bootstrap-admin/coverage-summary.json"],
                               ["backup", "coverage/tools/backup/coverage-summary.json"]];
