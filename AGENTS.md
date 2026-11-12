@@ -968,9 +968,9 @@ Three things that are easy to get wrong:
 - **The navigation is driven by a `capabilities` object the API resolves, not by the role.**
   `authorization/capabilities.ts` (`capabilitiesFor`) is the single derivation; `libs/models`
   declares the shape; `openapi.yaml` (`UserCapabilities`) is the contract. It is returned on the
-  sign-in body and on `GET /auth/me`. The client renders tabs from it, so a rule that lives in
-  server configuration — the Summary deny-list (FR-006) — reaches the menu without being
-  duplicated there. Do not re-derive a capability from `session.role()` in a component: that is
+  sign-in body and on `GET /auth/me`. The client renders tabs from it, so a server-side rule
+  reaches the menu without being duplicated there. Do not re-derive a capability from
+  `session.role()` in a component: that is
   what the legacy `credentials-function.ts` helpers did, in five files. A capability flag is
   presentation only; every one is also enforced on the endpoint it names (FR-003).
 - **Two capability flags are deliberately narrower than the endpoint they gate.**
@@ -1462,7 +1462,7 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   contact details by placeholders, across identifiers (`SISK_CONTACT_EMAIL` →
   `TENANT_STAFF_EMAIL`, `siskUrl` → `websiteUrl`, `COPY.contact.siskWebsiteUrl` →
   `websiteUrl`), user-facing copy (`libs/copy`), the e-mail signature and defaults
-  (`DEFAULT_CREATED_BY`, `DEFAULT_SUMMARY_DENY_LIST`, the bootstrap-admin surname) and the test
+  (`DEFAULT_CREATED_BY`, the bootstrap-admin surname) and the test
   fixtures (`@sisk.pl` → `@example.com`). `tools/scan-brand.js` fails CI on a `SISK` token in
   `apps`/`libs`/`tools`; it does **not** read `README.md`, `AGENTS.md` or `specs/`, because the
   legacy provenance deliberately stays there. The match is case-sensitive on `SISK` (not
@@ -1470,14 +1470,15 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `siskWebsiteUrl` would slip through the token check and is caught only by the rename.
   `siechnice` is **not** a brand token: it is the city the twelve reference facilities sit in
   (`CITIES`, `facility-seed.ts` and their fixtures), which is real business data.
-- **The Summary deny-list default is empty, and that is a behaviour change.** The legacy default
-  named a real person at the previous tenant (`mkulakowski@umsiechnice.pl`), so it is both a
-  privacy leak in a generic product and a meaningless restriction for any other deployment.
-  `DEFAULT_SUMMARY_DENY_LIST` is `''` now; an operator who wants the old restriction sets
-  `SUMMARY_DENY_LIST`. The reporting integration spec had relied on the default and now sets the
-  variable explicitly in `beforeAll` (before `createMongoTestContext()`, because
-  `ReportingController` reads it through `ConfigService`), which is the shape any spec asserting
-  the restriction needs.
+- **The Summary deny-list is removed entirely (#195), not merely defaulted to empty.** The legacy
+  default named a real person at the previous tenant (`mkulakowski@umsiechnice.pl`) — a privacy
+  leak in a generic product and a meaningless restriction for any other deployment. T033 first
+  made it the `SUMMARY_DENY_LIST` variable; open question 3 then removed the whole mechanism,
+  because a per-account exception is a privilege decision that cannot be reasoned about from the
+  role alone. `canSeeSummaryTab` is office/administrator and nothing else,
+  `capabilitiesFor(role)` takes no second argument, and `apps/server/src/app/reporting/deny-list.ts`
+  no longer exists. Do not reintroduce a per-account Summary rule; if one is ever needed it is a
+  new task, not a default.
 - **A required template placeholder is a deployment setting, not a literal (FR-033).** The
   applicant e-mails' signature is `{{tenantName}}`, supplied from `TENANT_NAME` (falling back to
   `DEFAULT_TENANT_NAME`), rather than the previous literal brand. Because the renderer throws on

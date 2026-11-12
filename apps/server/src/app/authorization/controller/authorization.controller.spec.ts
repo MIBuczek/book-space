@@ -1,6 +1,5 @@
 import {Test, TestingModule} from '@nestjs/testing';
 import {JwtService} from '@nestjs/jwt';
-import {ConfigService} from '@nestjs/config';
 import {getModelToken} from '@nestjs/mongoose';
 import {AuthGuard} from '@nestjs/passport';
 import {Response} from 'express';
@@ -21,7 +20,6 @@ describe('AuthorizationController', () => {
   let controller: AuthorizationController;
   let service: {signIn: jest.Mock};
   let jwt: {signAsync: jest.Mock};
-  let config: {get: jest.Mock};
 
   const user = {
     _id: 'user-1',
@@ -34,9 +32,6 @@ describe('AuthorizationController', () => {
   beforeEach(async () => {
     service = {signIn: jest.fn()};
     jwt = {signAsync: jest.fn().mockResolvedValue('signed.jwt.token')};
-    // Unset deny-list by default, so the capabilities are the role's own. The
-    // deny-list case is asserted on its own below.
-    config = {get: jest.fn().mockReturnValue(undefined)};
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthorizationController],
@@ -44,7 +39,6 @@ describe('AuthorizationController', () => {
         {provide: AuthorizationService, useValue: service},
         {provide: getModelToken('User'), useValue: {create: jest.fn(), find: jest.fn(), findOne: jest.fn()}},
         {provide: JwtService, useValue: jwt},
-        {provide: ConfigService, useValue: config},
       ],
     })
       .overrideGuard(AuthGuard('jwt'))
@@ -60,7 +54,7 @@ describe('AuthorizationController', () => {
     const result = await controller.signIn({email: user.email, password: 'correct horse battery'} as never);
 
     expect(result).toEqual({
-      user: {...serializeUser(user), capabilities: capabilitiesFor('ADMIN', false)},
+      user: {...serializeUser(user), capabilities: capabilitiesFor('ADMIN')},
       token: 'signed.jwt.token',
     });
   });
@@ -76,22 +70,7 @@ describe('AuthorizationController', () => {
       role: 'ADMIN',
     } as never);
 
-    expect(result.user.capabilities).toEqual(capabilitiesFor('EMPLOYEE', false));
-  });
-
-  it('denies the summary capability to a deny-listed account', async () => {
-    config.get.mockReturnValue('mkulakowski@umsiechnice.pl');
-    service.signIn.mockResolvedValue({...user, role: 'OFFICE' as const, email: 'mkulakowski@umsiechnice.pl'});
-
-    const result = await controller.signIn({
-      email: 'mkulakowski@umsiechnice.pl',
-      password: 'correct horse battery',
-    } as never);
-
-    expect(result.user.capabilities.canSeeSummaryTab).toBe(false);
-    // The deny-list is read from configuration, so the rest of the office capabilities
-    // must survive it.
-    expect(result.user.capabilities.canSeeClientsTab).toBe(true);
+    expect(result.user.capabilities).toEqual(capabilitiesFor('EMPLOYEE'));
   });
 
   it('never returns the password hash', async () => {
@@ -153,7 +132,7 @@ describe('AuthorizationController', () => {
 
       expect(result).toEqual({
         ...serializeUser(acting),
-        capabilities: capabilitiesFor('ADMIN', false),
+        capabilities: capabilitiesFor('ADMIN'),
       });
     });
 
@@ -164,7 +143,7 @@ describe('AuthorizationController', () => {
 
       const result = controller.getMe(acting) as {capabilities: {canSeeSummaryTab: boolean}};
 
-      expect(result.capabilities).toEqual(capabilitiesFor('OFFICE', false));
+      expect(result.capabilities).toEqual(capabilitiesFor('OFFICE'));
     });
 
     it('never returns the password hash', () => {

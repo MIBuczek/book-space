@@ -65,8 +65,8 @@ Legacy derivation of rights (see `credentials-function.ts` in the source repo):
 - `adminCredentials` = `isAdmin` only
 - `siskEmployeeCredentials` = `isAdmin || isOffice || isEmployee`
 - `adminSeeContentCredentials` = `isAdmin || isOffice` (controls Clients/Facilities/Summary tabs)
-- `summaryUserRestriction` = `isAdmin || isOffice`, **except** the account
-  `mkulakowski@umsiechnice.pl`, which is denied the Summary tab (legacy issue #73)
+- `summaryUserRestriction` = `isAdmin || isOffice` (the legacy per-account exception is removed,
+  open question 3, #195)
 
 ## 4. Locations and Facilities (current reference data)
 
@@ -233,8 +233,8 @@ content match the bookings in range.
 3. **Given** a generated summary, **When** the user exports CSV, **Then** the file
    contains one row per booked slot with client, facility, size as a percentage,
    payment method, discount, date, hours, participants and status.
-4. **Given** the Summary tab, **When** the user account is `mkulakowski@umsiechnice.pl`,
-   **Then** the tab is not available.
+4. **Given** the Summary tab, **When** an employee signs in, **Then** the tab is not available;
+   when an office or administrator account signs in, **Then** it is (no per-account exception).
 5. **Given** the "all clients" export, **When** it is generated, **Then** it contains
    rows for every client with accepted bookings in the selected range.
 
@@ -355,8 +355,9 @@ bookings it created remain readable.
 - **FR-005**: The system MUST restrict every read and write to the caller's
   permitted scope; a public visitor MUST only be able to read accepted, non-archived
   bookings.
-- **FR-006**: The system MUST provide a deny-list for the Summary feature so that the
-  account `mkulakowski@umsiechnice.pl` cannot access it (legacy issue #73).
+- **FR-006**: The system MUST NOT restrict the Summary feature to a hardcoded or configured
+  account: access is decided solely by role (`OFFICE`/`ADMIN`). The legacy
+  `mkulakowski@umsiechnice.pl` restriction is removed (open question 3, #195).
 
 **Facilities and locations**
 

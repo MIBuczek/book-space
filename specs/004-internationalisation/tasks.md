@@ -87,7 +87,8 @@
       hides the element (SC-005).
 - [ ] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
       `TENANT_NAME`, not "SISK Siechnice"; update the template spec.
-- [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: empty default; update the spec.
+- [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the
+      Summary restriction is gone, not merely defaulted to empty; update the spec.
 - [ ] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
       brand (decision 5: the sample facilities stay as they are).
 - [ ] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
@@ -100,7 +101,7 @@
 ## Phase 6 — Docs and conventions
 
 - [ ] **T260** `AGENTS.md`: the translation conventions (runtime JSON, key completeness, the
-      retargeted guard), the tenant settings, the deny-list behaviour change.
+      retargeted guard), the tenant settings, the removal of the Summary deny-list (#195).
 - [ ] **T261** [P] `specs/001-booking-platform-rewrite/ui-conventions.md`: the i18n convention.
 - [ ] **T262** [P] `README.md`: the tenant settings and how to add a language.
 - [ ] **T263** Record the server-side Polish decision (decision 2, FR-015) in `AGENTS.md`; note

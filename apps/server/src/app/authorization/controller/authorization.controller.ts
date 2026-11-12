@@ -1,6 +1,5 @@
 import {Body, Controller, Get, Post, Res, UseGuards} from '@nestjs/common';
 import {AuthGuard} from '@nestjs/passport';
-import {ConfigService} from '@nestjs/config';
 import {AuthorizationService} from '../service/authorization.service';
 import {LoginUserDto} from '../models/login-user-dto';
 import {Response} from 'express';
@@ -10,29 +9,23 @@ import {JwtPayload} from '@models/jwt-payload.model';
 import {CurrentUser} from '../decorators/current-user.decorator';
 import {IActingUser} from '../ownership';
 import {capabilitiesFor} from '../capabilities';
-import {isSummaryDenied, parseDenyList} from '../../reporting/deny-list';
 import {IUserCapabilities} from '@models/user.model';
 
 @Controller('auth')
 export class AuthorizationController {
   constructor(
     private autService: AuthorizationService,
-    private jwtService: JwtService,
-    private configService: ConfigService
+    private jwtService: JwtService
   ) {}
 
   /**
-   * Resolves the capability matrix for a user (FR-004, FR-006).
+   * Resolves the capability matrix for a user (FR-004).
    *
-   * The Summary deny-list is read per request, not captured at construction, so an
-   * operator can change `SUMMARY_DENY_LIST` without a redeploy — the same reason the
-   * reporting controller reads it on each call. A role the matrix does not recognise
-   * cannot reach here: the schema enum rejects it, and `JwtStrategy` loads the stored
-   * document.
+   * A role the matrix does not recognise cannot reach here: the schema enum rejects it, and
+   * `JwtStrategy` loads the stored document.
    */
-  private capabilitiesOf(user: {role: string; email?: string}): IUserCapabilities {
-    const denyList = parseDenyList(this.configService.get<string>('SUMMARY_DENY_LIST'));
-    return capabilitiesFor(user.role as never, isSummaryDenied(user.email, denyList));
+  private capabilitiesOf(user: {role: string}): IUserCapabilities {
+    return capabilitiesFor(user.role as never);
   }
 
   /**
@@ -66,8 +59,7 @@ export class AuthorizationController {
    * `role`, `city` and `buildings`: a response built from the token would report the
    * values as they were when the token was minted, so an administrator's change to an
    * account would not appear until the token expired. The capabilities are computed from
-   * that same stored document, so a role or deny-list change takes effect on the next
-   * request too.
+   * that same stored document, so a role change takes effect on the next request too.
    */
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
@@ -81,7 +73,7 @@ export class AuthorizationController {
     }
     return {
       ...serialized,
-      capabilities: this.capabilitiesOf(user as {role: string; email?: string}),
+      capabilities: this.capabilitiesOf(user as {role: string}),
     };
   }
 

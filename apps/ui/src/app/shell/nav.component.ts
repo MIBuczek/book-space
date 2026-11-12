@@ -10,7 +10,7 @@ import { LanguageSwitchComponent } from './language-switch.component';
  * The top navigation, shared by the public and admin areas.
  *
  * The admin link is offered when the account has the `staff` capability — the API's answer,
- * not a role re-derived here — so a role or deny-list change reaches the menu without a
+ * not a role re-derived here — so a role change reaches the menu without a
  * redeploy. This is presentation, not enforcement: the server decides what a request may do
  * (constitution: server-side enforcement), so a hidden link is a courtesy, not a control.
  *
