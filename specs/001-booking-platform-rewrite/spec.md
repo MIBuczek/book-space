@@ -602,14 +602,23 @@ bookings it created remain readable.
 
 ## 9. Open Questions
 
-1. **[NEEDS CLARIFICATION]** Does the rewrite target the same four cities at launch, or
-   should cities and facilities become fully administrator-managed from day one?
-2. **[NEEDS CLARIFICATION]** Should the public be able to cancel their own request, or
-   must every change go through staff?
-3. **[NEEDS CLARIFICATION]** Is the `mkulakowski@umsiechnice.pl` restriction still
-   required, and should it be a general configuration instead of a hardcoded account?
-4. **[NEEDS CLARIFICATION]** Should rejected bookings be deleted or retained with a
-   rejection status for audit?
+All nine questions were answered on 2026-11-12. Answers 1–4, 6–8 each open follow-up work, tracked
+in the issue referenced beside the answer; 5 and 9 need no implementation.
+
+1. **[RESOLVED — #193]** Cities and facilities are **fully administrator-managed from day one**:
+   the rewrite ships no compiled-in city list. The `CITIES` union in `libs/models/building.model.ts`
+   becomes a `City` collection with admin CRUD, and the four screens read the list from the API.
+2. **[RESOLVED — #194]** The **public may cancel their own booking request**. A cancellation is
+   authorised by a per-booking token issued at create time (returned once, e-mailed to the
+   applicant), and it writes the `CANCELED` slot status rather than deleting the record. A request
+   already accepted is not self-cancellable and is directed to staff.
+3. **[RESOLVED — #195]** The Summary deny-list is **removed entirely** — the restricted account
+   belonged to a person no longer with the tenant. `deny-list.ts`, `SUMMARY_DENY_LIST` and the
+   `summaryDenied` parameter to `capabilitiesFor` are deleted; `canSeeSummaryTab` is office or
+   administrator only.
+4. **[RESOLVED — #196]** A **rejected booking request is deleted**. There is no `REJECTED` status;
+   rejecting is the existing staff `DELETE /bookings/{_id}`, and the admin UI label is aligned to
+   it. The status vocabulary stays `INITIAL | DONE | CANCELED`.
 5. **[RESOLVED — T062]** Is a notification required for the applicant when a request is
    approved or rejected? **Yes.** An administrator may notify the requestor when their
    request is approved or rejected, through the `APPLICANT` audience of
@@ -618,14 +627,21 @@ bookings it created remain readable.
    applicant is contacted. The recipient is the booking's stored `personEmail` and the
    message (`booking-approved` / `booking-rejected`) is selected from the booking's stored
    decision, so the e-mail cannot claim a decision the record does not carry.
-6. **[NEEDS CLARIFICATION]** Which e-mail provider replaces EmailJS, and who owns the
-   sending domain?
-7. **[RESOLVED — T060]** What is the retention policy for archived bookings?
-   Archived bookings are retained for **five years after the last day they occupy a
-   slot**, then purged; active bookings are never purged. The anchor is the last slot
-   day rather than `modifiedAt`, which every write stamps (FR-016), so a re-saved old
-   booking cannot outlive its window. Implemented by `tools/backup`'s `purge`
-   subcommand and documented in `docs/operations.md`.
-8. **[NEEDS CLARIFICATION]** Should the PDF report become a server-generated document
-   instead of a browser print view?
-9. **[NEEDS CLARIFICATION]** Is a self-service password reset needed for staff?
+6. **[RESOLVED — #197]** The e-mail provider is **Azure Communication Services (ACS) Email**, and
+   **the tenant owns the sending domain** (verified SPF/DKIM at the tenant's registrar). ACS is
+   chosen because the App Service already holds a federated Azure identity (spec 003), so sending
+   needs no new vendor, key or allowlist. It is added as an `AcsMailTransport` behind the existing
+   `IMailTransport` seam; an unconfigured deployment still fails loudly (FR-036).
+7. **[RESOLVED — #198, supersedes T060's five years]** Archived bookings are retained for
+   **eleven months after the last day they occupy a slot**, then purged; active bookings are never
+   purged. The anchor is the last slot day rather than `modifiedAt`, which every write stamps
+   (FR-016), so a re-saved old booking cannot outlive its window. The window is expressed in
+   **months** (`DEFAULT_RETENTION_MONTHS = 11`, a calendar subtraction), implemented by
+   `tools/backup`'s `purge` subcommand and documented in `docs/operations.md`.
+8. **[RESOLVED — #199]** The report becomes a **server-generated PDF**:
+   `GET /reporting/summary.pdf` (office/administrator) returns an actual PDF document, generated
+   from the same `libs/reporting` view model as the CSV, replacing the browser print view. The
+   Summary tab downloads the PDF.
+9. **[RESOLVED — no work]** A self-service password reset for staff is **not needed**. Staff
+   accounts are few and administrator-managed; a forgotten password is reset by an administrator
+   through the existing users endpoints. No reset flow is built.
