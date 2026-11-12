@@ -1,4 +1,4 @@
-import {retentionCutoff, lastSlotDay, isPurgeable, purgeFilter, DEFAULT_RETENTION_YEARS} from './retention';
+import {retentionCutoff, lastSlotDay, isPurgeable, purgeFilter, DEFAULT_RETENTION_MONTHS} from './retention';
 
 /**
  * The retention rule's boundary cases (T060, spec.md §9 open question 7).
@@ -11,30 +11,41 @@ import {retentionCutoff, lastSlotDay, isPurgeable, purgeFilter, DEFAULT_RETENTIO
 const cutoff = (iso: string): Date => new Date(iso);
 
 describe('retentionCutoff', () => {
-  it('subtracts whole calendar years, not a fixed number of days', () => {
-    // A calendar subtraction is what the boundary must follow: 2026-11-08 minus five years is
-    // 2021-11-08, which 5*365 days would miss by a day in each leap year between them.
-    expect(retentionCutoff(new Date('2026-11-08T12:00:00.000Z'), 5).toISOString()).toBe(
-      '2021-11-08T12:00:00.000Z'
+  it('subtracts whole calendar months, not a fixed number of days', () => {
+    // A calendar subtraction is what the boundary must follow: 2026-11-08 minus eleven months is
+    // 2025-12-08, which 11*30 days would miss.
+    expect(retentionCutoff(new Date('2026-11-08T12:00:00.000Z'), 11).toISOString()).toBe(
+      '2025-12-08T12:00:00.000Z'
+    );
+  });
+
+  it('rolls a short month forward, matching the calendar', () => {
+    // 31 Jan minus one month has no 31 Feb, so JavaScript rolls to 3 Mar (2026 is not a leap
+    // year). The rule is documented against this, not left to be discovered.
+    expect(retentionCutoff(new Date('2026-01-31T12:00:00.000Z'), 1).toISOString()).toBe(
+      '2025-12-31T12:00:00.000Z'
+    );
+    expect(retentionCutoff(new Date('2026-03-31T12:00:00.000Z'), 1).toISOString()).toBe(
+      '2026-03-03T12:00:00.000Z'
     );
   });
 
   it('rolls a leap day forward, matching the calendar', () => {
-    // JavaScript has no 29 Feb 2019, so it rolls to 1 Mar. The rule is documented against this,
-    // not left to be discovered.
-    expect(retentionCutoff(new Date('2024-02-29T12:00:00.000Z'), 5).toISOString()).toBe(
-      '2019-03-01T12:00:00.000Z'
+    // 29 Feb minus a whole number of months lands on a month with a 29th here, so it is clean;
+    // the rollover case is the short-month one above.
+    expect(retentionCutoff(new Date('2024-02-29T12:00:00.000Z'), 11).toISOString()).toBe(
+      '2023-03-29T12:00:00.000Z'
     );
   });
 
   it('keeps the time of day', () => {
-    expect(retentionCutoff(new Date('2026-11-08T17:51:00.000Z'), 5).toISOString()).toBe(
-      '2021-11-08T17:51:00.000Z'
+    expect(retentionCutoff(new Date('2026-11-08T17:51:00.000Z'), 11).toISOString()).toBe(
+      '2025-12-08T17:51:00.000Z'
     );
   });
 
-  it('defaults to five years', () => {
-    expect(DEFAULT_RETENTION_YEARS).toBe(5);
+  it('defaults to eleven months', () => {
+    expect(DEFAULT_RETENTION_MONTHS).toBe(11);
   });
 });
 

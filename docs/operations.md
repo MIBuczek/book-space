@@ -110,19 +110,24 @@ The round trip is also pinned by `tools/backup/src/lib/archive.spec.ts`, which a
 
 ### Policy
 
-**Archived bookings are retained for five years after the last day they occupy a slot, then
+**Archived bookings are retained for eleven months after the last day they occupy a slot, then
 purged.** Active bookings are never purged, whatever their age. This is the answer to open
-question 7.
+question 7 (revised, #198).
 
 The anchor is the booking's **last slot day**, not `modifiedAt`. `modifiedAt` is stamped by every
 write (approval, a slot change, archive — FR-016), so a booking archived years ago and re-saved
 once would have its retention clock reset by an unrelated edit. The last slot day is immutable
 once the booking is done and is the point the record stopped being operationally live.
 
-Five years is the window a municipal entity can defend for booking history that underpins
-published summaries: long enough to answer a dispute or an audit across the period a report can
-cover, short enough that the collection does not grow without bound. The window is a default
-(`DEFAULT_RETENTION_YEARS`), overridable per run with `--retention-years`.
+Eleven months is a full annual reporting cycle plus a month of overlap: long enough to answer a
+dispute or an audit across the whole period a report can cover, and no longer than the tenant
+keeps any other record. The window is a default (`DEFAULT_RETENTION_MONTHS`), overridable per run
+with `--retention-months`.
+
+The monthly backup archives (12 months) therefore outlive the booking records they hold by about
+a month. That is deliberate: the archive is the recovery copy, and keeping one more month of
+backups than the data-retention window means a record purged today is still recoverable from last
+month's archive for the overlap period.
 
 ### Running the purge
 

@@ -3,7 +3,7 @@ import {ObjectId} from 'bson';
 import {promises as fs} from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import {parseArgs, run, parseRetentionYears, verifyRestore, purgeExitCode} from './cli';
+import {parseArgs, run, parseRetentionMonths, verifyRestore, purgeExitCode} from './cli';
 import {dumpDatabase} from './archive';
 import {createBackupTestContext} from '../testing/mongo-test-context';
 import type {IBackupTestContext} from '../testing/mongo-test-context';
@@ -24,9 +24,9 @@ describe('parseArgs', () => {
   });
 
   it('accepts the inline `--flag=value` form', () => {
-    const parsed = parseArgs(['purge', '--target=mongodb://a', '--retention-years=7']);
+    const parsed = parseArgs(['purge', '--target=mongodb://a', '--retention-months=7']);
     expect(parsed.flags.get('target')).toBe('mongodb://a');
-    expect(parsed.flags.get('retention-years')).toBe('7');
+    expect(parsed.flags.get('retention-months')).toBe('7');
   });
 
   it('accepts a boolean flag with no value', () => {
@@ -52,18 +52,18 @@ describe('parseArgs', () => {
   });
 });
 
-describe('parseRetentionYears', () => {
-  it('defaults when the flag is absent', () => {
-    expect(parseRetentionYears(new Map())).toBe(5);
+describe('parseRetentionMonths', () => {
+  it('defaults to eleven months when the flag is absent', () => {
+    expect(parseRetentionMonths(new Map())).toBe(11);
   });
 
   it('reads a whole number', () => {
-    expect(parseRetentionYears(new Map([['retention-years', '10']]))).toBe(10);
+    expect(parseRetentionMonths(new Map([['retention-months', '10']]))).toBe(10);
   });
 
   it('rejects a non-numeric value', () => {
-    expect(() => parseRetentionYears(new Map([['retention-years', 'ten']]))).toThrow('whole number');
-    expect(() => parseRetentionYears(new Map([['retention-years', true]]))).toThrow('whole number');
+    expect(() => parseRetentionMonths(new Map([['retention-months', 'ten']]))).toThrow('whole number');
+    expect(() => parseRetentionMonths(new Map([['retention-months', true]]))).toThrow('whole number');
   });
 });
 
@@ -145,7 +145,7 @@ describe('run', () => {
     expect(await context.source.db?.collection('bookings').countDocuments()).toBe(1);
     expect(
       await run(
-        parseArgs(['purge', '--target', context.sourceUri, '--retention-years=5', '--export', dir]),
+        parseArgs(['purge', '--target', context.sourceUri, '--retention-months=11', '--export', dir]),
         deps
       )
     ).toBe(0);
