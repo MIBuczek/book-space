@@ -31,6 +31,14 @@ describe('shared model values match data-model.md', () => {
     expect(BOOKING_STATUSES).toEqual(['INITIAL', 'DONE', 'CANCELED']);
   });
 
+  it('has no REJECTED status, because rejecting is the staff delete (#196)', () => {
+    // A rejected request is removed rather than retained (spec.md §9 Q4), so the
+    // vocabulary is closed. A `REJECTED` member would be the only whole-booking value
+    // in a list that otherwise describes a slot, and re-introducing it would silently
+    // contradict the decision.
+    expect(BOOKING_STATUSES).not.toContain('REJECTED');
+  });
+
   it('user roles', () => {
     expect(USER_ROLES).toEqual(['ADMIN', 'OFFICE', 'EMPLOYEE']);
   });

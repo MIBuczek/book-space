@@ -13,7 +13,10 @@ import {createMongoTestContext, MongoTestContext} from '../../testing/mongo-test
  */
 describe('GET /bookings/conflicts over HTTP', () => {
   let ctx: MongoTestContext;
-  let bookingModel: {create: (doc: Record<string, unknown>) => Promise<{_id: unknown}>};
+  let bookingModel: {
+    create: (doc: Record<string, unknown>) => Promise<{_id: unknown}>;
+    findById: (id: string) => Promise<unknown>;
+  };
   let userModel: {create: (doc: Record<string, unknown>) => Promise<unknown>};
 
   const PASSWORD = 'correct horse battery';
@@ -84,6 +87,12 @@ describe('GET /bookings/conflicts over HTTP', () => {
       headers: token ? {authorization: `Bearer ${token}`} : {},
     });
 
+  const remove = (id: unknown, token: string) =>
+    fetch(`${ctx.baseUrl}/bookings/${String(id)}`, {
+      method: 'DELETE',
+      headers: {authorization: `Bearer ${token}`},
+    });
+
   it('returns the ids of the conflicting unaccepted bookings to an administrator', async () => {
     const first = await bookingModel.create(booking());
     const second = await bookingModel.create(
@@ -126,6 +135,40 @@ describe('GET /bookings/conflicts over HTTP', () => {
     const ids = (await (await getConflicts(token)).json()) as string[];
 
     expect(ids).toEqual([]);
+  });
+
+  it('leaves no orphan reference after a rejected request is deleted (#196)', async () => {
+    // Rejecting a request is the staff delete, not a status transition, so a rejected
+    // booking is gone: it must not linger in the conflict counter and the store must
+    // hold nothing for it. This is the SC-003 "zero broken references" case for a
+    // rejection — the surviving booking, its former conflict, is unaffected.
+    const first = await bookingModel.create(booking());
+    const second = await bookingModel.create(
+      booking({
+        bookedTimes: [
+          {
+            day: new Date('2026-03-04T00:00:00Z'),
+            startHours: new Date('2026-03-04T09:00:00Z'),
+            endHours: new Date('2026-03-04T11:00:00Z'),
+            status: 'INITIAL',
+          },
+        ],
+      })
+    );
+    const token = await signIn('admin@example.com', 'ADMIN');
+
+    const deletion = await remove(second._id, token);
+    expect(deletion.status).toBe(200);
+
+    const ids = (await (await getConflicts(token)).json()) as string[];
+    expect(ids).toEqual([]);
+
+    // The document is gone rather than flagged: the conflict counter no longer sees it
+    // and the store has nothing left to reference.
+    expect(await bookingModel.findById(String(second._id))).toBeNull();
+
+    // The surviving booking is untouched by the rejection of its former conflict.
+    expect(await bookingModel.findById(String(first._id))).not.toBeNull();
   });
 
   it('does not compare bookings whose slots fall outside the period', async () => {

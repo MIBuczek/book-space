@@ -196,9 +196,9 @@
       "reschedule": "Reschedule slot",
       "resolve": "Settle slot",
       "edit": "Edit booking",
-      "delete": "Delete booking"
+      "delete": "Delete / reject booking"
     },
-    "deleteConfirm": "Are you sure you want to delete this booking?",
+    "deleteConfirm": "Are you sure you want to delete this booking? Rejecting a request removes it permanently.",
     "fields": {
       "nick": "Calendar name",
       "personName": "Full name",

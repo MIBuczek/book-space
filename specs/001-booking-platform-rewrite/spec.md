@@ -390,8 +390,11 @@ bookings it created remain readable.
   approval that would keep a conflict.
 - **FR-016**: The system MUST record who created and who last modified a booking and
   when.
-- **FR-017**: The system MUST allow an administrator to approve, reject (unapprove),
-  edit, reschedule individual slots, resolve individual slots and archive a booking.
+- **FR-017**: The system MUST allow an administrator to approve or unapprove, edit, reschedule
+  individual slots, resolve individual slots and archive a booking. Rejecting a booking
+  *request* is the staff delete (`DELETE /bookings/{_id}`, #196): a rejected request is removed
+  rather than retained under a `REJECTED` status, which is distinct from unapproving an
+  already-accepted booking.
 - **FR-018**: The system MUST prevent editing or deleting a time slot that has been
   resolved (status other than `INITIAL`).
 - **FR-019**: The system MUST allow an administrator to assign a client record to a

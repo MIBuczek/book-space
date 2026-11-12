@@ -473,9 +473,12 @@ describe('BookingsTableComponent', () => {
   it('deletes a booking after confirmation', async () => {
     const fixture = await render([booking({_id: 'b1'})], []);
 
-    pressButton(fixture, 'Usuń');
-    expect(element(fixture).textContent).toContain('Czy na pewno chcesz usunąć tą rezerwację?');
-    pressButton(fixture, 'Usuń', openPanel(fixture));
+    // Rejecting a request is this delete (#196), so the affordance names both readings.
+    pressButton(fixture, 'Usuń / Odrzuć');
+    expect(element(fixture).textContent).toContain(
+      'Czy na pewno chcesz usunąć tą rezerwację? Odrzucenie wniosku usuwa go bezpowrotnie.'
+    );
+    pressButton(fixture, 'Usuń / Odrzuć', openPanel(fixture));
 
     const request = httpMock.expectOne(
       (r) => r.url === '/api/bookings/b1' && r.method === 'DELETE'
@@ -488,7 +491,7 @@ describe('BookingsTableComponent', () => {
   it('cancels a delete without sending a request', async () => {
     const fixture = await render([booking({_id: 'b1'})], []);
 
-    pressButton(fixture, 'Usuń');
+    pressButton(fixture, 'Usuń / Odrzuć');
     pressButton(fixture, 'Anuluj', openPanel(fixture));
 
     expect(fixture.componentInstance.deleteTarget()).toBeNull();
