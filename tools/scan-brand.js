@@ -27,6 +27,9 @@ const fs = require('node:fs');
 const ROOTS = ['apps', 'libs', 'tools'];
 const EXTENSIONS = new Set(['.ts', '.js', '.mjs', '.cjs', '.json', '.html', '.scss', '.css']);
 const IGNORED = [/(^|\/)node_modules\//, /(^|\/)dist\//, /(^|\/)\.nx\//, /(^|\/)generated\//];
+// This script must name the token it matches, so it is the one file under `tools/` that is
+// exempt. It is excluded by exact path, so nothing else can hide behind the exemption.
+const SELF = 'tools/scan-brand.js';
 
 const PATTERNS = [
   {name: 'SISK brand', re: /SISK/},
@@ -35,7 +38,7 @@ const PATTERNS = [
 
 const tracked = execFileSync('git', ['ls-files', ...ROOTS], {encoding: 'utf8'})
   .split('\n')
-  .filter((file) => file !== '')
+  .filter((file) => file !== '' && file !== SELF)
   .filter((file) => !IGNORED.some((pattern) => pattern.test(file)))
   .filter((file) => EXTENSIONS.has(file.slice(file.lastIndexOf('.'))));
 
