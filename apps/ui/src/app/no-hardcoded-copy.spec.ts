@@ -21,9 +21,9 @@ const UI_SRC = join(__dirname, '..');
 
 const POLISH = /[ĄĆĘŁŃÓŚŹŻąćęłńóśźż]/;
 
-/** The catalogue lives in `libs/copy`; a spec may quote copy freely. */
+/** A spec may quote copy freely; the shipped catalogue is `assets/i18n`. */
 const isExempt = (path: string): boolean =>
-  path.endsWith('.spec.ts') || path.includes(`${join('libs', 'copy')}`);
+  path.endsWith('.spec.ts');
 
 const filesUnder = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {

@@ -46,19 +46,20 @@
 
 **Purpose**: replace every `COPY.x` read with a `translate` key. The compiler drives this.
 
-- [~] **T230** Migrate the shell: `nav.component.ts` and `footer.component.ts` are done
+- [x] **T230** Migrate the shell: `nav.component.ts` and `footer.component.ts` are done
       (with the language switch, T220–T223); `navigation.ts` moves with the admin frame (T232),
       because `admin-shell.component.ts` renders its label.
-- [ ] **T231** [P] Migrate the public features: `public-calendar`, `booking-request`,
+- [x] **T231** [P] Migrate the public features: `public-calendar`, `booking-request`,
       `informational/*`.
-- [ ] **T232** [P] Migrate the admin features: `bookings`, `clients`, `users`, `facilities`,
+- [x] **T232** [P] Migrate the admin features: `bookings`, `clients`, `users`, `facilities`,
       `summary`, `admin-shell`, `admin-tab-placeholder`.
-- [ ] **T233** Migrate `sign-in`.
-- [ ] **T234** Replace `libs/copy/src/lib/copy.spec.ts` with the completeness spec; **delete**
-      `libs/copy` and its `project.json`; remove it from any `tsconfig` path alias.
-- [ ] **T235** Update the migrated component specs to assert against the translation (or a test
+- [x] **T233** Migrate `sign-in`.
+- [x] **T234** Replace `libs/copy/src/lib/copy.spec.ts` with the completeness spec; **delete**
+      `libs/copy` and its `project.json`; remove it from any `tsconfig` path alias. The
+      completeness spec is `libs/i18n/src/lib/translations.spec.ts` (T217).
+- [x] **T235** Update the migrated component specs to assert against the translation (or a test
       translation stub).
-- [ ] **T236** Confirm `nx build ui` compiles (no stale `COPY` import) and the UI coverage
+- [x] **T236** Confirm `nx build ui` compiles (no stale `COPY` import) and the UI coverage
       threshold is met.
 
 ## Phase 4 — Retarget the guard (User Story 3)
