@@ -6,6 +6,7 @@ import {IPaginated} from '@models/pagination.model';
 import {SessionStore} from '../../../core/session.store';
 import {adminUser, officeUser} from '../../../../testing/fixtures';
 import {ClientsTableComponent} from './clients-table.component';
+import {provideTestI18n} from '../../../../testing/i18n-testing';
 
 const client = (overrides: Partial<IClient> = {}): IClient => ({
   _id: 'c1',
@@ -37,7 +38,7 @@ describe('ClientsTableComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [ClientsTableComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     session = TestBed.inject(SessionStore);

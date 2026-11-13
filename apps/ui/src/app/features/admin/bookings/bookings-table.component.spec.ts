@@ -8,6 +8,7 @@ import {IPaginated} from '@models/pagination.model';
 import {SessionStore} from '../../../core/session.store';
 import {adminUser, employeeUser, makeUser} from '../../../../testing/fixtures';
 import {BookingsTableComponent} from './bookings-table.component';
+import {provideTestI18n} from '../../../../testing/i18n-testing';
 
 const facility = (
   property: string,
@@ -75,7 +76,7 @@ describe('BookingsTableComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [BookingsTableComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     session = TestBed.inject(SessionStore);

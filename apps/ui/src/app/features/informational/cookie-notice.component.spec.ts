@@ -1,12 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { CookieNoticeComponent } from './cookie-notice.component';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 const KEY = 'book-space.cookies-acknowledged';
 
 describe('CookieNoticeComponent', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ imports: [CookieNoticeComponent] });
+    TestBed.configureTestingModule({
+      imports: [CookieNoticeComponent],
+      providers: [provideTestI18n()],
+    });
   });
 
   const render = () => {

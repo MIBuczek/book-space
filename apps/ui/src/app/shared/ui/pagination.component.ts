@@ -1,5 +1,6 @@
-import { Component, computed, input, output } from '@angular/core';
-import { COPY } from '@booking/copy';
+import { Component, computed, inject, input, output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
+import { injectTranslate } from '@booking/i18n';
 import { ButtonComponent } from './button.component';
 
 /**
@@ -12,15 +13,15 @@ import { ButtonComponent } from './button.component';
  */
 @Component({
   selector: 'book-space-pagination',
-  imports: [ButtonComponent],
+  imports: [ButtonComponent, TranslatePipe],
   template: `
-    <nav class="bs-pagination" [attr.aria-label]="copy.ariaLabel">
+    <nav class="bs-pagination" [attr.aria-label]="'shared.pagination.ariaLabel' | translate">
       <book-space-button
         variant="secondary"
         [disabled]="page() <= 1"
         (pressed)="goTo(page() - 1)"
       >
-        {{ copy.previous }}
+        {{ 'shared.pagination.previous' | translate }}
       </book-space-button>
       <span class="bs-pagination__status">{{ status() }}</span>
       <book-space-button
@@ -28,7 +29,7 @@ import { ButtonComponent } from './button.component';
         [disabled]="page() >= pageCount()"
         (pressed)="goTo(page() + 1)"
       >
-        {{ copy.next }}
+        {{ 'shared.pagination.next' | translate }}
       </book-space-button>
     </nav>
   `,
@@ -43,14 +44,16 @@ import { ButtonComponent } from './button.component';
   ],
 })
 export class PaginationComponent {
-  readonly copy = COPY.shared.pagination;
+  private readonly t = injectTranslate();
   readonly page = input.required<number>();
   readonly total = input.required<number>();
   readonly limit = input.required<number>();
   readonly pageChange = output<number>();
 
   readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.limit())));
-  readonly status = computed(() => this.copy.status(this.page(), this.pageCount()));
+  readonly status = computed(() =>
+    this.t('shared.pagination.status', {page: this.page(), count: this.pageCount()})
+  );
 
   goTo(page: number): void {
     if (page >= 1 && page <= this.pageCount()) {

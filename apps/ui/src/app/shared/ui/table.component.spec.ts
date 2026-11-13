@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ITableColumn, TableComponent } from './table.component';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 @Component({
   imports: [TableComponent],
@@ -35,6 +36,20 @@ class HostComponent {
   }
 }
 
+/** A table that supplies neither of the optional labels, to exercise the translated defaults. */
+@Component({
+  imports: [TableComponent],
+  template: `<book-space-table [columns]="columns" [rows]="rows">
+    <ng-template #rowActions let-row>
+      <button type="button" class="act">Act</button>
+    </ng-template>
+  </book-space-table>`,
+})
+class DefaultsHostComponent {
+  columns: ITableColumn[] = [{ key: '_id', label: 'Id' }];
+  rows: Record<string, unknown>[] = [];
+}
+
 /** The same table with no projected templates, to prove they are optional. */
 @Component({
   imports: [TableComponent],
@@ -47,7 +62,7 @@ class PlainHostComponent {
 
 describe('TableComponent', () => {
   const create = async () => {
-    await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [HostComponent], providers: [provideTestI18n()] }).compileComponents();
     return TestBed.createComponent(HostComponent);
   };
 
@@ -111,8 +126,19 @@ describe('TableComponent', () => {
     expect(details[1].textContent).toContain('Detail 2');
   });
 
+  it('falls back to the translated empty and action labels when none is supplied', async () => {
+    await TestBed.configureTestingModule({ imports: [DefaultsHostComponent], providers: [provideTestI18n()] }).compileComponents();
+    const fixture = TestBed.createComponent(DefaultsHostComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('th:last-child').textContent).toContain('Akcje');
+    expect(fixture.nativeElement.querySelector('td').textContent).toContain(
+      'Brak danych.'
+    );
+  });
+
   it('works without any projected template', async () => {
-    await TestBed.configureTestingModule({ imports: [PlainHostComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [PlainHostComponent], providers: [provideTestI18n()] }).compileComponents();
     const fixture = TestBed.createComponent(PlainHostComponent);
     fixture.detectChanges();
 

@@ -6,6 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { AdminShellComponent } from './admin-shell.component';
 import { adminUser, employeeUser } from '../../../testing/fixtures';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 @Component({ selector: 'book-space-tab-stub', template: '' })
 class TabStubComponent {}
@@ -27,6 +28,7 @@ describe('AdminShellComponent', () => {
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideTestI18n(),
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);

@@ -1,4 +1,4 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IUserRequest, IUserUpdateRequest, TUserRole} from '@models/user.model';
 import {TCity} from '@models/building.model';
 
@@ -29,19 +29,23 @@ const PASSWORD_MAX = 30;
  * domain after it, because `@IsEmail` requires a dotted domain and the two must agree. */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The role labels, from the shared copy catalogue (NFR-005, T061). */
-const ROLE_LABELS: Record<TUserRole, string> = COPY.users.roleLabels;
+/** The role label keys (FR-001), read through `translate` at the call site. */
+const ROLE_LABELS: Record<TUserRole, string> = {
+  ADMIN: 'users.roleLabels.ADMIN',
+  OFFICE: 'users.roleLabels.OFFICE',
+  EMPLOYEE: 'users.roleLabels.EMPLOYEE',
+};
 
 /** The roles a caller may choose, in the order the legacy form offered them. */
 const ROLE_OPTIONS: readonly TUserRole[] = ['ADMIN', 'OFFICE', 'EMPLOYEE'];
 
 /** The columns the table renders. */
 const USER_COLUMNS = [
-  {key: 'name', label: COPY.users.columns.name},
-  {key: 'email', label: COPY.users.columns.email},
-  {key: 'roleLabel', label: COPY.users.columns.role},
-  {key: 'cityLabel', label: COPY.users.columns.city},
-  {key: 'activeLabel', label: COPY.users.columns.status},
+  {key: 'name', label: 'users.columns.name'},
+  {key: 'email', label: 'users.columns.email'},
+  {key: 'roleLabel', label: 'users.columns.role'},
+  {key: 'cityLabel', label: 'users.columns.city'},
+  {key: 'activeLabel', label: 'users.columns.status'},
 ];
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -113,35 +117,39 @@ const isCityRequired = (role: TUserRole): boolean => role !== 'ADMIN';
  * confirmation must match whenever a password is supplied, which is the `PasswordConfirmation`
  * rule the server enforces.
  */
-const validateUserForm = (value: IUserFormValue, editing: boolean): TUserFieldErrors => {
+const validateUserForm = (
+  value: IUserFormValue,
+  editing: boolean,
+  t: TranslateFn
+): TUserFieldErrors => {
   const errors: TUserFieldErrors = {};
 
   if (value.firstName.length < NAME_MIN || value.firstName.length > NAME_MAX) {
-    errors.firstName = COPY.validation.firstNameRange(NAME_MIN, NAME_MAX);
+    errors.firstName = t('validation.firstNameRange', {min: NAME_MIN, max: NAME_MAX});
   }
   if (value.lastName.length < NAME_MIN || value.lastName.length > NAME_MAX) {
-    errors.lastName = COPY.validation.lastNameRange(NAME_MIN, NAME_MAX);
+    errors.lastName = t('validation.lastNameRange', {min: NAME_MIN, max: NAME_MAX});
   }
   if (
     !EMAIL_PATTERN.test(value.email) ||
     value.email.length < EMAIL_MIN ||
     value.email.length > EMAIL_MAX
   ) {
-    errors.email = COPY.validation.emailInvalid;
+    errors.email = t('validation.emailInvalid');
   }
 
   const passwordSupplied = value.password !== '';
   if (!editing || passwordSupplied) {
     if (value.password.length < PASSWORD_MIN || value.password.length > PASSWORD_MAX) {
-      errors.password = COPY.validation.passwordRange(PASSWORD_MIN, PASSWORD_MAX);
+      errors.password = t('validation.passwordRange', {min: PASSWORD_MIN, max: PASSWORD_MAX});
     }
   }
   if (passwordSupplied && value.password !== value.recheckPassword) {
-    errors.recheckPassword = COPY.validation.passwordsMismatch;
+    errors.recheckPassword = t('validation.passwordsMismatch');
   }
 
   if (isCityRequired(value.role) && value.city.trim() === '') {
-    errors.city = COPY.validation.cityRequired;
+    errors.city = t('validation.cityRequired');
   }
 
   return errors;
@@ -232,7 +240,7 @@ const fieldForMessage = (message: string): keyof IUserFormValue | null => {
  * cannot see is an error they cannot act on. The messages are joined, so two unmatched ones are
  * both shown.
  */
-const mapServerErrors = (messages: readonly string[]): IUserWriteErrors => {
+const mapServerErrors = (messages: readonly string[], t: TranslateFn): IUserWriteErrors => {
   const fields: TUserFieldErrors = {};
   let unmatched = false;
 
@@ -241,11 +249,11 @@ const mapServerErrors = (messages: readonly string[]): IUserWriteErrors => {
     if (field === null) {
       unmatched = true;
     } else {
-      fields[field] = COPY.errors.fieldInvalid;
+      fields[field] = t('errors.fieldInvalid');
     }
   }
 
-  return {fields, general: unmatched ? COPY.errors.generic : null};
+  return {fields, general: unmatched ? t('errors.generic') : null};
 };
 
 /** Shapes an account into the row the table renders. */
@@ -257,13 +265,15 @@ const toRow = (user: {
   role: TUserRole;
   city?: string;
   active: boolean;
-}): Record<string, unknown> => ({
+},
+  t: TranslateFn
+): Record<string, unknown> => ({
   _id: user._id,
   name: `${user.firstName} ${user.lastName}`,
   email: user.email,
-  roleLabel: ROLE_LABELS[user.role],
-  cityLabel: user.city ?? COPY.common.dash,
-  activeLabel: user.active ? COPY.users.active.yes : COPY.users.active.no,
+  roleLabel: t(ROLE_LABELS[user.role]),
+  cityLabel: user.city ?? t('common.dash'),
+  activeLabel: t(user.active ? 'users.active.yes' : 'users.active.no'),
   user,
 });
 

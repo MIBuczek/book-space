@@ -1,7 +1,8 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {COPY} from '@booking/copy';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
 import {IClient} from '@models/client.model';
 import {IValidationError} from '@models/validation-error.model';
 import {TClientType} from '@models/booking.model';
@@ -32,10 +33,6 @@ import {
 } from './clients-table';
 import type {IClientFormValue, TClientFieldErrors} from './clients-table';
 
-const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TClientType[]).map(
-  (type) => ({value: type, label: CLIENT_TYPE_LABELS[type]})
-);
-
 /**
  * The admin clients tab (FR-024, FR-025, FR-026, issue #41).
  *
@@ -62,42 +59,43 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
     PaginationComponent,
     SelectComponent,
     TableComponent,
+    TranslatePipe,
   ],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'clients.title' | translate }}</h1>
 
       <div class="bs-clients__controls">
         <book-space-input
-          [label]="copy.search"
+          [label]="'clients.search' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)"
         />
         @if (canWrite()) {
           <book-space-button variant="primary" (pressed)="openCreate()">
-            {{ copy.add }}
+            {{ 'clients.add' | translate }}
           </book-space-button>
         }
       </div>
 
       @if (clientsResource.isLoading()) {
-        <p role="status">{{ copy.loading }}</p>
+        <p role="status">{{ 'clients.loading' | translate }}</p>
       } @else if (clientsResource.status() === 'error') {
-        <p role="alert">{{ copy.loadError }}</p>
+        <p role="alert">{{ 'clients.loadError' | translate }}</p>
       } @else {
         <book-space-table
-          [caption]="copy.caption"
+          [caption]="'clients.caption' | translate"
           [columns]="columns"
           [rows]="rows()"
-          [emptyMessage]="copy.empty"
+          [emptyMessage]="'clients.empty' | translate"
         >
           @if (canWrite()) {
             <ng-template #rowActions let-row>
               <book-space-button variant="secondary" (pressed)="openEdit(row.client)">
-                {{ common.edit }}
+                {{ 'common.edit' | translate }}
               </book-space-button>
               <book-space-button variant="danger" (pressed)="askDelete(row.client)">
-                {{ common.remove }}
+                {{ 'common.remove' | translate }}
               </book-space-button>
             </ng-template>
           }
@@ -110,7 +108,7 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
           (pageChange)="onPage($event)"
         />
         <book-space-select
-          [label]="common.pageSize"
+          [label]="'common.pageSize' | translate"
           [options]="pageSizeOptions"
           [value]="limitValue()"
           (valueChange)="onLimit($event)"
@@ -119,75 +117,75 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
 
       <book-space-modal
         [open]="editing()"
-        [title]="editTarget() ? copy.editTitle : copy.createTitle"
+        [title]="(editTarget() ? 'clients.editTitle' : 'clients.createTitle') | translate"
         (closed)="cancelEdit()"
       >
         @if (editing()) {
           <book-space-select
-            [label]="copy.fields.type"
-            [options]="clientOptions"
+            [label]="'clients.fields.type' | translate"
+            [options]="clientOptions()"
             [value]="form().type"
             (valueChange)="onType($event)"
           />
           <book-space-input
-            [label]="nameLabel()"
+            [label]="nameLabel() | translate"
             [value]="form().name"
             [error]="fieldErrors().name ?? null"
             (valueChange)="update({name: $event})"
           />
           <book-space-input
-            [label]="copy.fields.nick"
+            [label]="'clients.fields.nick' | translate"
             [value]="form().nick"
             [error]="fieldErrors().nick ?? null"
             (valueChange)="update({nick: $event})"
           />
           <book-space-input
-            [label]="copy.fields.contactPerson"
+            [label]="'clients.fields.contactPerson' | translate"
             [value]="form().contactPerson"
             [error]="fieldErrors().contactPerson ?? null"
             (valueChange)="update({contactPerson: $event})"
           />
           <book-space-input
-            [label]="copy.fields.phone"
+            [label]="'clients.fields.phone' | translate"
             [value]="form().phone"
             [error]="fieldErrors().phone ?? null"
             (valueChange)="update({phone: $event})"
           />
           <book-space-input
-            [label]="copy.fields.email"
+            [label]="'clients.fields.email' | translate"
             type="email"
             [value]="form().email"
             [error]="fieldErrors().email ?? null"
             (valueChange)="update({email: $event})"
           />
           <book-space-input
-            [label]="copy.fields.street"
+            [label]="'clients.fields.street' | translate"
             [value]="form().street"
             [error]="fieldErrors().street ?? null"
             (valueChange)="update({street: $event})"
           />
           <book-space-input
-            [label]="copy.fields.city"
+            [label]="'clients.fields.city' | translate"
             [value]="form().city"
             [error]="fieldErrors().city ?? null"
             (valueChange)="update({city: $event})"
           />
           <book-space-input
-            [label]="copy.fields.zipCode"
+            [label]="'clients.fields.zipCode' | translate"
             [value]="form().zipCode"
             [error]="fieldErrors().zipCode ?? null"
             (valueChange)="update({zipCode: $event})"
           />
           @if (nipRequired()) {
             <book-space-input
-              [label]="copy.fields.nip"
+              [label]="'clients.fields.nip' | translate"
               [value]="form().nip"
               [error]="fieldErrors().nip ?? null"
               (valueChange)="update({nip: $event})"
             />
           }
           <book-space-checkbox
-            [label]="copy.fields.active"
+            [label]="'clients.fields.active' | translate"
             [checked]="form().active"
             (checkedChange)="update({active: $event})"
           />
@@ -197,26 +195,26 @@ const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TCli
           }
 
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmSave()">{{ common.save }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmSave()">{{ 'common.save' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deleteTarget() !== null"
-        [title]="copy.deleteTitle"
+        [title]="'clients.deleteTitle' | translate"
         role="alertdialog"
         (closed)="cancelDelete()"
       >
         @if (deleteTarget(); as target) {
-          <p>{{ copy.deleteConfirm(target.name) }}</p>
+          <p>{{ 'clients.deleteConfirm' | translate: {name: target.name} }}</p>
           @if (deleteError(); as message) {
             <p class="bs-clients__error" role="alert">{{ message }}</p>
           }
           <div class="bs-modal__actions">
-            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ common.remove }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ 'common.remove' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
@@ -244,10 +242,14 @@ export class ClientsTableComponent {
   private readonly clientsApi = inject(ClientsApi);
   private readonly session = inject(SessionStore);
 
-  readonly copy = COPY.clients;
-  readonly common = COPY.common;
+  private readonly t = injectTranslate();
   readonly columns = CLIENT_COLUMNS;
-  readonly clientOptions = CLIENT_OPTIONS;
+  readonly clientOptions = computed<ISelectOption[]>(() =>
+    (Object.keys(CLIENT_TYPE_LABELS) as TClientType[]).map((type) => ({
+      value: type,
+      label: this.t(CLIENT_TYPE_LABELS[type]),
+    }))
+  );
   readonly pageSizeOptions: ISelectOption[] = PAGE_SIZES.map((size) => ({
     value: String(size),
     label: String(size),
@@ -276,12 +278,14 @@ export class ClientsTableComponent {
    */
   readonly deleteError = signal<string | null>(null);
 
-  readonly nameLabel = computed(() => nameLabelFor(this.form().type));
+  readonly nameLabel = computed(() => this.t(nameLabelFor(this.form().type)));
   readonly nipRequired = computed(() => this.form().type === 'COMPANY');
 
   /** The form errors, but only after a submit attempt, so typing is not punished. */
   readonly fieldErrors = computed<TClientFieldErrors>(() =>
-    this.submitted() ? {...validateClientForm(this.form()), ...this.serverErrors()} : {}
+    this.submitted()
+      ? {...validateClientForm(this.form(), this.t), ...this.serverErrors()}
+      : {}
   );
 
   readonly clientsResource = rxResource({
@@ -295,7 +299,7 @@ export class ClientsTableComponent {
 
   readonly rows = computed<Record<string, unknown>[]>(() => {
     const items = this.clientsResource.hasValue() ? this.clientsResource.value().items : [];
-    return items.map((client) => toRow(client));
+    return items.map((client) => toRow(client, this.t));
   });
 
   readonly total = computed(() =>
@@ -350,7 +354,7 @@ export class ClientsTableComponent {
     this.serverErrors.set({});
     this.generalError.set(null);
 
-    if (Object.keys(validateClientForm(this.form())).length > 0) {
+    if (Object.keys(validateClientForm(this.form(), this.t)).length > 0) {
       return;
     }
 
@@ -389,7 +393,7 @@ export class ClientsTableComponent {
       },
       // A `409` names the situation (a booking still references the client) and points at the
       // supported alternative; the modal shows the server's message rather than inventing one.
-      error: (error: unknown) => this.deleteError.set(deleteFailureMessage(error)),
+      error: (error: unknown) => this.deleteError.set(deleteFailureMessage(error, this.t)),
     });
   }
 
@@ -403,12 +407,12 @@ export class ClientsTableComponent {
     if (error instanceof HttpErrorResponse && error.status === 422) {
       const body = error.error as IValidationError | undefined;
       const messages = Array.isArray(body?.message) ? body.message : [];
-      const {fields, general} = mapServerErrors(messages);
+      const {fields, general} = mapServerErrors(messages, this.t);
       this.serverErrors.set(fields);
-      this.generalError.set(general ?? COPY.errors.generic);
+      this.generalError.set(general ?? this.t('errors.generic'));
       return;
     }
-    this.generalError.set(COPY.clients.saveFailure);
+    this.generalError.set(this.t('clients.saveFailure'));
   }
 
   private resetErrors(): void {

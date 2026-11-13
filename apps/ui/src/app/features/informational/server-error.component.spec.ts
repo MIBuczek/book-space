@@ -2,15 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ServerErrorComponent } from './server-error.component';
 import { ErrorStore } from '../../core/error.store';
-import { COPY } from '@booking/copy';
+import { provideTestI18n, testCatalogue } from '../../../testing/i18n-testing';
 
-const OFFICE_CONTACT = COPY.contact.office;
+const OFFICE_CONTACT = (testCatalogue('pl')['contact'] as Record<string, never>)[
+  'office'
+] as Record<string, string>;
 
 describe('ServerErrorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ServerErrorComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideTestI18n()],
     }).compileComponents();
   });
 
@@ -31,13 +33,13 @@ describe('ServerErrorComponent', () => {
 
   it('offers the office phone and e-mail, dialling the number it prints', () => {
     const el = render();
-    expect(el.textContent).toContain(OFFICE_CONTACT.phone);
-    expect(el.textContent).toContain(OFFICE_CONTACT.email);
+    expect(el.textContent).toContain(OFFICE_CONTACT['phone']);
+    expect(el.textContent).toContain(OFFICE_CONTACT['email']);
     // The legacy labelled the `tel:` link with an envelope icon; here the link's
     // text is the number, so the label and the target agree.
-    const phone = el.querySelector(`a[href="${OFFICE_CONTACT.phoneHref}"]`);
-    expect(phone?.textContent).toContain(OFFICE_CONTACT.phone);
-    expect(el.querySelector(`a[href="mailto:${OFFICE_CONTACT.email}"]`)).not.toBeNull();
+    const phone = el.querySelector(`a[href="${OFFICE_CONTACT['phoneHref']}"]`);
+    expect(phone?.textContent).toContain(OFFICE_CONTACT['phone']);
+    expect(el.querySelector(`a[href="mailto:${OFFICE_CONTACT['email']}"]`)).not.toBeNull();
   });
 
   it('offers a link back to the calendar', () => {

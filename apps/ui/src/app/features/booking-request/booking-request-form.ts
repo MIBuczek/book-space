@@ -1,4 +1,4 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IPublicBuilding} from '@models/building.model';
 import {IBookingRequest, TClientType, TPayment} from '@models/booking.model';
 import {IBookedTime} from '@models/booked-time.model';
@@ -47,11 +47,18 @@ const CLOSING_HOUR = 23;
 /** The exclusive end of the day, allowed as a slot's end hour (local midnight). */
 const END_OF_DAY_HOUR = 24;
 
-/** The client-type labels, from the shared copy catalogue (NFR-005, T061). */
-const CLIENT_TYPE_LABELS: Record<TClientType, string> = COPY.labels.clientType;
+/** The client-type label keys, so the component reads each one through the active language. */
+const CLIENT_TYPE_LABELS: Record<TClientType, string> = {
+  INDIVIDUAL: 'labels.clientType.INDIVIDUAL',
+  COMPANY: 'labels.clientType.COMPANY',
+};
 
-/** The payment-method labels, from the shared copy catalogue. */
-const PAYMENT_LABELS: Record<TPayment, string> = COPY.labels.payment;
+/** The payment-method label keys, one per `TPayment`. */
+const PAYMENT_LABELS: Record<TPayment, string> = {
+  TRANSFER: 'labels.payment.TRANSFER',
+  CASH: 'labels.payment.CASH',
+  FREE: 'labels.payment.FREE',
+};
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
 interface IBookingFormValue {
@@ -168,33 +175,33 @@ const facilityAtHour = (day: Date, hour: number): Date => atFacilityTime(day, ho
  * the submit button is disabled until it is ticked (acceptance scenario 3), and the server
  * enforces it for a public caller, so a message would be a third copy of the rule.
  */
-const validateForm = (value: IBookingFormValue): TFieldErrors => {
+const validateForm = (value: IBookingFormValue, t: TranslateFn): TFieldErrors => {
   const errors: TFieldErrors = {};
 
   if (value.nick.length < NICK_MIN || value.nick.length > NICK_MAX) {
-    errors.nick = COPY.validation.nickRange(NICK_MIN, NICK_MAX);
+    errors.nick = t('validation.nickRange', {min: NICK_MIN, max: NICK_MAX});
   }
   if (value.personName.length < PERSON_NAME_MIN || value.personName.length > PERSON_NAME_MAX) {
-    errors.personName = COPY.validation.personNameRange(PERSON_NAME_MIN, PERSON_NAME_MAX);
+    errors.personName = t('validation.personNameRange', {min: PERSON_NAME_MIN, max: PERSON_NAME_MAX});
   }
   if (value.personCompany.length > PERSON_COMPANY_MAX) {
-    errors.personCompany = COPY.validation.personCompanyMax(PERSON_COMPANY_MAX);
+    errors.personCompany = t('validation.personCompanyMax', {max: PERSON_COMPANY_MAX});
   }
   if (
     !EMAIL_PATTERN.test(value.personEmail) ||
     value.personEmail.length < PERSON_EMAIL_MIN ||
     value.personEmail.length > PERSON_EMAIL_MAX
   ) {
-    errors.personEmail = COPY.validation.emailInvalid;
+    errors.personEmail = t('validation.emailInvalid');
   }
   if (value.personPhone.length < PERSON_PHONE_MIN || value.personPhone.length > PERSON_PHONE_MAX) {
-    errors.personPhone = COPY.validation.phoneRange(PERSON_PHONE_MIN, PERSON_PHONE_MAX);
+    errors.personPhone = t('validation.phoneRange', {min: PERSON_PHONE_MIN, max: PERSON_PHONE_MAX});
   }
   if (value.comments.length > COMMENTS_MAX) {
-    errors.comments = COPY.validation.commentsMax(COMMENTS_MAX);
+    errors.comments = t('validation.commentsMax', {max: COMMENTS_MAX});
   }
   if (value.discount !== '' && !DISCOUNT_PATTERN.test(value.discount)) {
-    errors.discount = COPY.validation.discountInvalid;
+    errors.discount = t('validation.discountInvalid');
   }
 
   return errors;

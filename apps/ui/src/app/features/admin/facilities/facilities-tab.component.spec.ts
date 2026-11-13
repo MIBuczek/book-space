@@ -6,6 +6,7 @@ import {IBuilding} from '@models/building.model';
 import {SessionStore} from '../../../core/session.store';
 import {adminUser, employeeUser, makeCapabilities, makeUser} from '../../../../testing/fixtures';
 import {FacilitiesTabComponent} from './facilities-tab.component';
+import {provideTestI18n} from '../../../../testing/i18n-testing';
 
 const facility = (overrides: Partial<IBuilding> = {}): IBuilding => ({
   _id: 'b1',
@@ -46,7 +47,7 @@ describe('FacilitiesTabComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [FacilitiesTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     session = TestBed.inject(SessionStore);

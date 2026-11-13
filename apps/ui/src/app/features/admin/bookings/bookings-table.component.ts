@@ -2,7 +2,8 @@ import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
-import {COPY} from '@booking/copy';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
 import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
 import {BookingsApi} from '../../../core/bookings.api';
 import {FacilitiesApi} from '../../../core/facilities.api';
@@ -70,78 +71,79 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
     PaginationComponent,
     SelectComponent,
     TableComponent,
+    TranslatePipe,
   ],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'bookings.title' | translate }}</h1>
 
       <div class="bs-bookings__controls">
         <book-space-select
-          [label]="copy.city"
+          [label]="'bookings.city' | translate"
           [options]="cityOptions"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
         <book-space-select
-          [label]="copy.facility"
+          [label]="'bookings.facility' | translate"
           [options]="buildingOptions()"
           [value]="building()"
-          [placeholder]="copy.facilityPlaceholder"
+          [placeholder]="'bookings.facilityPlaceholder' | translate"
           (valueChange)="onBuilding($event)"
         />
         <book-space-select
-          [label]="copy.period"
+          [label]="'bookings.period' | translate"
           [options]="periodSelectOptions"
           [value]="period()"
           (valueChange)="onPeriod($event)"
         />
         <book-space-input
-          [label]="copy.search"
+          [label]="'bookings.search' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)"
         />
         @if (canFilterUnapproved()) {
           <book-space-checkbox
-            [label]="copy.unapproved"
+            [label]="'bookings.unapproved' | translate"
             [checked]="unapprovedOnly()"
             (checkedChange)="onUnapprovedOnly($event)"
           />
         }
         <book-space-checkbox
-          [label]="copy.showDetails"
+          [label]="'bookings.showDetails' | translate"
           [checked]="showDetails()"
           (checkedChange)="onShowDetails($event)"
         />
       </div>
 
       @if (building() === '') {
-        <p>{{ copy.chooseFacility }}</p>
+        <p>{{ 'bookings.chooseFacility' | translate }}</p>
       } @else if (bookingsResource.isLoading()) {
-        <p role="status">{{ copy.loading }}</p>
+        <p role="status">{{ 'bookings.loading' | translate }}</p>
       } @else if (bookingsResource.status() === 'error') {
-        <p role="alert">{{ copy.loadError }}</p>
+        <p role="alert">{{ 'bookings.loadError' | translate }}</p>
       } @else {
         <book-space-table
-          [caption]="copy.caption"
+          [caption]="'bookings.caption' | translate"
           [columns]="columns"
           [rows]="rows()"
           [expandAll]="showDetails()"
-          [emptyMessage]="copy.empty"
+          [emptyMessage]="'bookings.empty' | translate"
         >
           <ng-template #rowDetails let-row>
             <div class="bs-bookings__details">
-              <p><strong>{{ copy.details.tenant }}</strong> {{ row.personName }}</p>
-              <p><strong>{{ copy.details.club }}</strong> {{ row.booking.personCompany || common.dash }}</p>
-              <p><strong>{{ copy.details.payment }}</strong> {{ row.booking.paymentMethod }}</p>
-              <p><strong>{{ copy.details.message }}</strong> {{ row.booking.comments || common.dash }}</p>
+              <p><strong>{{ 'bookings.details.tenant' | translate }}</strong> {{ row.personName }}</p>
+              <p><strong>{{ 'bookings.details.club' | translate }}</strong> {{ row.booking.personCompany || dash }}</p>
+              <p><strong>{{ 'bookings.details.payment' | translate }}</strong> {{ row.booking.paymentMethod }}</p>
+              <p><strong>{{ 'bookings.details.message' | translate }}</strong> {{ row.booking.comments || dash }}</p>
               <table class="bs-slots">
                 <thead>
                   <tr>
-                    <th scope="col">{{ copy.slotColumns.day }}</th>
-                    <th scope="col">{{ copy.slotColumns.hours }}</th>
-                    <th scope="col">{{ copy.slotColumns.status }}</th>
-                    <th scope="col">{{ copy.slotColumns.participants }}</th>
-                    <th scope="col">{{ copy.slotColumns.actions }}</th>
+                    <th scope="col">{{ 'bookings.slotColumns.day' | translate }}</th>
+                    <th scope="col">{{ 'bookings.slotColumns.hours' | translate }}</th>
+                    <th scope="col">{{ 'bookings.slotColumns.status' | translate }}</th>
+                    <th scope="col">{{ 'bookings.slotColumns.participants' | translate }}</th>
+                    <th scope="col">{{ 'bookings.slotColumns.actions' | translate }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -150,22 +152,22 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
                       <td>{{ slot.dayLabel }}</td>
                       <td>{{ slot.hoursLabel }}</td>
                       <td>{{ slot.statusLabel }}</td>
-                      <td>{{ slot.participants ?? common.dash }}</td>
+                      <td>{{ slot.participants ?? dash }}</td>
                       <td>
                         @if (slot.resolved) {
-                          <span>{{ copy.resolvedSlot }}</span>
+                          <span>{{ 'bookings.resolvedSlot' | translate }}</span>
                         } @else {
                           <book-space-button
                             variant="secondary"
                             (pressed)="openReschedule(row.booking, slot)"
                           >
-                            {{ copy.reschedule }}
+                            {{ 'bookings.reschedule' | translate }}
                           </book-space-button>
                           <book-space-button
                             variant="secondary"
                             (pressed)="openResolve(row.booking, slot)"
                           >
-                            {{ copy.resolve }}
+                            {{ 'bookings.resolve' | translate }}
                           </book-space-button>
                         }
                       </td>
@@ -182,26 +184,26 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
                 [variant]="row.accepted ? 'secondary' : 'primary'"
                 (pressed)="toggleApproval(row.booking)"
               >
-                {{ row.accepted ? copy.unapprove : copy.approve }}
+                {{ (row.accepted ? 'bookings.unapprove' : 'bookings.approve') | translate }}
               </book-space-button>
               <book-space-button
                 variant="secondary"
                 [disabled]="notifyTargetId() === row.booking._id"
                 (pressed)="notifyApplicant(row.booking)"
               >
-                {{ copy.notifyApplicant }}
+                {{ 'bookings.notifyApplicant' | translate }}
               </book-space-button>
             }
             @if (canArchiveBookings()) {
               <book-space-button variant="secondary" (pressed)="toggleArchive(row.booking)">
-                {{ row.archive ? copy.unarchive : copy.archive }}
+                {{ (row.archive ? 'bookings.unarchive' : 'bookings.archive') | translate }}
               </book-space-button>
             }
             <book-space-button variant="secondary" (pressed)="edit(row.booking)">
-              {{ common.edit }}
+              {{ 'common.edit' | translate }}
             </book-space-button>
             <book-space-button variant="danger" (pressed)="askDelete(row.booking)">
-              {{ copy.remove }}
+              {{ 'bookings.remove' | translate }}
             </book-space-button>
           </ng-template>
         </book-space-table>
@@ -213,7 +215,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
           (pageChange)="onPage($event)"
         />
         <book-space-select
-          [label]="common.pageSize"
+          [label]="'common.pageSize' | translate"
           [options]="pageSizeOptions"
           [value]="limitValue()"
           (valueChange)="onLimit($event)"
@@ -221,7 +223,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
 
         @if (canSeeConflicts()) {
           <p class="bs-bookings__conflicts" [class.bs-bookings__conflicts--active]="conflictCount() > 0">
-            {{ copy.conflicts(conflictCount()) }}
+            {{ 'bookings.conflicts' | translate: {count: conflictCount()} }}
           </p>
         }
 
@@ -237,111 +239,111 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
         <section class="bs-bookings__warning" role="alert">
           <p>{{ warning }}</p>
           <book-space-button variant="primary" (pressed)="confirmApproval()">
-            {{ copy.approveAnyway }}
+            {{ 'bookings.approveAnyway' | translate }}
           </book-space-button>
-          <book-space-button variant="secondary" (pressed)="cancelApproval()">{{ common.cancel }}</book-space-button>
+          <book-space-button variant="secondary" (pressed)="cancelApproval()">{{ 'common.cancel' | translate }}</book-space-button>
         </section>
       }
 
       <book-space-modal
         [open]="rescheduleTarget() !== null"
-        [title]="copy.modals.reschedule"
+        [title]="'bookings.modals.reschedule' | translate"
         (closed)="cancelReschedule()"
       >
         @if (rescheduleTarget()) {
           <book-space-date-picker
-            [label]="copy.slotColumns.day"
+            [label]="'bookings.slotColumns.day' | translate"
             [value]="rescheduleDay()"
             (valueChange)="rescheduleDay.set($event)"
           />
           <book-space-select
-            [label]="copy.hours.from"
+            [label]="'bookings.hours.from' | translate"
             [options]="startHourOptions"
             [value]="rescheduleStart()"
             (valueChange)="rescheduleStart.set($event)"
           />
           <book-space-select
-            [label]="copy.hours.to"
+            [label]="'bookings.hours.to' | translate"
             [options]="endHourOptions"
             [value]="rescheduleEnd()"
             (valueChange)="rescheduleEnd.set($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmReschedule()">{{ common.save }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelReschedule()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmReschedule()">{{ 'common.save' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelReschedule()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="resolveTarget() !== null"
-        [title]="copy.modals.resolve"
+        [title]="'bookings.modals.resolve' | translate"
         (closed)="cancelResolve()"
       >
         @if (resolveTarget()) {
           <book-space-select
-            [label]="copy.resolveFields.status"
+            [label]="'bookings.resolveFields.status' | translate"
             [options]="statusOptions"
             [value]="resolveStatus()"
             (valueChange)="onResolveStatus($event)"
           />
           <book-space-input
-            [label]="copy.resolveFields.participants"
+            [label]="'bookings.resolveFields.participants' | translate"
             type="number"
             [value]="resolveParticipants()"
             (valueChange)="onResolveParticipants($event)"
           />
           <book-space-input
-            [label]="copy.resolveFields.comments"
+            [label]="'bookings.resolveFields.comments' | translate"
             [value]="resolveComments()"
             (valueChange)="onResolveComments($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmResolve()">{{ common.save }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelResolve()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmResolve()">{{ 'common.save' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelResolve()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="editTarget() !== null"
-        [title]="copy.modals.edit"
+        [title]="'bookings.modals.edit' | translate"
         (closed)="cancelEdit()"
       >
         @if (editTarget()) {
           <book-space-input
-            [label]="copy.fields.nick"
+            [label]="'bookings.fields.nick' | translate"
             [value]="editNick()"
             (valueChange)="editNick.set($event)"
           />
           <book-space-input
-            [label]="copy.fields.personName"
+            [label]="'bookings.fields.personName' | translate"
             [value]="editPersonName()"
             (valueChange)="editPersonName.set($event)"
           />
           <book-space-input
-            [label]="copy.fields.phone"
+            [label]="'bookings.fields.phone' | translate"
             [value]="editPhone()"
             (valueChange)="editPhone.set($event)"
           />
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmEdit()">{{ common.save }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmEdit()">{{ 'common.save' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deleteTarget() !== null"
-        [title]="copy.modals.delete"
+        [title]="'bookings.modals.delete' | translate"
         role="alertdialog"
         (closed)="cancelDelete()"
       >
         @if (deleteTarget()) {
-          <p>{{ copy.deleteConfirm }}</p>
+          <p>{{ 'bookings.deleteConfirm' | translate }}</p>
           <div class="bs-modal__actions">
-            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ copy.remove }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="danger" (pressed)="confirmDelete()">{{ 'bookings.remove' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelDelete()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
@@ -400,8 +402,8 @@ export class BookingsTableComponent {
   private readonly notificationsApi = inject(NotificationsApi);
   private readonly session = inject(SessionStore);
 
-  readonly copy = COPY.bookings;
-  readonly common = COPY.common;
+  private readonly t = injectTranslate();
+  readonly dash = this.t('common.dash');
   readonly columns = BOOKING_COLUMNS;
   readonly cityOptions = CITY_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
@@ -409,7 +411,7 @@ export class BookingsTableComponent {
     value: String(size),
     label: String(size),
   }));
-  readonly periodSelectOptions: ISelectOption[] = periodOptions(new Date()).map((option) => ({
+  readonly periodSelectOptions: ISelectOption[] = periodOptions(new Date(), this.t).map((option) => ({
     value: option.value,
     label: option.label,
   }));
@@ -482,7 +484,7 @@ export class BookingsTableComponent {
   });
 
   readonly resolvedPeriod = computed(() =>
-    resolvePeriod(this.period(), periodOptions(new Date()), new Date())
+    resolvePeriod(this.period(), periodOptions(new Date(), this.t), new Date())
   );
 
   /** The staff list read, re-run whenever a filter changes. */
@@ -529,7 +531,7 @@ export class BookingsTableComponent {
 
   readonly rows = computed<Record<string, unknown>[]>(() => {
     const items = this.bookingsResource.hasValue() ? this.bookingsResource.value().items : [];
-    return items.map((booking) => toRow(booking, this.conflicts()));
+    return items.map((booking) => toRow(booking, this.conflicts(), this.t));
   });
 
   readonly total = computed(() => (this.bookingsResource.hasValue() ? this.bookingsResource.value().total : 0));
@@ -539,7 +541,7 @@ export class BookingsTableComponent {
   }
 
   slotRows(booking: IBooking): ISlotRow[] {
-    return toSlotRows(booking);
+    return toSlotRows(booking, this.t);
   }
 
   onCity(city: string): void {
@@ -591,7 +593,7 @@ export class BookingsTableComponent {
     const accepted = !booking.accepted;
     if (accepted && this.conflicts().includes(booking._id)) {
       this.pendingApprovalId.set(booking._id);
-      this.approvalWarning.set(COPY.bookings.approveWarning);
+      this.approvalWarning.set(this.t('bookings.approveWarning'));
       return;
     }
     this.sendApproval(booking._id, accepted, false);
@@ -635,11 +637,11 @@ export class BookingsTableComponent {
     this.notificationsApi.notifyBooking({bookingId: booking._id, audience: 'APPLICANT'}).subscribe({
       next: () => {
         this.notifyTargetId.set(null);
-        this.notifySuccess.set(this.copy.notifySent);
+        this.notifySuccess.set(this.t('bookings.notifySent'));
       },
       error: () => {
         this.notifyTargetId.set(null);
-        this.notifyError.set(this.copy.notifyFailure);
+        this.notifyError.set(this.t('bookings.notifyFailure'));
       },
     });
   }

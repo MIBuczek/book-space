@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { COPY } from '@booking/copy';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CookieNoticeStore } from '../../core/cookie-notice.store';
 
 /**
@@ -11,20 +11,23 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
  * `CookieNoticeStore`, which stores the acknowledgement as `'true'` rather than
  * the legacy `'false'`.
  *
- * The text comes from the shared copy catalogue (NFR-005, T061).
+ * The text is translated (FR-001).
  */
 @Component({
   selector: 'book-space-cookie-notice',
+  imports: [TranslatePipe],
   template: `
     @if (!cookies.acknowledged()) {
-      <aside class="bs-cookies" [attr.aria-label]="copy.ariaLabel">
-        <h2 class="bs-cookies__header">{{ copy.heading }}</h2>
+      <aside class="bs-cookies" [attr.aria-label]="'cookieNotice.ariaLabel' | translate">
+        <h2 class="bs-cookies__header">{{ 'cookieNotice.heading' | translate }}</h2>
         <p class="bs-cookies__text">
-          {{ copy.text }}
-          <a [href]="privacyUrl" target="_blank" rel="noopener">{{ copy.learnMore }}</a>
+          {{ 'cookieNotice.text' | translate }}
+          <a [href]="privacyUrl" target="_blank" rel="noopener">{{
+            'cookieNotice.learnMore' | translate
+          }}</a>
         </p>
         <button type="button" class="bs-cookies__accept" (click)="cookies.acknowledge()">
-          {{ copy.accept }}
+          {{ 'cookieNotice.accept' | translate }}
         </button>
       </aside>
     }
@@ -67,7 +70,7 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
   ],
 })
 export class CookieNoticeComponent {
-  readonly copy = COPY.cookieNotice;
+  private readonly translate = inject(TranslateService);
   readonly cookies = inject(CookieNoticeStore);
-  readonly privacyUrl = COPY.contact.privacyPolicyUrl;
+  readonly privacyUrl = this.translate.instant('contact.privacyPolicyUrl');
 }

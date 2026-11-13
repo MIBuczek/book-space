@@ -1,4 +1,4 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {CITY_LABELS, IBuilding} from '@models/building.model';
 import {IMessageRequest} from '@models/notification.model';
 
@@ -55,8 +55,8 @@ type TEmployeeMessageErrors = Partial<Record<keyof IEmployeeMessageValue, string
  */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The yes/no labels for the boolean flags, from the shared copy catalogue (NFR-005, T061). */
-const yesNo = (value: boolean): string => (value ? COPY.common.yes : COPY.common.no);
+/** The yes/no labels for the boolean flags, as translation keys (FR-001). */
+const yesNo = (value: boolean): string => (value ? 'common.yes' : 'common.no');
 
 /**
  * The facility detail rows (FR-009).
@@ -66,21 +66,21 @@ const yesNo = (value: boolean): string => (value ? COPY.common.yes : COPY.common
  * the facility can actually be booked as. An absent facility yields no rows, which is how the
  * screen shows "nothing loaded" rather than a stale default.
  */
-const facilityDetails = (facility: IBuilding | null): IDetailRow[] => {
+const facilityDetails = (facility: IBuilding | null, t: TranslateFn): IDetailRow[] => {
   if (facility === null) {
     return [];
   }
   return [
-    {label: COPY.facilities.details.city, value: CITY_LABELS[facility.city]},
-    {label: COPY.facilities.details.name, value: facility.name},
-    {label: COPY.facilities.details.phone, value: facility.phone},
-    {label: COPY.facilities.details.email, value: facility.email},
-    {label: COPY.facilities.details.sizes, value: facility.sizes.join(', ')},
-    {label: COPY.facilities.details.lighting, value: yesNo(facility.lighting)},
-    {label: COPY.facilities.details.toilets, value: yesNo(facility.toilets)},
+    {label: t('facilities.details.city'), value: CITY_LABELS[facility.city]},
+    {label: t('facilities.details.name'), value: facility.name},
+    {label: t('facilities.details.phone'), value: facility.phone},
+    {label: t('facilities.details.email'), value: facility.email},
+    {label: t('facilities.details.sizes'), value: facility.sizes.join(', ')},
+    {label: t('facilities.details.lighting'), value: t(yesNo(facility.lighting))},
+    {label: t('facilities.details.toilets'), value: t(yesNo(facility.toilets))},
     // The tab receives retired facilities too (T059), so the status is what tells an
     // administrator the facility is deactivated rather than simply in use.
-    {label: COPY.facilities.details.status, value: facility.active !== false ? COPY.facilities.active.yes : COPY.facilities.active.no},
+    {label: t('facilities.details.status'), value: t(facility.active !== false ? 'facilities.active.yes' : 'facilities.active.no')},
   ];
 };
 
@@ -110,17 +110,20 @@ const emptyEmployeeMessage = (facility: IBuilding | null): IEmployeeMessageValue
  * `recipient` must be an e-mail). The server is the authority and answers `422`; the form
  * checks the same rules so an obviously invalid message is caught before a round trip.
  */
-const validateEmployeeMessage = (value: IEmployeeMessageValue): TEmployeeMessageErrors => {
+const validateEmployeeMessage = (
+  value: IEmployeeMessageValue,
+  t: TranslateFn
+): TEmployeeMessageErrors => {
   const errors: TEmployeeMessageErrors = {};
 
   if (value.person.trim() === '') {
-    errors.person = COPY.validation.personRequired;
+    errors.person = t('validation.personRequired');
   }
   if (!EMAIL_PATTERN.test(value.recipient)) {
-    errors.recipient = COPY.validation.emailInvalid;
+    errors.recipient = t('validation.emailInvalid');
   }
   if (value.message.trim() === '') {
-    errors.message = COPY.validation.messageRequired;
+    errors.message = t('validation.messageRequired');
   }
 
   return errors;
@@ -152,14 +155,14 @@ const buildMessageRequest = (
  * and any other status — a `502` provider failure in particular — shows a retry message. There
  * is no status that returns `null`.
  */
-const sendFailureMessage = (status: number): string => {
+const sendFailureMessage = (status: number, t: TranslateFn): string => {
   // A `422` is a field problem the form already validates in Polish; the server's English
   // message list is not rendered (NFR-005, T061). Any other status is a provider failure
   // (FR-036), which is a retry prompt.
   if (status === 422) {
-    return COPY.facilities.sendValidation;
+    return t('facilities.sendValidation');
   }
-  return COPY.facilities.sendFailure;
+  return t('facilities.sendFailure');
 };
 
 export {

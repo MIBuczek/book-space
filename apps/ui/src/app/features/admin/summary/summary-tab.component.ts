@@ -1,6 +1,7 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {COPY} from '@booking/copy';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
 import {IClientSummary} from '@models/reporting.model';
 import {ClientsApi} from '../../../core/clients.api';
 import {ReportingApi} from '../../../core/reporting.api';
@@ -49,35 +50,35 @@ const thisMonth = (): Date => {
  */
 @Component({
   selector: 'book-space-summary-tab',
-  imports: [ButtonComponent, CheckboxComponent, MonthPickerComponent, SelectComponent],
+  imports: [ButtonComponent, CheckboxComponent, MonthPickerComponent, SelectComponent, TranslatePipe],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'summary.title' | translate }}</h1>
 
       <div class="bs-summary__controls">
         <book-space-select
-          [label]="copy.client"
-          [placeholder]="copy.clientPlaceholder"
+          [label]="'summary.client' | translate"
+          [placeholder]="'summary.clientPlaceholder' | translate"
           [options]="clientOptions()"
           [value]="clientId()"
           (valueChange)="onClient($event)"
         />
 
         <book-space-month-picker
-          [label]="copy.fromMonth"
+          [label]="'summary.fromMonth' | translate"
           [value]="fromMonth()"
           [disabled]="fromTheBeginning()"
           (valueChange)="onFromMonth($event)"
         />
         <book-space-month-picker
-          [label]="copy.toMonth"
+          [label]="'summary.toMonth' | translate"
           [value]="toMonth()"
           [disabled]="fromTheBeginning()"
           (valueChange)="onToMonth($event)"
         />
 
         <book-space-checkbox
-          [label]="copy.fromBeginning"
+          [label]="'summary.fromBeginning' | translate"
           [checked]="fromTheBeginning()"
           (checkedChange)="onFromTheBeginning($event)"
         />
@@ -89,21 +90,21 @@ const thisMonth = (): Date => {
 
       <div class="bs-summary__actions">
         <book-space-button [disabled]="!canGenerate()" (pressed)="generate()">
-          {{ copy.generate }}
+          {{ 'summary.generate' | translate }}
         </book-space-button>
-        <book-space-button variant="secondary" (pressed)="clear()">{{ copy.clear }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="clear()">{{ 'summary.clear' | translate }}</book-space-button>
         <book-space-button variant="secondary" [disabled]="!canGenerate()" (pressed)="downloadAllCsv()">
-          {{ copy.downloadAll }}
+          {{ 'summary.downloadAll' | translate }}
         </book-space-button>
       </div>
 
       @if (summaryResource.isLoading()) {
-        <p role="status">{{ copy.loading }}</p>
+        <p role="status">{{ 'summary.loading' | translate }}</p>
       } @else if (summaryResource.status() === 'error') {
-        <p role="alert">{{ copy.loadError }}</p>
+        <p role="alert">{{ 'summary.loadError' | translate }}</p>
       } @else if (summary(); as current) {
-        <section class="bs-printable" [attr.aria-label]="copy.reportAria">
-          <h2>{{ copy.reportTitle }}</h2>
+        <section class="bs-printable" [attr.aria-label]="'summary.reportAria' | translate">
+          <h2>{{ 'summary.reportTitle' | translate }}</h2>
           <p>{{ periodText() }}</p>
 
           <dl class="bs-summary__client">
@@ -128,20 +129,20 @@ const thisMonth = (): Date => {
                 @for (entry of report.entries; track $index) {
                   <div class="bs-summary__booking">
                     <p>
-                      {{ copy.booking.building }}: {{ entry.building }} · {{ copy.booking.size }}: {{ entry.size }} ·
-                      {{ copy.booking.discount }}: {{ entry.discount }} · {{ copy.booking.payment }}: {{ entry.payment }} ·
-                      {{ copy.booking.extraOptions }}: {{ entry.extraOptions }}
+                      {{ 'summary.booking.building' | translate }}: {{ entry.building }} · {{ 'summary.booking.size' | translate }}: {{ entry.size }} ·
+                      {{ 'summary.booking.discount' | translate }}: {{ entry.discount }} · {{ 'summary.booking.payment' | translate }}: {{ entry.payment }} ·
+                      {{ 'summary.booking.extraOptions' | translate }}: {{ entry.extraOptions }}
                     </p>
                     @if (entry.selectedOptions) {
-                      <p>{{ copy.booking.selectedOptions }}: {{ entry.selectedOptions }}</p>
+                      <p>{{ 'summary.booking.selectedOptions' | translate }}: {{ entry.selectedOptions }}</p>
                     }
-                    <p>{{ copy.booking.comments }}: {{ entry.comments }}</p>
+                    <p>{{ 'summary.booking.comments' | translate }}: {{ entry.comments }}</p>
                     <ul>
                       @for (slot of entry.slots; track $index) {
                         <li>
-                          {{ copy.slot.day }}: {{ slot.day }} · {{ copy.slot.hours }}: {{ slot.hours }} ·
-                          {{ copy.slot.participants }}: {{ slot.participants }} · {{ copy.slot.status }}: {{ slot.status }} ·
-                          {{ copy.slot.comments }}: {{ slot.comments }}
+                          {{ 'summary.slot.day' | translate }}: {{ slot.day }} · {{ 'summary.slot.hours' | translate }}: {{ slot.hours }} ·
+                          {{ 'summary.slot.participants' | translate }}: {{ slot.participants }} · {{ 'summary.slot.status' | translate }}: {{ slot.status }} ·
+                          {{ 'summary.slot.comments' | translate }}: {{ slot.comments }}
                         </li>
                       }
                     </ul>
@@ -154,14 +155,14 @@ const thisMonth = (): Date => {
 
         <div class="bs-summary__downloads">
           <book-space-button [disabled]="!canGenerate()" (pressed)="downloadClientCsv()">
-            {{ copy.downloadClient }}
+            {{ 'summary.downloadClient' | translate }}
           </book-space-button>
           <book-space-button variant="secondary" (pressed)="printReport()">
-            {{ copy.print }}
+            {{ 'summary.print' | translate }}
           </book-space-button>
         </div>
       } @else {
-        <p>{{ copy.empty }}</p>
+        <p>{{ 'summary.empty' | translate }}</p>
       }
     </section>
   `,
@@ -192,7 +193,7 @@ export class SummaryTabComponent {
   private readonly reportingApi = inject(ReportingApi);
   private readonly reportExport = inject(ReportExport);
 
-  readonly copy = COPY.summary;
+  private readonly t = injectTranslate();
   readonly clientId = signal('');
   readonly fromMonth = signal<Date>(thisMonth());
   readonly toMonth = signal<Date>(thisMonth());
@@ -215,7 +216,7 @@ export class SummaryTabComponent {
 
   /** The range error, or `null` when the selection can be submitted (the corrected legacy bug). */
   readonly rangeError = computed(() =>
-    rangeError(this.fromMonth(), this.toMonth(), this.fromTheBeginning())
+    rangeError(this.fromMonth(), this.toMonth(), this.fromTheBeginning(), this.t)
   );
 
   /** A client and a valid range are the two preconditions for generating or exporting. */
@@ -242,7 +243,7 @@ export class SummaryTabComponent {
 
   readonly detailRows = computed(() => {
     const summary = this.summary();
-    return summary === null ? [] : clientDetailRows(summary.client);
+    return summary === null ? [] : clientDetailRows(summary.client, this.t);
   });
 
   readonly totals = computed(() => {
@@ -252,10 +253,10 @@ export class SummaryTabComponent {
 
   readonly reports = computed(() => {
     const summary = this.summary();
-    return summary === null ? [] : cityReports(summary);
+    return summary === null ? [] : cityReports(summary, this.t);
   });
 
-  readonly periodText = computed(() => periodText(this.period()));
+  readonly periodText = computed(() => periodText(this.period(), this.t));
 
   onClient(clientId: string): void {
     this.clientId.set(clientId);
@@ -292,13 +293,13 @@ export class SummaryTabComponent {
     if (summary === null) {
       return;
     }
-    const filename = csvFilename(summary.client.name, this.period(), false);
+    const filename = csvFilename(summary.client.name, this.period(), false, this.t);
     this.reportingApi.summaryCsv(this.query()).subscribe((csv) => this.reportExport.download(filename, csv));
   }
 
   /** Downloads every client's CSV (FR-029), named per the legacy pattern. */
   downloadAllCsv(): void {
-    const filename = csvFilename(null, this.period(), true);
+    const filename = csvFilename(null, this.period(), true, this.t);
     this.reportingApi.summaryCsv({...this.query(), clientId: undefined}).subscribe((csv) =>
       this.reportExport.download(filename, csv)
     );

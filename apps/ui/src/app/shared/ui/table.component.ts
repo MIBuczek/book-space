@@ -1,6 +1,6 @@
-import { Component, contentChild, input, TemplateRef } from '@angular/core';
+import { Component, computed, contentChild, inject, input, TemplateRef } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { COPY } from '@booking/copy';
+import { injectTranslate } from '@booking/i18n';
 
 interface ITableColumn {
   key: string;
@@ -34,7 +34,7 @@ interface ITableColumn {
             <th scope="col">{{ column.label }}</th>
           }
           @if (rowActions()) {
-            <th scope="col">{{ actionsLabel() }}</th>
+            <th scope="col">{{ resolvedActionsLabel() }}</th>
           }
         </tr>
       </thead>
@@ -61,7 +61,7 @@ interface ITableColumn {
           }
         } @empty {
           <tr>
-            <td [attr.colspan]="columnCount()">{{ emptyMessage() }}</td>
+            <td [attr.colspan]="columnCount()">{{ resolvedEmptyMessage() }}</td>
           </tr>
         }
       </tbody>
@@ -92,14 +92,24 @@ interface ITableColumn {
   ],
 })
 export class TableComponent {
+  private readonly t = injectTranslate();
   readonly columns = input.required<ITableColumn[]>();
   readonly rows = input.required<Record<string, unknown>[]>();
   readonly caption = input('');
-  readonly emptyMessage = input<string>(COPY.shared.table.empty);
+  /** The empty-state text; the caller overrides it, so it is not translated here. */
+  readonly emptyMessage = input('');
   /** The row property whose value identifies the row, normally `_id`. */
   readonly trackKey = input('_id');
   /** The label for the projected action column; only rendered when `rowActions` is given. */
-  readonly actionsLabel = input<string>(COPY.shared.table.actions);
+  readonly actionsLabel = input('');
+  /** The translated default empty message, used when the caller supplies none. */
+  readonly resolvedEmptyMessage = computed(
+    () => this.emptyMessage() || this.t('shared.table.empty')
+  );
+  /** The translated default action-column label, used when the caller supplies none. */
+  readonly resolvedActionsLabel = computed(
+    () => this.actionsLabel() || this.t('shared.table.actions')
+  );
   /** Whether every row's `rowDetails` template is rendered. */
   readonly expandAll = input(false);
 

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PaginationComponent } from './pagination.component';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 @Component({
   imports: [PaginationComponent],
@@ -23,7 +24,7 @@ class HostComponent {
 
 describe('PaginationComponent', () => {
   const create = async () => {
-    await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [HostComponent], providers: [provideTestI18n()] }).compileComponents();
     return TestBed.createComponent(HostComponent);
   };
 

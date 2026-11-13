@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { SignInComponent } from './sign-in.component';
 import { adminUser } from '../../../testing/fixtures';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 const user = adminUser();
 
@@ -16,7 +17,12 @@ describe('SignInComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [SignInComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideTestI18n(),
+      ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

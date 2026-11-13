@@ -199,6 +199,7 @@
       "delete": "Usuń / Odrzuć rezerwację"
     },
     "deleteConfirm": "Czy na pewno chcesz usunąć tą rezerwację? Odrzucenie wniosku usuwa go bezpowrotnie.",
+    "remove": "Usuń / Odrzuć",
     "fields": {
       "nick": "Nazwa w kalendarzu",
       "personName": "Imię i nazwisko",

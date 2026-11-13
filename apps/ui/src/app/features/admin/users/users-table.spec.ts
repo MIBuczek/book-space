@@ -14,6 +14,7 @@ import {
   validateUserForm,
 } from './users-table';
 import type {IUserFormValue} from './users-table';
+import {testTranslate} from '../../../../testing/i18n-testing';
 
 /**
  * The Users tab's pure logic (FR-045, FR-047).
@@ -33,9 +34,13 @@ const form = (overrides: Partial<IUserFormValue> = {}): IUserFormValue => ({
   ...overrides,
 });
 
+const t = testTranslate();
+
 describe('labels', () => {
   it('labels every role in Polish', () => {
-    expect(ROLE_LABELS).toEqual({ADMIN: 'Administrator', OFFICE: 'Biuro', EMPLOYEE: 'Pracownik'});
+    expect(ROLE_LABELS['ADMIN']).toBe('users.roleLabels.ADMIN');
+    expect(ROLE_LABELS['OFFICE']).toBe('users.roleLabels.OFFICE');
+    expect(ROLE_LABELS['EMPLOYEE']).toBe('users.roleLabels.EMPLOYEE');
   });
 
   it('offers every role as an option', () => {
@@ -112,47 +117,47 @@ describe('formFromUser', () => {
 
 describe('validateUserForm', () => {
   it('accepts a complete create form', () => {
-    expect(validateUserForm(form({role: 'OFFICE', city: 'siechnice'}), false)).toEqual({});
+    expect(validateUserForm(form({role: 'OFFICE', city: 'siechnice'}), false, t)).toEqual({});
   });
 
   it('requires a name of the server bound', () => {
-    expect(validateUserForm(form({firstName: 'Al'}), false).firstName).toBeDefined();
+    expect(validateUserForm(form({firstName: 'Al'}), false, t).firstName).toBeDefined();
   });
 
   it('rejects a name over the server maximum', () => {
     const long = 'a'.repeat(NAME_MAX + 1);
-    expect(validateUserForm(form({firstName: long}), false).firstName).toBeDefined();
-    expect(validateUserForm(form({lastName: long}), false).lastName).toBeDefined();
+    expect(validateUserForm(form({firstName: long}), false, t).firstName).toBeDefined();
+    expect(validateUserForm(form({lastName: long}), false, t).lastName).toBeDefined();
   });
 
   it('rejects a malformed e-mail', () => {
-    expect(validateUserForm(form({email: 'not-an-email'}), false).email).toBeDefined();
-    expect(validateUserForm(form({email: 'a@b'}), false).email).toBeDefined();
+    expect(validateUserForm(form({email: 'not-an-email'}), false, t).email).toBeDefined();
+    expect(validateUserForm(form({email: 'a@b'}), false, t).email).toBeDefined();
   });
 
   it('requires a password on create', () => {
-    expect(validateUserForm(form({password: '', recheckPassword: ''}), false).password).toBeDefined();
+    expect(validateUserForm(form({password: '', recheckPassword: ''}), false, t).password).toBeDefined();
   });
 
   it('does not require a password on edit, because blank means unchanged', () => {
-    const errors = validateUserForm(form({password: '', recheckPassword: ''}), true);
+    const errors = validateUserForm(form({password: '', recheckPassword: ''}), true, t);
     expect(errors.password).toBeUndefined();
   });
 
   it('requires the confirmation to match whenever a password is supplied', () => {
     expect(
-      validateUserForm(form({password: 'secret1', recheckPassword: 'secret2'}), true).recheckPassword
+      validateUserForm(form({password: 'secret1', recheckPassword: 'secret2'}), true, t).recheckPassword
     ).toBeDefined();
   });
 
   it('ignores the confirmation when no password is supplied on edit', () => {
-    const errors = validateUserForm(form({password: '', recheckPassword: 'anything'}), true);
+    const errors = validateUserForm(form({password: '', recheckPassword: 'anything'}), true, t);
     expect(errors.recheckPassword).toBeUndefined();
   });
 
   it('requires a city for a non-administrator and not for an administrator', () => {
-    expect(validateUserForm(form({role: 'OFFICE', city: ''}), false).city).toBeDefined();
-    expect(validateUserForm(form({role: 'ADMIN', city: ''}), false).city).toBeUndefined();
+    expect(validateUserForm(form({role: 'OFFICE', city: ''}), false, t).city).toBeDefined();
+    expect(validateUserForm(form({role: 'ADMIN', city: ''}), false, t).city).toBeUndefined();
   });
 });
 
@@ -198,25 +203,25 @@ describe('buildUpdateRequest', () => {
 
 describe('mapServerErrors', () => {
   it('matches a message to the field it names', () => {
-    const {fields, general} = mapServerErrors(['E-mail address need to contains correct pattern.']);
+    const {fields, general} = mapServerErrors(['E-mail address need to contains correct pattern.'], t);
     expect(fields.email).toBeDefined();
     expect(general).toBeNull();
   });
 
   it('matches a password confirmation message to the confirmation field, not the password', () => {
-    const {fields} = mapServerErrors(['Passwords not match each other']);
+    const {fields} = mapServerErrors(['Passwords not match each other'], t);
     expect(fields.recheckPassword).toBeDefined();
     expect(fields.password).toBeUndefined();
   });
 
   it('returns the generic prompt for a message that names no field', () => {
-    const {fields, general} = mapServerErrors(['Role must be one of ADMIN, OFFICE, EMPLOYEE.']);
+    const {fields, general} = mapServerErrors(['Role must be one of ADMIN, OFFICE, EMPLOYEE.'], t);
     expect(fields).toEqual({});
     expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
   it('shows one generic prompt for several unmatched messages', () => {
-    const {general} = mapServerErrors(['Role is not allowed', 'Please try again']);
+    const {general} = mapServerErrors(['Role is not allowed', 'Please try again'], t);
     expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 });
@@ -231,7 +236,7 @@ describe('toRow', () => {
       role: 'OFFICE',
       city: 'siechnice',
       active: true,
-    });
+    }, t);
     expect(row['name']).toBe('Anna Nowak');
     expect(row['roleLabel']).toBe('Biuro');
     expect(row['cityLabel']).toBe('siechnice');
@@ -246,7 +251,7 @@ describe('toRow', () => {
       email: 'ada@example.com',
       role: 'ADMIN',
       active: false,
-    });
+    }, t);
     expect(row['cityLabel']).toBe('—');
     expect(row['activeLabel']).toBe('Nieaktywne');
   });

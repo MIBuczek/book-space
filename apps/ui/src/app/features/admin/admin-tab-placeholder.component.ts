@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { COPY } from '@booking/copy';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * A tab's placeholder body.
@@ -11,10 +11,11 @@ import { COPY } from '@booking/copy';
  */
 @Component({
   selector: 'book-space-admin-tab',
+  imports: [TranslatePipe],
   template: `
     <section class="bs-page">
-      <h1>{{ title() }}</h1>
-      <p>{{ copy.placeholder.body }}</p>
+      <h1>{{ title() | translate }}</h1>
+      <p>{{ 'admin.placeholder.body' | translate }}</p>
     </section>
   `,
   styles: [
@@ -26,6 +27,5 @@ import { COPY } from '@booking/copy';
   ],
 })
 export class AdminTabPlaceholderComponent {
-  readonly copy = COPY.admin;
-  readonly title = input(COPY.admin.placeholder.title);
+  readonly title = input('admin.placeholder.title');
 }

@@ -1,7 +1,8 @@
 import {Component, computed, inject, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {COPY} from '@booking/copy';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
 import {IUser, TUserRole} from '@models/user.model';
 import {IBuilding, CITY_LABELS} from '@models/building.model';
 import {IValidationError} from '@models/validation-error.model';
@@ -33,13 +34,6 @@ import {
 } from './users-table';
 import type {IUserFormValue, TUserFieldErrors} from './users-table';
 
-const ROLE_SELECT_OPTIONS: ISelectOption[] = ROLE_OPTIONS.map((role) => ({
-  value: role,
-  label: ROLE_LABELS[role],
-}));
-
-const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
-
 /**
  * The admin Users tab (FR-045, FR-047, issue #118).
  *
@@ -65,35 +59,36 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
     ModalComponent,
     SelectComponent,
     TableComponent,
+    TranslatePipe,
   ],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'users.title' | translate }}</h1>
 
       <div class="bs-users__controls">
         <book-space-button variant="primary" (pressed)="openCreate()">
-          {{ copy.add }}
+          {{ 'users.add' | translate }}
         </book-space-button>
       </div>
 
       @if (usersResource.isLoading()) {
-        <p role="status">{{ copy.loading }}</p>
+        <p role="status">{{ 'users.loading' | translate }}</p>
       } @else if (usersResource.status() === 'error') {
-        <p role="alert">{{ copy.loadError }}</p>
+        <p role="alert">{{ 'users.loadError' | translate }}</p>
       } @else {
         <book-space-table
-          [caption]="copy.caption"
+          [caption]="'users.caption' | translate"
           [columns]="columns"
           [rows]="rows()"
-          [emptyMessage]="copy.empty"
+          [emptyMessage]="'users.empty' | translate"
         >
           <ng-template #rowActions let-row>
             <book-space-button variant="secondary" (pressed)="openEdit(row.user)">
-              {{ common.edit }}
+              {{ 'common.edit' | translate }}
             </book-space-button>
             @if (row.user.active) {
               <book-space-button variant="danger" (pressed)="askDeactivate(row.user)">
-                {{ copy.deactivate }}
+                {{ 'users.deactivate' | translate }}
               </book-space-button>
             }
           </ng-template>
@@ -102,53 +97,53 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
 
       <book-space-modal
         [open]="editing()"
-        [title]="editTarget() ? copy.editTitle : copy.createTitle"
+        [title]="(editTarget() ? 'users.editTitle' : 'users.createTitle') | translate"
         (closed)="cancelEdit()"
       >
         @if (editing()) {
           <book-space-input
-            [label]="copy.fields.firstName"
+            [label]="'users.fields.firstName' | translate"
             [value]="form().firstName"
             [error]="fieldErrors().firstName ?? null"
             (valueChange)="update({firstName: $event})"
           />
           <book-space-input
-            [label]="copy.fields.lastName"
+            [label]="'users.fields.lastName' | translate"
             [value]="form().lastName"
             [error]="fieldErrors().lastName ?? null"
             (valueChange)="update({lastName: $event})"
           />
           <book-space-input
-            [label]="copy.fields.email"
+            [label]="'users.fields.email' | translate"
             type="email"
             [value]="form().email"
             [error]="fieldErrors().email ?? null"
             (valueChange)="update({email: $event})"
           />
           <book-space-input
-            [label]="copy.fields.password"
+            [label]="'users.fields.password' | translate"
             type="password"
-            [placeholder]="editTarget() ? copy.passwordPlaceholderEdit : ''"
+            [placeholder]="(editTarget() ? 'users.passwordPlaceholderEdit' : '') | translate"
             [value]="form().password"
             [error]="fieldErrors().password ?? null"
             (valueChange)="update({password: $event})"
           />
           <book-space-input
-            [label]="copy.fields.recheckPassword"
+            [label]="'users.fields.recheckPassword' | translate"
             type="password"
             [value]="form().recheckPassword"
             [error]="fieldErrors().recheckPassword ?? null"
             (valueChange)="update({recheckPassword: $event})"
           />
           <book-space-select
-            [label]="copy.fields.role"
-            [options]="roleOptions"
+            [label]="'users.fields.role' | translate"
+            [options]="roleOptions()"
             [value]="form().role"
             (valueChange)="onRole($event)"
           />
           @if (cityRequired()) {
             <book-space-select
-              [label]="copy.fields.city"
+              [label]="'users.fields.city' | translate"
               [options]="citySelectOptions"
               [value]="form().city"
               [error]="fieldErrors().city ?? null"
@@ -157,7 +152,7 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
           }
           @if (facilities().length > 0) {
             <fieldset class="bs-users__assignment">
-              <legend>{{ copy.assignmentsLegend }}</legend>
+              <legend>{{ 'users.assignmentsLegend' | translate }}</legend>
               @for (facility of facilities(); track facility._id) {
                 <book-space-checkbox
                   [label]="facilityLabel(facility)"
@@ -168,7 +163,7 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
             </fieldset>
           }
           <book-space-checkbox
-            [label]="copy.fields.active"
+            [label]="'users.fields.active' | translate"
             [checked]="form().active"
             (checkedChange)="update({active: $event})"
           />
@@ -178,29 +173,29 @@ const CITY_SELECT_OPTIONS: ISelectOption[] = cityOptions(CITY_LABELS);
           }
 
           <div class="bs-modal__actions">
-            <book-space-button variant="primary" (pressed)="confirmSave()">{{ common.save }}</book-space-button>
-            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ common.cancel }}</book-space-button>
+            <book-space-button variant="primary" (pressed)="confirmSave()">{{ 'common.save' | translate }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="cancelEdit()">{{ 'common.cancel' | translate }}</book-space-button>
           </div>
         }
       </book-space-modal>
 
       <book-space-modal
         [open]="deactivateTarget() !== null"
-        [title]="copy.deactivateTitle"
+        [title]="'users.deactivateTitle' | translate"
         role="alertdialog"
         (closed)="cancelDeactivate()"
       >
         @if (deactivateTarget(); as target) {
-          <p>{{ copy.deactivateConfirm(target.firstName, target.lastName) }}</p>
+          <p>{{ 'users.deactivateConfirm' | translate: {firstName: target.firstName, lastName: target.lastName} }}</p>
           @if (deactivateError(); as message) {
             <p class="bs-users__error" role="alert">{{ message }}</p>
           }
           <div class="bs-modal__actions">
             <book-space-button variant="danger" (pressed)="confirmDeactivate()">
-              {{ copy.deactivate }}
+              {{ 'users.deactivate' | translate }}
             </book-space-button>
             <book-space-button variant="secondary" (pressed)="cancelDeactivate()">
-              {{ common.cancel }}
+              {{ 'common.cancel' | translate }}
             </book-space-button>
           </div>
         }
@@ -238,11 +233,12 @@ export class UsersTableComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly session = inject(SessionStore);
 
-  readonly copy = COPY.users;
-  readonly common = COPY.common;
+  private readonly t = injectTranslate();
   readonly columns = USER_COLUMNS;
-  readonly roleOptions = ROLE_SELECT_OPTIONS;
-  readonly citySelectOptions = CITY_SELECT_OPTIONS;
+  readonly roleOptions = computed<ISelectOption[]>(() =>
+    ROLE_OPTIONS.map((role) => ({value: role, label: this.t(ROLE_LABELS[role])}))
+  );
+  readonly citySelectOptions: ISelectOption[] = cityOptions(CITY_LABELS);
 
   readonly editing = signal(false);
   readonly editTarget = signal<IUser | null>(null);
@@ -258,7 +254,7 @@ export class UsersTableComponent {
   /** The form errors, but only after a submit attempt, so typing is not punished. */
   readonly fieldErrors = computed<TUserFieldErrors>(() =>
     this.submitted()
-      ? {...validateUserForm(this.form(), this.editTarget() !== null), ...this.serverErrors()}
+      ? {...validateUserForm(this.form(), this.editTarget() !== null, this.t), ...this.serverErrors()}
       : {}
   );
 
@@ -284,7 +280,7 @@ export class UsersTableComponent {
 
   readonly rows = computed<Record<string, unknown>[]>(() => {
     const items = this.usersResource.hasValue() ? this.usersResource.value() : [];
-    return items.map((user) => toRow(user));
+    return items.map((user) => toRow(user, this.t));
   });
 
   onRole(role: string): void {
@@ -339,7 +335,7 @@ export class UsersTableComponent {
     this.generalError.set(null);
 
     const target = this.editTarget();
-    if (Object.keys(validateUserForm(this.form(), target !== null)).length > 0) {
+    if (Object.keys(validateUserForm(this.form(), target !== null, this.t)).length > 0) {
       return;
     }
 
@@ -393,22 +389,22 @@ export class UsersTableComponent {
     if (error instanceof HttpErrorResponse && error.status === 422) {
       const body = error.error as IValidationError | undefined;
       const messages = Array.isArray(body?.message) ? body.message : [];
-      const {fields, general} = mapServerErrors(messages);
+      const {fields, general} = mapServerErrors(messages, this.t);
       this.serverErrors.set(fields);
-      this.generalError.set(general ?? COPY.errors.generic);
+      this.generalError.set(general ?? this.t('errors.generic'));
       return;
     }
-    this.generalError.set(COPY.users.saveFailure);
+    this.generalError.set(this.t('users.saveFailure'));
   }
 
   private handleDeactivateError(error: unknown): void {
     if (error instanceof HttpErrorResponse && error.status === 409) {
       // The `409` body is English (the last-active-administrator rule); the UI shows its own
       // Polish text, keyed by the status (NFR-005, T061).
-      this.deactivateError.set(COPY.users.deactivateConflict);
+      this.deactivateError.set(this.t('users.deactivateConflict'));
       return;
     }
-    this.deactivateError.set(COPY.users.deactivateFailure);
+    this.deactivateError.set(this.t('users.deactivateFailure'));
   }
 
   private resetErrors(): void {

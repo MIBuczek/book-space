@@ -9,6 +9,7 @@ import {
   validateEmployeeMessage,
   yesNo,
 } from './facilities-tab';
+import {testTranslate} from '../../../../testing/i18n-testing';
 
 const facility = (overrides: Partial<IBuilding> = {}): IBuilding => ({
   _id: 'b1',
@@ -24,19 +25,21 @@ const facility = (overrides: Partial<IBuilding> = {}): IBuilding => ({
   ...overrides,
 });
 
+const t = testTranslate();
+
 describe('facilities tab logic', () => {
   it('labels a boolean flag in Polish', () => {
-    expect(yesNo(true)).toBe('Tak');
-    expect(yesNo(false)).toBe('Nie');
+    expect(t(yesNo(true))).toBe('Tak');
+    expect(t(yesNo(false))).toBe('Nie');
   });
 
   describe('facilityDetails', () => {
     it('returns no rows for an absent facility, so no compiled-in default can leak in', () => {
-      expect(facilityDetails(null)).toEqual([]);
+      expect(facilityDetails(null, t)).toEqual([]);
     });
 
     it('describes the facility with its contact details, sizes and flags (FR-009)', () => {
-      expect(facilityDetails(facility())).toEqual([
+      expect(facilityDetails(facility(), t)).toEqual([
         {label: 'Miejscowość', value: 'Siechnice'},
         {label: 'Nazwa obiektu', value: 'Hala sportowa'},
         {label: 'Telefon kontaktowy', value: '609 996 064'},
@@ -49,11 +52,11 @@ describe('facilities tab logic', () => {
     });
 
     it('marks a retired facility and reads an absent flag as active (T059)', () => {
-      expect(facilityDetails(facility({active: false}))).toContainEqual({
+      expect(facilityDetails(facility({active: false}), t)).toContainEqual({
         label: 'Status',
         value: 'Nieaktywny',
       });
-      expect(facilityDetails(facility({active: undefined}))).toContainEqual({
+      expect(facilityDetails(facility({active: undefined}), t)).toContainEqual({
         label: 'Status',
         value: 'Aktywny',
       });
@@ -91,23 +94,23 @@ describe('facilities tab logic', () => {
     const valid = {person: 'Beata Hasiuk', recipient: 'beata@example.com', message: 'Dzień dobry'};
 
     it('accepts a complete message', () => {
-      expect(validateEmployeeMessage(valid)).toEqual({});
+      expect(validateEmployeeMessage(valid, t)).toEqual({});
     });
 
     it('requires an employee', () => {
-      expect(validateEmployeeMessage({...valid, person: '   '})).toEqual({
+      expect(validateEmployeeMessage({...valid, person: '   '}, t)).toEqual({
         person: 'Wybierz pracownika',
       });
     });
 
     it('requires a well-formed recipient address', () => {
-      expect(validateEmployeeMessage({...valid, recipient: 'not-an-email'})).toEqual({
+      expect(validateEmployeeMessage({...valid, recipient: 'not-an-email'}, t)).toEqual({
         recipient: 'Podaj poprawny adres e-mail',
       });
     });
 
     it('requires a message body', () => {
-      expect(validateEmployeeMessage({...valid, message: '  '})).toEqual({
+      expect(validateEmployeeMessage({...valid, message: '  '}, t)).toEqual({
         message: 'Wiadomość nie może być pusta',
       });
     });
@@ -142,11 +145,11 @@ describe('facilities tab logic', () => {
 
   describe('sendFailureMessage', () => {
     it('shows a Polish prompt for a 422, not the server\'s English field message (T061)', () => {
-      expect(sendFailureMessage(422)).toBe('Popraw dane i spróbuj ponownie.');
+      expect(sendFailureMessage(422, t)).toBe('Popraw dane i spróbuj ponownie.');
     });
 
     it('shows a retry message for a provider failure (FR-036)', () => {
-      expect(sendFailureMessage(502)).toBe(
+      expect(sendFailureMessage(502, t)).toBe(
         'Nie udało się wysłać wiadomości. Spróbuj ponownie później.'
       );
     });
