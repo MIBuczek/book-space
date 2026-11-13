@@ -77,10 +77,11 @@
 > layer: the previous tenant's brand is gone from shipped source (identifiers, UI copy, e-mail
 > signature, defaults and fixtures) and `tools/scan-brand.js` guards it in CI. That covers
 > **T253**, **T254**, **T255**, **T256** and the rename half of **T250**
-> (`SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`, `TENANT_NAME` added). What remains here is the
-> *configurable* design — the tenant model and `GET /api/tenant` (**T251**) and the UI reading
-> the tenant rather than the hardcoded `Book Space` values (**T252**) — plus the rest of
-> **T250** (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`).
+> (`SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`, `TENANT_NAME` added). The *configurable* design
+> has since landed too: the tenant model and `GET /api/tenant` (**T251**), the UI reading the
+> tenant rather than the hardcoded `Book Space` values (**T252**), and the rest of **T250**
+> (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`). **T258** is the one task
+> left in this phase and it is blocked on a spec question (see below), not on implementation.
 
 - [x] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
       `TENANT_PRIVACY_URL`; rename `SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`; update
@@ -96,18 +97,26 @@
       `contact.office.website`, `contact.office.websiteHref`, `contact.websiteUrl` and
       `contact.privacyPolicyUrl` are retired with the move. The `@api/tenant` route and schema
       are in `contracts/openapi.yaml`.
-- [ ] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
+- [x] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
       `TENANT_NAME`, not "SISK Siechnice"; update the template spec.
-- [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the
+- [x] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the
       Summary restriction is gone, not merely defaulted to empty; update the spec.
-- [ ] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
+- [x] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
       brand (decision 5: the sample facilities stay as they are).
-- [ ] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
+- [x] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
       (`@example.com`) across the UI and server specs.
-- [ ] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
+- [x] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
       replacement reintroduces a brand.
 - [ ] **T258** A bundle scan in CI: `grep -ri "sisk\|siechnice" dist/apps/ui` fails the build
-      (SC-002).
+      (SC-002). **Blocked on a spec question, not on work.** The bundle *does* contain
+      `siechnice` — `CITIES` in `libs/models/building.model.ts` is the twelve sample facilities'
+      city list, and `libs/models/building.model.ts` reaches the client. `AGENTS.md` and decision
+      5 both state `siechnice` is *not* a brand token (it is real business data), so a
+      `siechnice` check would fail on a correct bundle. Either SC-002 is narrowed to the `SISK`
+      token (and a bundle scan is added for it — `tools/scan-brand.js` reads the *source tree*
+      today, not the bundle, because an identifier such as `SISK_CONTACT_EMAIL` never reaches the
+      client), or the sample data moves behind a server-side seed with no client city list. Do
+      not implement the criterion as written.
 
 ## Phase 6 — Docs and conventions
 
