@@ -36,6 +36,14 @@ const PATTERNS = [
   // A Gmail address is not an intentional public contact detail for this application: a Gmail
   // address in the bundle is either a leaked operator address or a copied configuration.
   {name: 'Gmail address', re: /[A-Za-z0-9._%+-]+@gmail\.com/},
+  // The previous tenant's brand (SC-002). `scan-brand.js` guards the *source tree*, because an
+  // identifier such as `SISK_CONTACT_EMAIL` never reaches a bundle; this is the bundle half, so a
+  // brand that slipped into a template or a shipped JSON is caught where the source scan cannot
+  // see it. Only the brand tokens match — `SISK` case-sensitively, and the domain. `siechnice`
+  // alone is **not** here: it is the sample facilities' city name (`CITIES`), real business data
+  // the product carries (decision 5, AGENTS.md).
+  {name: 'previous tenant brand', re: /SISK/},
+  {name: 'previous tenant domain', re: /sisk-siechnice\.pl/i},
 ];
 
 const target = process.argv[2] ?? 'dist/apps/ui';

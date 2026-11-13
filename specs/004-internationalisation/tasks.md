@@ -107,16 +107,16 @@
       (`@example.com`) across the UI and server specs.
 - [x] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
       replacement reintroduces a brand.
-- [ ] **T258** A bundle scan in CI: `grep -ri "sisk\|siechnice" dist/apps/ui` fails the build
-      (SC-002). **Blocked on a spec question, not on work.** The bundle *does* contain
-      `siechnice` — `CITIES` in `libs/models/building.model.ts` is the twelve sample facilities'
-      city list, and `libs/models/building.model.ts` reaches the client. `AGENTS.md` and decision
-      5 both state `siechnice` is *not* a brand token (it is real business data), so a
-      `siechnice` check would fail on a correct bundle. Either SC-002 is narrowed to the `SISK`
-      token (and a bundle scan is added for it — `tools/scan-brand.js` reads the *source tree*
-      today, not the bundle, because an identifier such as `SISK_CONTACT_EMAIL` never reaches the
-      client), or the sample data moves behind a server-side seed with no client city list. Do
-      not implement the criterion as written.
+- [x] **T258** A bundle scan in CI: the built `dist/apps/ui` fails the build if it carries the
+      `SISK` brand or the `sisk-siechnice.pl` domain (SC-002). **Implemented by extending
+      `tools/scan-bundle.js`**, not by a new `grep`: the pattern list lives in one script so the
+      CI gate and a local run cannot drift, and the bundle scan already owns the client-bundle
+      patterns. SC-002 was narrowed to the *brand tokens* — the original wording named `siechnice`
+      too, but `siechnice` is the sample facilities' city name (`CITIES` in
+      `libs/models/building.model.ts`) and legitimately reaches the client, so a `siechnice` check
+      would fail a correct bundle (decision 5, AGENTS.md). `scan-brand.js` still guards the source
+      tree (an identifier such as `SISK_CONTACT_EMAIL` never reaches a bundle); this is the bundle
+      half.
 
 ## Phase 6 — Docs and conventions
 
