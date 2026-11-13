@@ -23,7 +23,7 @@ import { LanguageSwitchComponent } from './language-switch.component';
   imports: [RouterLink, RouterLinkActive, ButtonComponent, TranslatePipe, LanguageSwitchComponent],
   template: `
     <nav class="bs-nav" [attr.aria-label]="'nav.ariaLabel' | translate">
-      <a class="bs-nav__brand" routerLink="/">Book Space</a>
+      <a class="bs-nav__brand" routerLink="/">{{ 'nav.brand' | translate: { tenant: brand } }}</a>
       <ul class="bs-nav__links">
         <li>
           <a
@@ -99,6 +99,11 @@ import { LanguageSwitchComponent } from './language-switch.component';
   ],
 })
 export class NavComponent {
+  /**
+   * The tenant name that brands the navigation. A component field until the tenant endpoint
+   * lands (T252); it must not be a literal, which is what the hardcoded-copy guard enforces.
+   */
+  readonly brand = 'Book Space';
   readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

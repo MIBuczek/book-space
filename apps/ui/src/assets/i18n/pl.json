@@ -15,6 +15,7 @@
   },
   "nav": {
     "ariaLabel": "Nawigacja",
+    "brand": "{{tenant}}",
     "calendar": "Kalendarz",
     "bookingRequest": "Rezerwacja",
     "contact": "Kontakt",

@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { TranslateService } from '@ngx-translate/core';
 import { LanguageStore } from '@booking/i18n';
 import { LanguageSwitchComponent } from './language-switch.component';
 import { provideTestI18n } from '../../testing/i18n-testing';

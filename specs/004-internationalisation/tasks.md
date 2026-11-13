@@ -64,9 +64,12 @@
 
 ## Phase 4 — Retarget the guard (User Story 3)
 
-- [ ] **T240** Rewrite `no-hardcoded-copy.spec.ts` from a Polish-character check to a
-      user-facing-literal check (FR-012); a spec proves it fails on a literal.
-- [ ] **T241** Fix any literal the retargeted guard finds.
+- [x] **T240** Rewrite `no-hardcoded-copy.spec.ts` from a Polish-character check to a
+      user-facing-literal check (FR-012); a spec proves it fails on a literal. The walk reads
+      only the `template:` regions (a whole-file scan flags TypeScript generics), and two cases
+      pin the rule by feeding it a literal and a translated/bound value.
+- [x] **T241** Fix any literal the retargeted guard finds. It found one: the nav's hardcoded
+      `Book Space` brand, now `nav.brand` with the name as an interpolation parameter.
 
 ## Phase 5 — De-branding (User Story 2)
 

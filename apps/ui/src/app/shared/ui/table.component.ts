@@ -1,4 +1,4 @@
-import { Component, computed, contentChild, inject, input, TemplateRef } from '@angular/core';
+import { Component, computed, contentChild, input, TemplateRef } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { injectTranslate } from '@booking/i18n';
 
