@@ -22,7 +22,7 @@ existing catalogue's groups, unchanged, so the migration is a rename of `COPY.a.
   "facilities": { ... },
   "summary":  { ... },
   "signIn":   { ... },
-  "contact":  { "email": "{{tenantEmail}}", "website": "{{tenantWebsite}}", ... },
+  "contact":  { "office": { "address": "—", "phone": "—", "phoneHref": "tel:" }, ... },
   "cookieNotice": { ... },
   "notFound": { ... },
   "serverError": { ... },
@@ -86,8 +86,8 @@ Only the values a visitor may see cross to the UI:
 | Field | Where it appears |
 |-------|------------------|
 | `name` | the footer, the e-mail signature |
-| `contactEmail` | the contact page |
-| `websiteUrl`, `privacyUrl` | the footer links |
+| `contactEmail` | the contact page and the server-error page |
+| `websiteUrl`, `privacyUrl` | the footer links and the cookie notice's privacy link |
 
 The staff inbox is **server-only** and never reaches the bundle (they are not
 secrets, but they are not public either; keeping them server-side keeps the bundle clean and the

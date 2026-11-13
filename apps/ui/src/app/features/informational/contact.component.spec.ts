@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { ContactComponent } from './contact.component';
 import { provideTestI18n, testCatalogue } from '../../../testing/i18n-testing';
+import { provideTestTenant } from '../../../testing/tenant-testing';
 
 /** The catalogue the app loads, so a key that moves in the JSON fails the spec (T235). */
 const CONTACT = testCatalogue('pl')['contact'] as Record<string, never>;
@@ -14,7 +15,7 @@ describe('ContactComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ContactComponent],
-      providers: [provideTestI18n()],
+      providers: [provideTestI18n(), provideTestTenant()],
     }).compileComponents();
   });
 
@@ -30,17 +31,35 @@ describe('ContactComponent', () => {
     expect(text).toContain(REGISTERED_OFFICE['address']);
   });
 
-  it('shows the office contact details, dialling the number it prints', () => {
+  it('shows the office address and phone, dialling the number it prints', () => {
     const el = render();
     const text = el.textContent ?? '';
     expect(text).toContain(OFFICE_CONTACT['address']);
     expect(text).toContain(OFFICE_CONTACT['phone']);
-    expect(text).toContain(OFFICE_CONTACT['email']);
 
     const phone = el.querySelector(`a[href="${OFFICE_CONTACT['phoneHref']}"]`);
     expect(phone?.textContent).toContain(OFFICE_CONTACT['phone']);
-    const email = el.querySelector(`a[href="mailto:${OFFICE_CONTACT['email']}"]`);
-    expect(email).not.toBeNull();
+  });
+
+  it('shows the tenant contact e-mail and website (FR-007)', () => {
+    const el = render();
+    expect(el.querySelector('a[href="mailto:office@example.com"]')).not.toBeNull();
+    expect(el.querySelector('a[href="https://example.com"]')).not.toBeNull();
+  });
+
+  it('hides the contact e-mail and website when the tenant has none (SC-005)', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ContactComponent],
+      providers: [
+        provideTestI18n(),
+        provideTestTenant(null),
+      ],
+    });
+    const el = render();
+    const office = el.querySelectorAll('.bs-contact__column')[1];
+    expect(office.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(office.querySelector('a[href^="https://example.com"]')).toBeNull();
   });
 
   it('shows every opening hour', () => {

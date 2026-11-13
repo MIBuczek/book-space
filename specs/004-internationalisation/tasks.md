@@ -82,13 +82,20 @@
 > the tenant rather than the hardcoded `Book Space` values (**T252**) — plus the rest of
 > **T250** (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`).
 
-- [ ] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
+- [x] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
       `TENANT_PRIVACY_URL`; rename `SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`; update
       `.env.example`.
-- [ ] **T251** [P] `libs/models/tenant.model.ts`: `ITenant`; a `GET /api/tenant` route (public)
-      returning the public subset.
-- [ ] **T252** [P] The UI reads the tenant and renders the footer/contact from it; an absent value
-      hides the element (SC-005).
+- [x] **T251** [P] `libs/models/tenant.model.ts`: `ITenant`; a `GET /api/tenant` route (public)
+      returning the public subset. `TenantService` reads `ConfigService`; an absent or blank
+      setting is `null` and the staff inbox is never read. `tenant.integration.spec.ts` pins the
+      anonymous read and the absence of the inbox.
+- [x] **T252** [P] The UI reads the tenant and renders the footer/contact from it; an absent value
+      hides the element (SC-005). `TenantStore` is filled by an app initializer (a failure is
+      swallowed, so the shell is never blanked); the nav brand, the footer, the contact page, the
+      cookie notice and the server-error page read it. The catalogue's `contact.office.email`,
+      `contact.office.website`, `contact.office.websiteHref`, `contact.websiteUrl` and
+      `contact.privacyPolicyUrl` are retired with the move. The `@api/tenant` route and schema
+      are in `contracts/openapi.yaml`.
 - [ ] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
       `TENANT_NAME`, not "SISK Siechnice"; update the template spec.
 - [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the

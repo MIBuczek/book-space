@@ -48,6 +48,24 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   TENANT_STAFF_EMAIL?: string;
+
+  /**
+   * The public tenant contact details (FR-007). Unlike `TENANT_STAFF_EMAIL` these cross to the
+   * client on `GET /api/tenant`, so they are contact details, not credentials. Each is optional
+   * and an unset (or blank) value reaches the UI as `null`, which hides the element rather than
+   * rendering a broken `mailto:` or an empty link (SC-005).
+   */
+  @IsOptional()
+  @IsString()
+  TENANT_CONTACT_EMAIL?: string;
+
+  @IsOptional()
+  @IsString()
+  TENANT_WEBSITE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  TENANT_PRIVACY_URL?: string;
 }
 
 /**

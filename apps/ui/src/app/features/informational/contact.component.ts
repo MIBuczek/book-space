@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TenantStore } from '../../core/tenant.store';
 
 /** One opening-hours line, as the catalogue declares it. */
 interface IHoursEntry {
@@ -12,9 +13,6 @@ interface IContactBlock {
   address: string;
   phone: string;
   phoneHref: string;
-  email: string;
-  website: string;
-  websiteHref: string;
 }
 
 /**
@@ -24,8 +22,13 @@ interface IContactBlock {
  * address, and the person to contact about a booking. The headings are translated through the
  * pipe (FR-001); the blocks and the opening-hours list are read through `instant`, because
  * `instant` reads the service's own signals so a `computed` that calls it re-fills on a language
- * switch. The contact values are configuration placeholders until the tenant endpoint lands
- * (T252).
+ * switch.
+ *
+ * The office **e-mail** and **website** are the tenant's configured contact details (FR-007),
+ * not catalogue values: they come from `GET /api/tenant`, and an absent one hides its line
+ * rather than rendering an empty `mailto:` or a link with no destination (SC-005). The postal
+ * address, the phone and the opening hours are not tenant settings, so they stay in the
+ * catalogue as the deployment's sample content.
  */
 @Component({
   selector: 'book-space-contact',
@@ -50,12 +53,16 @@ interface IContactBlock {
         <p>
           <a [href]="contact().phoneHref">{{ 'common.phonePrefix' | translate }}{{ contact().phone }}</a>
         </p>
-        <p>
-          <a [href]="'mailto:' + contact().email">{{ contact().email }}</a>
-        </p>
-        <p>
-          <a [href]="contact().websiteHref">{{ contact().website }}</a>
-        </p>
+        @if (contactEmail(); as email) {
+          <p>
+            <a [href]="'mailto:' + email">{{ email }}</a>
+          </p>
+        }
+        @if (websiteUrl(); as site) {
+          <p>
+            <a [href]="site">{{ site }}</a>
+          </p>
+        }
       </section>
 
       <section class="bs-contact__column">
@@ -104,6 +111,7 @@ interface IContactBlock {
 })
 export class ContactComponent {
   private readonly translate = inject(TranslateService);
+  private readonly tenants = inject(TenantStore);
 
   // The blocks and the hours list are objects and arrays, so they are read through `instant`
   // rather than the pipe. Each `computed` tracks the service's signals, so a switch re-fills it.
@@ -116,10 +124,11 @@ export class ContactComponent {
     address: this.translate.instant('contact.office.address'),
     phone: this.translate.instant('contact.office.phone'),
     phoneHref: this.translate.instant('contact.office.phoneHref'),
-    email: this.translate.instant('contact.office.email'),
-    website: this.translate.instant('contact.office.website'),
-    websiteHref: this.translate.instant('contact.office.websiteHref'),
   }));
+
+  /** The tenant's contact address, or `null` when the deployment has not set one. */
+  readonly contactEmail = computed(() => this.tenants.tenant()?.contactEmail ?? null);
+  readonly websiteUrl = computed(() => this.tenants.tenant()?.websiteUrl ?? null);
 
   readonly booking = computed(() => ({
     name: this.translate.instant('contact.bookingContact.name'),

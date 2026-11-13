@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Component, computed, inject } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { CookieNoticeStore } from '../../core/cookie-notice.store';
+import { TenantStore } from '../../core/tenant.store';
 
 /**
  * The cookie notice (FR-039, FR-040, issue #44).
@@ -11,7 +12,9 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
  * `CookieNoticeStore`, which stores the acknowledgement as `'true'` rather than
  * the legacy `'false'`.
  *
- * The text is translated (FR-001).
+ * The text is translated (FR-001). The "learn more" link points at the tenant's configured
+ * privacy policy (FR-007), so it is the same URL the footer renders; an unset value hides the
+ * link rather than rendering one with no destination (SC-005).
  */
 @Component({
   selector: 'book-space-cookie-notice',
@@ -22,9 +25,11 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
         <h2 class="bs-cookies__header">{{ 'cookieNotice.heading' | translate }}</h2>
         <p class="bs-cookies__text">
           {{ 'cookieNotice.text' | translate }}
-          <a [href]="privacyUrl" target="_blank" rel="noopener">{{
-            'cookieNotice.learnMore' | translate
-          }}</a>
+          @if (privacyUrl(); as privacy) {
+            <a [href]="privacy" target="_blank" rel="noopener">{{
+              'cookieNotice.learnMore' | translate
+            }}</a>
+          }
         </p>
         <button type="button" class="bs-cookies__accept" (click)="cookies.acknowledge()">
           {{ 'cookieNotice.accept' | translate }}
@@ -70,7 +75,8 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
   ],
 })
 export class CookieNoticeComponent {
-  private readonly translate = inject(TranslateService);
   readonly cookies = inject(CookieNoticeStore);
-  readonly privacyUrl = this.translate.instant('contact.privacyPolicyUrl');
+  private readonly tenants = inject(TenantStore);
+
+  readonly privacyUrl = computed(() => this.tenants.tenant()?.privacyUrl ?? null);
 }

@@ -437,10 +437,7 @@
     "office": {
       "address": "—",
       "phone": "—",
-      "phoneHref": "tel:",
-      "email": "kontakt@book-space.example",
-      "website": "book-space.example",
-      "websiteHref": "https://book-space.example/"
+      "phoneHref": "tel:"
     },
     "bookingContact": {
       "name": "—",
@@ -471,8 +468,6 @@
         "hours": "08:00 - 14:00"
       }
     ],
-    "privacyPolicyUrl": "https://book-space.example/polityka-prywatnosci",
-    "websiteUrl": "https://book-space.example/",
     "rodoClauseUrl": "https://book-space.example/klauzula-informacyjna.pdf"
   },
   "cookieNotice": {

@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { ServerErrorComponent } from './server-error.component';
 import { ErrorStore } from '../../core/error.store';
 import { provideTestI18n, testCatalogue } from '../../../testing/i18n-testing';
+import { provideTestTenant } from '../../../testing/tenant-testing';
 
 const OFFICE_CONTACT = (testCatalogue('pl')['contact'] as Record<string, never>)[
   'office'
@@ -12,7 +13,7 @@ describe('ServerErrorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ServerErrorComponent],
-      providers: [provideRouter([]), provideTestI18n()],
+      providers: [provideRouter([]), provideTestI18n(), provideTestTenant()],
     }).compileComponents();
   });
 
@@ -31,15 +32,27 @@ describe('ServerErrorComponent', () => {
     expect(render().textContent).toContain('Serwer jest niedostępny.');
   });
 
-  it('offers the office phone and e-mail, dialling the number it prints', () => {
+  it('offers the office phone and the tenant contact e-mail, dialling the number it prints', () => {
     const el = render();
     expect(el.textContent).toContain(OFFICE_CONTACT['phone']);
-    expect(el.textContent).toContain(OFFICE_CONTACT['email']);
     // The legacy labelled the `tel:` link with an envelope icon; here the link's
     // text is the number, so the label and the target agree.
     const phone = el.querySelector(`a[href="${OFFICE_CONTACT['phoneHref']}"]`);
     expect(phone?.textContent).toContain(OFFICE_CONTACT['phone']);
-    expect(el.querySelector(`a[href="mailto:${OFFICE_CONTACT['email']}"]`)).not.toBeNull();
+    expect(el.querySelector('a[href="mailto:office@example.com"]')).not.toBeNull();
+  });
+
+  it('hides the contact e-mail when the tenant has none (SC-005)', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ServerErrorComponent],
+      providers: [
+        provideRouter([]),
+        provideTestI18n(),
+        provideTestTenant(null),
+      ],
+    });
+    expect(render().querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
   it('offers a link back to the calendar', () => {

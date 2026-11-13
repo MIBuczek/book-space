@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ErrorStore } from '../../core/error.store';
+import { TenantStore } from '../../core/tenant.store';
 
 /**
  * The server-error page (FR-039, issue #44).
@@ -11,10 +12,11 @@ import { ErrorStore } from '../../core/error.store';
  * detail is the HTTP status text or a handler message, never a stack trace or a
  * driver message — the API already guarantees a 5xx carries no cause.
  *
- * The contact block reuses the office phone and e-mail from the catalogue (FR-001). The legacy
- * `ServerError.tsx` linked `tel:+48718890023` but labelled it with an envelope icon and printed
- * a phone number; here the link is labelled as a phone link, so what it does and what it says
- * agree.
+ * The contact block reuses the office phone from the catalogue (FR-001) and the tenant's
+ * configured contact address (FR-007); an unset address hides its line rather than rendering an
+ * empty `mailto:` (SC-005). The legacy `ServerError.tsx` linked `tel:+48718890023` but labelled
+ * it with an envelope icon and printed a phone number; here the link is labelled as a phone
+ * link, so what it does and what it says agree.
  */
 @Component({
   selector: 'book-space-server-error',
@@ -27,9 +29,11 @@ import { ErrorStore } from '../../core/error.store';
       <p>
         <a [href]="contact.phoneHref">{{ 'common.phonePrefix' | translate }}{{ contact.phone }}</a>
       </p>
-      <p>
-        <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
-      </p>
+      @if (contactEmail(); as email) {
+        <p>
+          <a [href]="'mailto:' + email">{{ email }}</a>
+        </p>
+      }
       <a routerLink="/">{{ 'common.backToCalendar' | translate }}</a>
     </main>
   `,
@@ -46,10 +50,11 @@ import { ErrorStore } from '../../core/error.store';
 })
 export class ServerErrorComponent {
   private readonly translate = inject(TranslateService);
+  private readonly tenants = inject(TenantStore);
   readonly errors = inject(ErrorStore);
   readonly contact = {
     phone: this.translate.instant('contact.office.phone'),
     phoneHref: this.translate.instant('contact.office.phoneHref'),
-    email: this.translate.instant('contact.office.email'),
   };
+  readonly contactEmail = computed(() => this.tenants.tenant()?.contactEmail ?? null);
 }
