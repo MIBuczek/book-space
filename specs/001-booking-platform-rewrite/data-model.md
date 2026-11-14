@@ -95,7 +95,7 @@ Reference data: legacy `building-data-const.ts`
 | `_id` | ObjectId | |
 | `name` | string | required, 3–125 |
 | `property` | string | **[new]** required, unique **per city** |
-| `city` | string | required; one of `siechnice`, `radwanice`, `swieta-katarzyna`, `zerniki-wroclawskie` |
+| `city` | string | required, 2–125; free text, **not** a compiled-in list (spec.md §9 open question 1, FR-007) |
 | `sizes` | string[] | **[new]** required, non-empty; subset of `1/1`, `1/2`, `1/3`, `2/3`, `1/4`, `3/4` |
 | `lighting` | boolean | **[new]** default `false` |
 | `toilets` | boolean | **[new]** default `false` |
@@ -327,7 +327,7 @@ does not take.
 ## Relationship summary
 
 ```text
-City (string enum) 1 ── n Facility (buildings)
+City (free text, not a table) 1 ── n Facility (buildings)
 Facility            1 ── n Booking        (via place.place + place.city)
 Client              1 ── n Booking        (via clientId, optional)
 Booking             1 ── n BookedTime     (embedded)

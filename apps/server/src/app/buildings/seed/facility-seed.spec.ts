@@ -1,4 +1,4 @@
-import {CITIES, SIZES} from '@models/building.model';
+import {SIZES} from '@models/building.model';
 import {FACILITY_SEED, CITY_SEED} from './facility-seed';
 
 /**
@@ -17,9 +17,9 @@ describe('facility seed data', () => {
     expect(CITY_SEED).toHaveLength(4);
   });
 
-  it('uses only city and size values the shared model allows', () => {
+  it('uses only size values the shared model allows', () => {
     for (const facility of FACILITY_SEED) {
-      expect(CITIES).toContain(facility.city);
+      expect(CITY_SEED).toContain(facility.city);
       expect(facility.sizes.length).toBeGreaterThan(0);
       for (const size of facility.sizes) {
         expect(SIZES).toContain(size);

@@ -925,12 +925,25 @@ Three things that are easy to get wrong:
   separate — `email` is the facility's contact address (the sender a reply returns to) and
   `recipient` is the employee's destination. `buildMessageRequest` reads the sender from the
   facility record, never from the form.
-- **`CITY_LABELS` lives in `libs/models/building.model.ts`, beside `CITIES` (T038).** It was
-  duplicated in the public calendar, the booking form and the bookings tab; the Facilities tab
-  was the fourth copy. Four copies of a display label is the drift the shared model exists to
-  prevent — a renamed city would render correctly on one screen and not another, with nothing to
-  catch it. Import it; do not re-declare it. (It is *not* in the i18n catalogue: it labels the
-  screen selectors and answers to the UI, while the reporting vocabulary is a separate audience.)
+- **`CITY_LABELS` lives in `libs/models/building.model.ts`, and the compiled-in city *list* is gone
+  (T038, T270–T274).** `CITY_LABELS` was duplicated in the public calendar, the booking form and
+  the bookings tab; the Facilities tab was the fourth copy. Four copies of a display label is the
+  drift the shared model exists to prevent — a renamed city would render correctly on one screen
+  and not another, with nothing to catch it. Import it; do not re-declare it. (It is *not* in the
+  i18n catalogue: it labels the screen selectors and answers to the UI, while the reporting
+  vocabulary is a separate audience.) It is now a *label map* over a free-text `city`, not an
+  enumeration of the cities that exist: spec.md §9 open question 1 was answered "cities and
+  facilities are fully administrator-managed from day one", so the `CITIES`/`CITY_OPTIONS`/
+  `SUMMARY_CITIES` constants were retired (T270). A city is a plain bounded `string` on the
+  building schema and DTO (length bounds, no `enum`), and a screen's city list is the set of
+  distinct stored values: `distinctCities` in `libs/models` feeds `cityOptions`
+  (`apps/ui/src/app/core/city-options.ts`), which the five selectors (public calendar, booking
+  request, bookings tab, facilities tab, users tab) read. A city with no facility is a city that
+  does not exist yet, so "add city" is "add a facility that names it" — the Facilities tab's
+  create/edit form (T272) is where that happens, and it sends a free-text city so the create
+  succeeds with no compiled-in list. `cityLabel` falls through to the stored value for a city the
+  label map does not name, on the screen *and* in the report (`REPORT_VALUE_LABELS`, T273), so a
+  new city renders as its own key rather than as a blank.
 - **All user-facing copy lives in the i18n catalogue, and two guards enforce it (T061/T240,
   NFR-005, FR-012).** A component binds a key (`{{ 'nav.calendar' | translate }}`, or
   `t('key')` from `injectTranslate` for a non-template read); it does not type the wording into a

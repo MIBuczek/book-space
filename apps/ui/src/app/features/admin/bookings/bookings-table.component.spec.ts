@@ -515,12 +515,13 @@ describe('BookingsTableComponent', () => {
     expect(element(fixture).textContent).toContain('Nie udało się wczytać rezerwacji.');
   });
 
-  it('asks the administrator to pick a facility when the city has none', async () => {
+  it('asks the administrator to pick a facility when there are no facilities', async () => {
     session.set('token', adminUser());
     const fixture = TestBed.createComponent(BookingsTableComponent);
     fixture.detectChanges();
-    // Only Radwanice has a facility, so selecting Siechnice yields no options and an empty key.
-    httpMock.expectOne('/api/buildings').flush([FACILITIES[2]]);
+    // Cities derive from the facilities (FR-007), so an empty facility list leaves the selector
+    // with nothing to offer and the prompt is the branch that renders.
+    httpMock.expectOne('/api/buildings').flush([]);
     await Promise.resolve();
     fixture.detectChanges();
 
@@ -589,8 +590,8 @@ describe('BookingsTableComponent', () => {
     session.set('token', adminUser());
     const fixture = TestBed.createComponent(BookingsTableComponent);
     fixture.detectChanges();
-    // Only Radwanice has a facility, so the selected city yields no building and no read.
-    httpMock.expectOne('/api/buildings').flush([FACILITIES[2]]);
+    // An empty facility list leaves no city and no building to read for.
+    httpMock.expectOne('/api/buildings').flush([]);
     await Promise.resolve();
     fixture.detectChanges();
 

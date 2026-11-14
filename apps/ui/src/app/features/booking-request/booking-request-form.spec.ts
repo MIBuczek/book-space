@@ -1,4 +1,4 @@
-import {CITY_LABELS, IPublicBuilding} from '@models/building.model';
+import {cityLabel, distinctCities, IPublicBuilding} from '@models/building.model';
 import {
   CLIENT_TYPE_LABELS,
   END_HOUR_OPTIONS,
@@ -71,8 +71,20 @@ describe('booking request form labels and options', () => {
     expect(t(PAYMENT_LABELS.FREE)).toBe('Bezpłatne');
   });
 
-  it('labels the four cities', () => {
-    expect(CITY_LABELS['zerniki-wroclawskie']).toBe('Żerniki Wrocławskie');
+  it('labels a known city and leaves an unknown one verbatim', () => {
+    expect(cityLabel('zerniki-wroclawskie')).toBe('Żerniki Wrocławskie');
+    // Cities are data, so an administrator-added city the label map does not name renders as
+    // typed rather than being dropped.
+    expect(cityLabel('nowe-miasto')).toBe('nowe-miasto');
+  });
+
+  it('derives the city options from the facilities, not a compiled-in list', () => {
+    const buildings = [
+      {city: 'siechnice'},
+      {city: 'radwanice'},
+      {city: 'siechnice'},
+    ] as IPublicBuilding[];
+    expect(distinctCities(buildings)).toEqual(['siechnice', 'radwanice']);
   });
 
   it('offers the start hours 09 through 23', () => {

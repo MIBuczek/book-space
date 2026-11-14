@@ -313,8 +313,10 @@ describe('PublicCalendarComponent', () => {
     expect(alert?.textContent).toContain('Nie udało się wczytać rezerwacji');
   });
 
-  it('prompts for a facility when the selected city has none', async () => {
-    const fixture = await render([facility('hala-radwanice', 'radwanice', 'Hala Radwanice')]);
+  it('prompts for a facility when there are no facilities', async () => {
+    // Cities derive from the facilities (FR-007), so the only way a selector has no facility to
+    // offer is an empty facility list; the prompt is the branch that renders then.
+    const fixture = await render([]);
     await settle(fixture);
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(

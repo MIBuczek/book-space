@@ -184,7 +184,7 @@ describe('clientDetailRows', () => {
 });
 
 describe('cityTotals', () => {
-  it('lists every city in the legacy order with its counter', () => {
+  it('lists every city the summary carries, sorted, with its counter', () => {
     const totals = cityTotals(
       summary({
         siechnice: [summaryEntry()],
@@ -192,12 +192,20 @@ describe('cityTotals', () => {
       })
     );
 
+    // Cities are data (spec.md §9 open question 1): the report lists the cities present in the
+    // data, sorted by city key so the report is stable between runs, rather than a compiled-in
+    // four-city order.
     expect(totals.map((total) => [total.city, total.label, total.total])).toEqual([
-      ['siechnice', 'Siechnice', '1 rezerwacji, w tym 0 zrealizowanych.'],
       ['radwanice', 'Radwanice', '2 rezerwacji, w tym 0 zrealizowanych.'],
+      ['siechnice', 'Siechnice', '1 rezerwacji, w tym 0 zrealizowanych.'],
       ['swieta-katarzyna', 'Święta Katarzyna', '0 rezerwacji.'],
       ['zerniki-wroclawskie', 'Żerniki Wrocławskie', '0 rezerwacji.'],
     ]);
+  });
+
+  it('reports a city the compiled-in list never carried', () => {
+    const totals = cityTotals({client: client(), 'nowe-miasto': [summaryEntry()]});
+    expect(totals.map((total) => total.city)).toEqual(['nowe-miasto']);
   });
 });
 
@@ -299,17 +307,18 @@ describe('reportEntry', () => {
 });
 
 describe('cityReports', () => {
-  it('carries the total and the bookings for each city, in the legacy order', () => {
+  it('carries the total and the bookings for each city, sorted by city key', () => {
     const reports = cityReports(summary({siechnice: [summaryEntry()]}), t);
 
     expect(reports.map((report) => report.city)).toEqual([
-      'siechnice',
       'radwanice',
+      'siechnice',
       'swieta-katarzyna',
       'zerniki-wroclawskie',
     ]);
-    expect(reports[0].total).toBe('1 rezerwacji, w tym 0 zrealizowanych.');
-    expect(reports[0].entries).toHaveLength(1);
-    expect(reports[1].entries).toEqual([]);
+    expect(reports[0].total).toBe('0 rezerwacji.');
+    expect(reports[0].entries).toEqual([]);
+    expect(reports[1].total).toBe('1 rezerwacji, w tym 0 zrealizowanych.');
+    expect(reports[1].entries).toHaveLength(1);
   });
 });

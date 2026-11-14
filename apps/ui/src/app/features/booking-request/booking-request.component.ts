@@ -3,7 +3,7 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {TranslatePipe} from '@ngx-translate/core';
 import {injectTranslate} from '@booking/i18n';
-import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
+import {IPublicBuilding} from '@models/building.model';
 import {TClientType, TPayment} from '@models/booking.model';
 import {BookingRequestsApi} from '../../core/booking-requests.api';
 import {FacilitiesApi} from '../../core/facilities.api';
@@ -32,8 +32,7 @@ import {
 } from './booking-request-form';
 import type {ICyclicalEntry, IExtraOptionEntry, IBookingFormValue, ISlotEntry} from './booking-request-form';
 import {formatFacilityDate, formatFacilityTime} from '@booking/date-time';
-
-const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
+import {cityOptions as buildCityOptions, keepSelected} from '../../core/city-options';
 
 const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
   hours.map((hour) => ({value: String(hour), label: `${String(hour).padStart(2, '0')}:00`}));
@@ -82,7 +81,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
             <legend>{{ 'bookingRequest.legends.facility' | translate }}</legend>
             <book-space-select
               [label]="'bookingRequest.city' | translate"
-              [options]="cityOptions"
+              [options]="cityOptions()"
               [value]="city()"
               (valueChange)="onCity($event)"
             />
@@ -353,7 +352,6 @@ export class BookingRequestComponent {
   private readonly requestsApi = inject(BookingRequestsApi);
   private readonly t = injectTranslate();
 
-  readonly cityOptions = CITY_OPTIONS;
   readonly clientOptions = computed<ISelectOption[]>(() =>
     (Object.keys(CLIENT_TYPE_LABELS) as TClientType[]).map((type) => ({
       value: type,
@@ -370,7 +368,35 @@ export class BookingRequestComponent {
   readonly endHourOptions = HOUR_OPTIONS(END_HOUR_OPTIONS);
   readonly rodoClauseUrl = this.t('contact.rodoClauseUrl');
 
-  readonly city = signal<TCity>('siechnice');
+  readonly facilitiesResource = rxResource({stream: () => this.facilitiesApi.list()});
+
+  readonly facilities = computed<IPublicBuilding[]>(() =>
+    this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
+  );
+
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly cityOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
+
+  /**
+   * The selected city. A `linkedSignal` on the facility list, so the initial city is the first
+   * city the facilities carry rather than a compiled-in default (spec.md §9 open question 1).
+   */
+  readonly city = linkedSignal<ISelectOption[], string>({
+    source: () => this.cityOptions(),
+    computation: (options, previous) => keepSelected(options, previous?.value),
+  });
+
+  readonly buildingOptions = computed<ISelectOption[]>(() =>
+    this.facilities()
+      .filter((facility) => facility.city === this.city())
+      .map((facility) => ({value: facility.property, label: facility.name}))
+  );
+
+  readonly facilityProperty = linkedSignal<{city: string; options: ISelectOption[]}, string>({
+    source: () => ({city: this.city(), options: this.buildingOptions()}),
+    computation: (source, previous) => keepSelected(source.options, previous?.value),
+  });
+
   readonly value = signal<IBookingFormValue>({
     type: 'INDIVIDUAL',
     size: '',
@@ -406,28 +432,6 @@ export class BookingRequestComponent {
   readonly submitting = signal(false);
   readonly formError = signal<string | null>(null);
 
-  readonly facilitiesResource = rxResource({stream: () => this.facilitiesApi.list()});
-
-  readonly facilities = computed<IPublicBuilding[]>(() =>
-    this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
-  );
-
-  readonly buildingOptions = computed<ISelectOption[]>(() =>
-    this.facilities()
-      .filter((facility) => facility.city === this.city())
-      .map((facility) => ({value: facility.property, label: facility.name}))
-  );
-
-  readonly facilityProperty = linkedSignal<{city: TCity; options: ISelectOption[]}, string>({
-    source: () => ({city: this.city(), options: this.buildingOptions()}),
-    computation: (source, previous) => {
-      if (previous && source.options.some((option) => option.value === previous.value)) {
-        return previous.value;
-      }
-      return source.options[0]?.value ?? '';
-    },
-  });
-
   readonly selectedFacility = computed<IPublicBuilding | undefined>(() =>
     this.facilities().find(
       (facility) => facility.property === this.facilityProperty() && facility.city === this.city()
@@ -460,7 +464,7 @@ export class BookingRequestComponent {
   );
 
   onCity(city: string): void {
-    this.city.set(city as TCity);
+    this.city.set(city);
   }
 
   onFacility(property: string): void {

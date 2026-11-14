@@ -1,6 +1,6 @@
 import {TranslateFn} from '@booking/i18n';
 import {IClient} from '@models/client.model';
-import {IBookedTimeSummary, IClientSummary, SUMMARY_CITIES, TSummaryCity} from '@models/reporting.model';
+import {IBookedTimeSummary, IClientSummary, cityBookings} from '@models/reporting.model';
 import {facilityWallClock, formatFacilityDate, formatFacilityTime} from '@booking/date-time';
 import {
   displayBoolean,
@@ -38,9 +38,9 @@ interface IDetailRow {
   value: string;
 }
 
-/** One city's total line, in the legacy order. */
+/** One city's total line. */
 interface ICityTotal {
-  city: TSummaryCity;
+  city: string;
   label: string;
   total: string;
 }
@@ -193,13 +193,22 @@ const clientDetailRows = (client: IClient, t: TranslateFn): IDetailRow[] =>
     return rows;
   }, []);
 
-/** The per-city totals, in the legacy city order, each as "N rezerwacji, w tym M zrealizowanych." */
+/**
+ * The per-city totals, one per city the summary actually carries (spec.md §9 open question 1).
+ *
+ * The cities are the keys of the summary, not a compiled-in list, so a city an administrator
+ * added is reported like any other. The order is the sorted city key so the report is stable
+ * between runs; the legacy constant's four-city order no longer applies once the list is data.
+ */
 const cityTotals = (summary: IClientSummary): ICityTotal[] =>
-  SUMMARY_CITIES.map((city) => ({
-    city,
-    label: displayValue(city),
-    total: summaryTotalBookingsNumber(summary[city]),
-  }));
+  Object.keys(summary)
+    .filter((key) => key !== 'client')
+    .sort((a, b) => a.localeCompare(b))
+    .map((city) => ({
+      city,
+      label: displayValue(city),
+      total: summaryTotalBookingsNumber(cityBookings(summary, city)),
+    }));
 
 /** One booking's slots, as the printable report renders them. */
 const reportSlots = (booking: IBookedTimeSummary, t: TranslateFn): IReportSlot[] =>
@@ -239,7 +248,7 @@ const cityReports = (summary: IClientSummary, t: TranslateFn): ICityReport[] =>
     city,
     label,
     total,
-    entries: summary[city].map((booking) => reportEntry(booking, t)),
+    entries: cityBookings(summary, city).map((booking) => reportEntry(booking, t)),
   }));
 
 export {

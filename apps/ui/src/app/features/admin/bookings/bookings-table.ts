@@ -1,7 +1,6 @@
 import {TranslateFn} from '@booking/i18n';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
-import {CITY_LABELS} from '@models/building.model';
 import {
   academicYearStartYear,
   atFacilityTime,
@@ -295,7 +294,6 @@ export {
   BOOKING_COLUMNS,
   STATUS_LABELS,
   STATUS_OPTIONS,
-  CITY_LABELS,
   PAGE_SIZES,
   OPENING_HOUR,
   END_OF_DAY_HOUR,

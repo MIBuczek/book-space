@@ -4,7 +4,7 @@ import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
 import {TranslatePipe} from '@ngx-translate/core';
 import {injectTranslate} from '@booking/i18n';
-import {CITIES, IPublicBuilding, TCity} from '@models/building.model';
+import {IPublicBuilding} from '@models/building.model';
 import {BookingsApi} from '../../../core/bookings.api';
 import {FacilitiesApi} from '../../../core/facilities.api';
 import {NotificationsApi} from '../../../core/notifications.api';
@@ -22,7 +22,6 @@ import {
 } from '../../../shared/ui';
 import {
   BOOKING_COLUMNS,
-  CITY_LABELS,
   END_HOURS,
   FROM_THE_BEGINNING,
   ISlotRow,
@@ -36,8 +35,7 @@ import {
   toRow,
   toSlotRows,
 } from './bookings-table';
-
-const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
+import {cityOptions as buildCityOptions, keepSelected} from '../../../core/city-options';
 
 const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
   hours.map((hour) => ({value: String(hour), label: `${String(hour).padStart(2, '0')}:00`}));
@@ -80,7 +78,7 @@ const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
       <div class="bs-bookings__controls">
         <book-space-select
           [label]="'bookings.city' | translate"
-          [options]="cityOptions"
+          [options]="cityOptions()"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
@@ -405,7 +403,6 @@ export class BookingsTableComponent {
   private readonly t = injectTranslate();
   readonly dash = this.t('common.dash');
   readonly columns = BOOKING_COLUMNS;
-  readonly cityOptions = CITY_OPTIONS;
   readonly statusOptions = STATUS_OPTIONS;
   readonly pageSizeOptions: ISelectOption[] = PAGE_SIZES.map((size) => ({
     value: String(size),
@@ -418,7 +415,6 @@ export class BookingsTableComponent {
   readonly startHourOptions = HOUR_OPTIONS(START_HOURS);
   readonly endHourOptions = HOUR_OPTIONS(END_HOURS);
 
-  readonly city = signal<TCity>('siechnice');
   readonly period = signal(FROM_THE_BEGINNING);
   readonly search = signal('');
   readonly unapprovedOnly = signal(false);
@@ -461,6 +457,18 @@ export class BookingsTableComponent {
 
   readonly facilities = signal<IPublicBuilding[]>([]);
 
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly cityOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
+
+  /**
+   * The selected city. A `linkedSignal` on the facility list, so the initial city is the first
+   * city the facilities carry rather than a compiled-in default (spec.md §9 open question 1).
+   */
+  readonly city = linkedSignal<ISelectOption[], string>({
+    source: () => this.cityOptions(),
+    computation: (options, previous) => keepSelected(options, previous?.value),
+  });
+
   /** The facilities of the selected city, as the selector's options. */
   readonly buildingOptions = computed<ISelectOption[]>(() =>
     this.facilities()
@@ -473,14 +481,9 @@ export class BookingsTableComponent {
    * is still valid — the same `linkedSignal` the calendar uses, so a facility-list refresh
    * does not reset a choice the administrator already made.
    */
-  readonly building = linkedSignal<{city: TCity; options: ISelectOption[]}, string>({
+  readonly building = linkedSignal<{city: string; options: ISelectOption[]}, string>({
     source: () => ({city: this.city(), options: this.buildingOptions()}),
-    computation: (source, previous) => {
-      if (previous && source.options.some((option) => option.value === previous.value)) {
-        return previous.value;
-      }
-      return source.options[0]?.value ?? '';
-    },
+    computation: (source, previous) => keepSelected(source.options, previous?.value),
   });
 
   readonly resolvedPeriod = computed(() =>
@@ -545,7 +548,7 @@ export class BookingsTableComponent {
   }
 
   onCity(city: string): void {
-    this.city.set(city as TCity);
+    this.city.set(city);
     this.page.set(1);
   }
 

@@ -69,8 +69,14 @@ describe('BuildingDto', () => {
     expect(fieldNames(errors)).toContain('property');
   });
 
-  it('rejects a city outside the four the business operates in', async () => {
+  it('accepts a city outside the sample four, because cities are data', async () => {
     const errors = await validateDto(validPayload({city: 'wroclaw'}));
+
+    expect(fieldNames(errors)).not.toContain('city');
+  });
+
+  it('rejects a city shorter than the two-character bound', async () => {
+    const errors = await validateDto(validPayload({city: 'x'}));
 
     expect(fieldNames(errors)).toContain('city');
   });

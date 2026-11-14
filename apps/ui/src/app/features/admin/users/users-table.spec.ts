@@ -1,11 +1,10 @@
-import {CITY_LABELS} from '@models/building.model';
+import {IBuilding} from '@models/building.model';
 import {
   ROLE_LABELS,
   ROLE_OPTIONS,
   NAME_MAX,
   buildCreateRequest,
   buildUpdateRequest,
-  cityOptions,
   emptyUserForm,
   formFromUser,
   isCityRequired,
@@ -14,6 +13,7 @@ import {
   validateUserForm,
 } from './users-table';
 import type {IUserFormValue} from './users-table';
+import {cityOptions} from '../../../core/city-options';
 import {testTranslate} from '../../../../testing/i18n-testing';
 
 /**
@@ -47,14 +47,15 @@ describe('labels', () => {
     expect(ROLE_OPTIONS).toEqual(['ADMIN', 'OFFICE', 'EMPLOYEE']);
   });
 
-  it('builds the city options from the shared labels', () => {
-    const options = cityOptions(CITY_LABELS);
-    expect(options).toEqual(
-      (Object.keys(CITY_LABELS) as Array<keyof typeof CITY_LABELS>).map((city) => ({
-        value: city,
-        label: CITY_LABELS[city],
-      }))
-    );
+  it('derives the city options from the facilities, in facility order', () => {
+    const facilities = [
+      {city: 'siechnice', name: 'Hala', property: 'hala-sportowa'},
+      {city: 'radwanice', name: 'Hala', property: 'hala-sportowa'},
+    ] as IBuilding[];
+    expect(cityOptions(facilities)).toEqual([
+      {value: 'siechnice', label: 'Siechnice'},
+      {value: 'radwanice', label: 'Radwanice'},
+    ]);
   });
 });
 

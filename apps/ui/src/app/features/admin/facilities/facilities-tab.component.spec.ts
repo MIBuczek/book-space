@@ -4,7 +4,7 @@ import {HttpTestingController, provideHttpClientTesting} from '@angular/common/h
 import {throwError} from 'rxjs';
 import {IBuilding} from '@models/building.model';
 import {SessionStore} from '../../../core/session.store';
-import {adminUser, employeeUser, makeCapabilities, makeUser} from '../../../../testing/fixtures';
+import {adminUser, employeeUser, makeCapabilities, makeUser, officeUser} from '../../../../testing/fixtures';
 import {FacilitiesTabComponent} from './facilities-tab.component';
 import {provideTestI18n} from '../../../../testing/i18n-testing';
 
@@ -87,17 +87,24 @@ describe('FacilitiesTabComponent', () => {
       | HTMLTextAreaElement;
   };
 
-  const setSelect = (fixture: Fixture, label: string, value: string): void => {
-    const select = control(fixture, label) as HTMLSelectElement;
+  const setSelect = (fixture: Fixture, label: string, value: string, root?: ParentNode): void => {
+    const select = control(fixture, label, root) as HTMLSelectElement;
     select.value = value;
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
   };
 
-  const setText = (fixture: Fixture, label: string, value: string): void => {
-    const input = control(fixture, label) as HTMLInputElement | HTMLTextAreaElement;
+  const setText = (fixture: Fixture, label: string, value: string, root?: ParentNode): void => {
+    const input = control(fixture, label, root) as HTMLInputElement | HTMLTextAreaElement;
     input.value = value;
     input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  };
+
+  const setCheckbox = (fixture: Fixture, label: string, checked: boolean, root?: ParentNode): void => {
+    const input = control(fixture, label, root) as HTMLInputElement;
+    input.checked = checked;
+    input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
   };
 
@@ -118,6 +125,15 @@ describe('FacilitiesTabComponent', () => {
 
   const messagePanel = (fixture: Fixture): ParentNode =>
     element(fixture).querySelector('.bs-facilities__message') as ParentNode;
+
+  const formPanel = (fixture: Fixture): ParentNode =>
+    element(fixture).querySelector('.bs-facilities__form') as ParentNode;
+
+  const deletePanel = (fixture: Fixture): ParentNode =>
+    element(fixture).querySelector('.bs-facilities__delete') as ParentNode;
+
+  const detailsPanel = (fixture: Fixture): ParentNode =>
+    element(fixture).querySelector('.bs-facilities__details') as ParentNode;
 
   it('reads the staff facility list and shows the city and its first facility', async () => {
     session.set('token', adminUser());
@@ -344,5 +360,283 @@ describe('FacilitiesTabComponent', () => {
     listRequest().flush([facility()]);
     await Promise.resolve();
     fixture.detectChanges();
+  });
+
+  describe('facility writes (T272)', () => {
+    it('offers the create control to an administrator and hides it from office/employee', async () => {
+      const admin = await render([facility()], adminUser());
+      expect(admin.componentInstance.canWrite()).toBe(true);
+      expect(element(admin).textContent).toContain('Dodaj obiekt');
+
+      const office = await render([facility()], officeUser());
+      expect(office.componentInstance.canWrite()).toBe(false);
+      expect(element(office).textContent).not.toContain('Dodaj obiekt');
+    });
+
+    it('creates a facility from the form, then reloads the list', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Dodaj obiekt');
+      expect(fixture.componentInstance.editing()).toBe(true);
+
+      setText(fixture, 'Nazwa obiektu', 'Nowa hala', formPanel(fixture));
+      setText(fixture, 'Klucz obiektu', 'nowa-hala', formPanel(fixture));
+      setText(fixture, 'Miejscowość', 'olawa', formPanel(fixture));
+      setText(fixture, 'E-mail', 'nowa@example.com', formPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '600 000 000', formPanel(fixture));
+      setCheckbox(fixture, '1/1', true, formPanel(fixture));
+      setText(fixture, 'Pracownicy (każdy w nowej linii)', 'Anna\nPiotr', formPanel(fixture));
+
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      const request = httpMock.expectOne('/api/buildings');
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({
+        name: 'Nowa hala',
+        property: 'nowa-hala',
+        city: 'olawa',
+        email: 'nowa@example.com',
+        phone: '600 000 000',
+        sizes: ['1/1'],
+        lighting: false,
+        toilets: false,
+        employees: ['Anna', 'Piotr'],
+        active: true,
+      });
+      request.flush(facility({_id: 'b9', name: 'Nowa hala', city: 'olawa'}));
+      fixture.detectChanges();
+
+      // The list reloads after a successful write.
+      listRequest().flush([facility(), facility({_id: 'b9', name: 'Nowa hala', city: 'olawa'})]);
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.editing()).toBe(false);
+    });
+
+    it('refuses to submit an incomplete form and never calls the API', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Dodaj obiekt');
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectNone('/api/buildings');
+      expect(fixture.componentInstance.facilityErrors().name).toBeDefined();
+      expect(fixture.componentInstance.facilityErrors().sizes).toBe(
+        'Wybierz co najmniej jedną powierzchnię'
+      );
+    });
+
+    it('edits the selected facility, sending only the changed value', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      expect(fixture.componentInstance.editTarget()?.property).toBe('hala-sportowa');
+
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      const request = httpMock.expectOne('/api/buildings/b1');
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body.phone).toBe('111 222 333');
+      request.flush(facility());
+      fixture.detectChanges();
+      listRequest().flush([facility()]);
+      await Promise.resolve();
+      fixture.detectChanges();
+    });
+
+    it('maps a 422 back to the field it names (FR-026)', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(
+        {statusCode: 422, message: ['Property need to be filled.'], error: 'Unprocessable Entity'},
+        {status: 422, statusText: 'Unprocessable Entity'}
+      );
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityErrors().property).toBe('Nieprawidłowa wartość.');
+      expect(element(fixture).textContent).toContain('Nieprawidłowa wartość.');
+    });
+
+    it('shows a generic save failure for a non-422 error', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush('boom', {status: 500, statusText: 'Server Error'});
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityGeneralError()).toContain('Nie udało się zapisać');
+    });
+
+    it('shows the general prompt for a 422 whose message names no field', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(
+        {statusCode: 422, message: ['Number of characters need to be between 3 and 125'], error: 'Unprocessable Entity'},
+        {status: 422, statusText: 'Unprocessable Entity'}
+      );
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityGeneralError()).toBe('Popraw dane i spróbuj ponownie.');
+    });
+
+    it('shows the general prompt for a 422 with no message list at all', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(null, {
+        status: 422,
+        statusText: 'Unprocessable Entity',
+      });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityGeneralError()).toBe('Popraw dane i spróbuj ponownie.');
+    });
+
+    it('shows the general prompt for a 422 whose message is not a list', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(
+        {statusCode: 422, message: 'Property need to be filled.', error: 'Unprocessable Entity'},
+        {status: 422, statusText: 'Unprocessable Entity'}
+      );
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityGeneralError()).toBe('Popraw dane i spróbuj ponownie.');
+    });
+
+    it('shows the general prompt for a 422 whose body carries no message', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(
+        {statusCode: 422, error: 'Unprocessable Entity'},
+        {status: 422, statusText: 'Unprocessable Entity'}
+      );
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.facilityGeneralError()).toBe('Popraw dane i spróbuj ponownie.');
+    });
+
+    it('shows a generic save failure for a non-HTTP error', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      setText(fixture, 'Telefon kontaktowy', '111 222 333', formPanel(fixture));
+      jest
+        .spyOn(fixture.componentInstance['facilitiesApi'], 'update')
+        .mockReturnValue(throwError(() => new Error('offline')));
+
+      pressButton(fixture, 'Zapisz', formPanel(fixture));
+
+      expect(fixture.componentInstance.facilityGeneralError()).toContain('Nie udało się zapisać');
+    });
+
+    it('cancels an edit without sending a request', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Dodaj obiekt');
+      pressButton(fixture, 'Anuluj', formPanel(fixture));
+
+      httpMock.expectNone('/api/buildings');
+      expect(fixture.componentInstance.editing()).toBe(false);
+    });
+
+    it('deletes the selected facility after confirmation, then reloads', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Usuń', detailsPanel(fixture));
+      expect(fixture.componentInstance.deleteTarget()?.property).toBe('hala-sportowa');
+
+      pressButton(fixture, 'Usuń', deletePanel(fixture));
+
+      const request = httpMock.expectOne('/api/buildings/b1');
+      expect(request.request.method).toBe('DELETE');
+      request.flush({});
+      fixture.detectChanges();
+
+      listRequest().flush([]);
+      await Promise.resolve();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.deleteTarget()).toBeNull();
+    });
+
+    it('names the conflict when a delete is refused with 409 (T059)', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Usuń', detailsPanel(fixture));
+      pressButton(fixture, 'Usuń', deletePanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush(
+        {statusCode: 409, message: ['Facility is referenced'], error: 'Conflict'},
+        {status: 409, statusText: 'Conflict'}
+      );
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.deleteError()).toContain('Nie można usunąć obiektu');
+      expect(element(fixture).textContent).toContain('Nie można usunąć obiektu');
+    });
+
+    it('shows a generic delete failure for a non-409 error', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Usuń', detailsPanel(fixture));
+      pressButton(fixture, 'Usuń', deletePanel(fixture));
+
+      httpMock.expectOne('/api/buildings/b1').flush('boom', {status: 500, statusText: 'Server Error'});
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.deleteError()).toContain('Nie udało się usunąć obiektu');
+    });
+
+    it('dismisses the delete dialog without deleting', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Usuń', detailsPanel(fixture));
+      pressButton(fixture, 'Anuluj', deletePanel(fixture));
+
+      httpMock.expectNone('/api/buildings/b1');
+      expect(fixture.componentInstance.deleteTarget()).toBeNull();
+    });
+
+    it('toggles a size off when its checkbox is cleared', async () => {
+      const fixture = await render([facility()]);
+
+      pressButton(fixture, 'Edytuj', detailsPanel(fixture));
+      // The seeded facility has 1/1 and 1/2; clearing 1/1 leaves 1/2.
+      setCheckbox(fixture, '1/1', false, formPanel(fixture));
+
+      expect(fixture.componentInstance.facilityForm().sizes).toEqual(['1/2']);
+    });
+
+    it('ignores a delete confirmation with no target', async () => {
+      const fixture = await render([facility()]);
+
+      fixture.componentInstance.confirmDelete();
+
+      httpMock.expectNone('/api/buildings/b1');
+    });
   });
 });

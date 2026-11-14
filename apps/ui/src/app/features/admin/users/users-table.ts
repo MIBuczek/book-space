@@ -1,6 +1,5 @@
 import {TranslateFn} from '@booking/i18n';
 import {IUserRequest, IUserUpdateRequest, TUserRole} from '@models/user.model';
-import {TCity} from '@models/building.model';
 
 /**
  * The admin Users tab's pure logic (FR-045, FR-047).
@@ -277,10 +276,6 @@ const toRow = (user: {
   user,
 });
 
-/** The city selector's options, from the shared city labels. */
-const cityOptions = (labels: Record<TCity, string>): Array<{value: string; label: string}> =>
-  (Object.keys(labels) as TCity[]).map((city) => ({value: city, label: labels[city]}));
-
 export {
   ROLE_LABELS,
   ROLE_OPTIONS,
@@ -300,6 +295,5 @@ export {
   buildUpdateRequest,
   mapServerErrors,
   toRow,
-  cityOptions,
 };
 export type {IUserFormValue, TUserFieldErrors, IUserWriteErrors};

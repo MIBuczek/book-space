@@ -1,4 +1,4 @@
-import {IBuilding, TCity} from '@models/building.model';
+import {IBuilding} from '@models/building.model';
 
 /** A facility as the seed declares it: the stored shape without the database-assigned id. */
 export type TSeedFacility = Omit<IBuilding, '_id'>;
@@ -159,8 +159,14 @@ export const FACILITY_SEED: readonly TSeedFacility[] = [
   },
 ];
 
-/** The four cities, in the order `spec.md` §4 lists them. */
-export const CITY_SEED: readonly TCity[] = [
+/**
+ * The four cities the sample facilities sit in, in the order `spec.md` §4 lists them.
+ *
+ * This is the *sample data's* city list, not a constraint: cities are data (spec.md §9 open
+ * question 1), so this constant describes what the seed contains, not what a deployment may
+ * use. Nothing validates a new facility's city against it.
+ */
+export const CITY_SEED: readonly string[] = [
   'siechnice',
   'radwanice',
   'swieta-katarzyna',

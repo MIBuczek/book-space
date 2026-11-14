@@ -107,6 +107,37 @@ issue. T051 (staff user management) sits in Phase 3 with the rest of the authori
 - [x] T063 Reconcile the booking status vocabulary and its Polish label. (CHK014, research.md R11, spec.md §9) — **done.** The legacy app labelled the same slot status two ways: the resolve dropdown (`BOOKING_STATUS_OPTIONS`) called `QUIT` "Odwołana" while `transformValue` — the table, the summary and the CSV — called it "Rezygnacja", so the legacy CSV already disagreed with its own UI. The target keeps the **`transformValue`** wording for every status and makes the screen agree with it, because that is the vocabulary the business already reads in the exported report (so the rewrite's CSV is byte-compatible with the legacy export and no downstream spreadsheet changes) and because the dropdown was the inconsistent surface. All three values are aligned, not just the renamed one: `INITIAL` "Nie rozpoczęta", `DONE` "Zakończona", `CANCELED` "Rezygnacja". The enum rename `QUIT` → `CANCELED` and its migration mapping already landed in T042; this task is the label. The UI labels (`libs/copy` `COPY.bookings.statusLabels`) and the report labels (`libs/reporting` `REPORT_VALUE_LABELS`) stay separate maps — the copy is translatable, the report vocabulary is the legacy Polish a business artefact prints — and a guard in `bookings-table.spec.ts` asserts each UI label equals `displayValue(status)`, which is the assertion the legacy app never had. Stale `QUIT` references in `spec.md` corrected. Decision recorded in `data-model.md` § "Slot status vocabulary". Tracked as #55.
 - [x] T064 Document that rejecting a request is the staff delete, not a status transition. (FR-017, spec.md §9 open question 4) — **done.** Open question 4 is answered: a rejected booking request is **deleted**, because the tenant removes a request it will not fulfil rather than keeping a rejected record. No `REJECTED` status is introduced and none is wanted, so the change is confirmatory: the existing staff `DELETE /bookings/{_id}` (guarded with `AuthGuard('jwt')` + `assertCanModify`) *is* the rejection, and the admin delete affordance is labelled "Usuń / Odrzuć" (`COPY.bookings.modals.delete`) so the label names both readings. `data-model.md` § "Slot status vocabulary" records that the vocabulary is closed — the status is a property of a slot, so a whole-booking `REJECTED` member would be the only value of its kind — and `models-shape.spec.ts` asserts `BOOKING_STATUSES` does not contain it, so a re-introduction fails the build. SC-003 is pinned for the case: a deleted (rejected) booking leaves no orphan reference, which `conflicts.integration.spec.ts` proves over HTTP — the counter no longer returns it and the surviving booking is untouched. Tracked as #196.
 
+## Phase 10 — Cities as data (spec.md §9 open question 1, #193)
+
+Open question 1 was answered "cities and facilities are fully administrator-managed from day one:
+the rewrite ships no compiled-in city list". **Approach A** (chosen): a city is not its own
+collection — it is a plain field on a facility, and the city list a screen offers is the set of
+distinct `city` values across the facilities. Adding a city is adding a facility that names it, so
+"add city" needs no separate screen or resource. The four compiled-in values
+(`CITIES`/`CITY_LABELS`/`SUMMARY_CITIES`) are the thing being removed.
+
+- [x] **T270** Retire the compiled-in city list. `city` becomes a bounded free-text string on
+      `BuildingDto`/`UpdateBuildingDto` (length bounds, not `IsIn(CITIES)`) and on the
+      `building.schema.ts` `city` prop (no `enum`); `TCity` is dropped from `IBuilding.city` (a
+      plain `string`) and from the migration transform's cast. `CITIES`/`CITY_LABELS` leave
+      `libs/models/building.model.ts`. (FR-007, spec.md §9 Q1)
+- [x] **T271** Derive the city list in the UI from the facilities the screens already fetch
+      (`FacilitiesApi.list()`/`listStaff()`): a `distinctCities` helper in `libs/models` and a
+      `cityOptions` builder replace the compiled `CITY_OPTIONS`. The five selectors — public
+      calendar, booking request, bookings tab, facilities tab, users tab — read it. A city whose
+      facilities are all retired still appears for staff; the public selectors see only active
+      facilities. (FR-007)
+- [x] **T272** Admin create/edit facility form in the Facilities tab, so an administrator can add
+      a building and thereby a city (the write routes exist, the UI does not call them). The city
+      is a free-text field (or a datalist of the cities already in use), and the create succeeds
+      without any compiled-in list. (FR-007, FR-009)
+- [x] **T273** Reconcile the Summary/report city handling with a data-driven list: the report
+      groups by the cities actually present in the data rather than `SUMMARY_CITIES`, and
+      `REPORT_VALUE_LABELS` keeps the legacy city labels but falls through to the stored value for
+      a city it does not name. (FR-027, FR-028)
+- [x] **T274** Update the affected specs and docs: `models-shape.spec.ts`, `building.dto.spec.ts`,
+      the five selector specs, `data-model.md` (the City row, the ERD) and `ui-conventions.md`.
+
 ---
 
 ## Dependency notes

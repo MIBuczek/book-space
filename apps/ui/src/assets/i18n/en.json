@@ -347,6 +347,28 @@
     "sent": "The message has been sent successfully",
     "sendValidation": "Correct the details and try again.",
     "sendFailure": "Could not send the message. Please try again later.",
+    "add": "Add facility",
+    "createTitle": "New facility",
+    "editTitle": "Edit facility",
+    "deleteTitle": "Delete facility",
+    "deleteConfirm": "Delete the facility \"{{name}}\"?",
+    "deleteConflict": "This facility cannot be deleted because bookings or assigned staff still reference it. Set it as inactive instead.",
+    "deleteFailure": "Could not delete the facility. Please try again later.",
+    "saveFailure": "Could not save the facility. Please try again later.",
+    "fields": {
+      "name": "Facility name",
+      "property": "Facility key",
+      "city": "City",
+      "email": "E-mail",
+      "phone": "Contact phone",
+      "street": "Street",
+      "zipCode": "Zip code",
+      "sizes": "Areas",
+      "lighting": "Lighting",
+      "toilets": "Toilets",
+      "employees": "Employees (one per line)",
+      "active": "Facility active"
+    },
     "details": {
       "city": "City",
       "name": "Facility name",
@@ -527,7 +549,9 @@
     "emailRequired": "E-mail is required",
     "emailAt": "The e-mail must contain @",
     "emailRange": "The e-mail must be between {{min}} and {{max}} characters",
-    "passwordRequired": "Password is required"
+    "passwordRequired": "Password is required",
+    "propertyRequired": "The facility key is required",
+    "sizesRequired": "Select at least one area"
   },
   "labels": {
     "clientType": {

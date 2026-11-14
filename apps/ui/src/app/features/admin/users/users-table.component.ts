@@ -4,7 +4,7 @@ import {rxResource} from '@angular/core/rxjs-interop';
 import {TranslatePipe} from '@ngx-translate/core';
 import {injectTranslate} from '@booking/i18n';
 import {IUser, TUserRole} from '@models/user.model';
-import {IBuilding, CITY_LABELS} from '@models/building.model';
+import {IBuilding} from '@models/building.model';
 import {IValidationError} from '@models/validation-error.model';
 import {UsersApi} from '../../../core/users.api';
 import {FacilitiesApi} from '../../../core/facilities.api';
@@ -24,7 +24,6 @@ import {
   USER_COLUMNS,
   buildCreateRequest,
   buildUpdateRequest,
-  cityOptions,
   emptyUserForm,
   formFromUser,
   isCityRequired,
@@ -33,6 +32,7 @@ import {
   validateUserForm,
 } from './users-table';
 import type {IUserFormValue, TUserFieldErrors} from './users-table';
+import {cityOptions as buildCityOptions} from '../../../core/city-options';
 
 /**
  * The admin Users tab (FR-045, FR-047, issue #118).
@@ -144,7 +144,7 @@ import type {IUserFormValue, TUserFieldErrors} from './users-table';
           @if (cityRequired()) {
             <book-space-select
               [label]="'users.fields.city' | translate"
-              [options]="citySelectOptions"
+              [options]="citySelectOptions()"
               [value]="form().city"
               [error]="fieldErrors().city ?? null"
               (valueChange)="update({city: $event})"
@@ -238,7 +238,6 @@ export class UsersTableComponent {
   readonly roleOptions = computed<ISelectOption[]>(() =>
     ROLE_OPTIONS.map((role) => ({value: role, label: this.t(ROLE_LABELS[role])}))
   );
-  readonly citySelectOptions: ISelectOption[] = cityOptions(CITY_LABELS);
 
   readonly editing = signal(false);
   readonly editTarget = signal<IUser | null>(null);
@@ -277,6 +276,9 @@ export class UsersTableComponent {
   readonly facilities = computed(() =>
     this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
   );
+
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly citySelectOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
 
   readonly rows = computed<Record<string, unknown>[]>(() => {
     const items = this.usersResource.hasValue() ? this.usersResource.value() : [];

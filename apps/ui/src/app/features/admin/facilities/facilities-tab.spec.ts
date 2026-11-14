@@ -1,14 +1,23 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {IBuilding} from '@models/building.model';
 import {
   EMAIL_PATTERN,
+  buildFacilityRequest,
   buildMessageRequest,
+  deleteFailureMessage,
   employeeOptions,
   emptyEmployeeMessage,
+  emptyFacilityForm,
   facilityDetails,
+  formFromFacility,
+  mapFacilityServerErrors,
+  parseEmployees,
   sendFailureMessage,
   validateEmployeeMessage,
+  validateFacilityForm,
   yesNo,
 } from './facilities-tab';
+import type {IFacilityFormValue} from './facilities-tab';
 import {testTranslate} from '../../../../testing/i18n-testing';
 
 const facility = (overrides: Partial<IBuilding> = {}): IBuilding => ({
@@ -152,6 +161,203 @@ describe('facilities tab logic', () => {
       expect(sendFailureMessage(502, t)).toBe(
         'Nie udało się wysłać wiadomości. Spróbuj ponownie później.'
       );
+    });
+  });
+
+  describe('facility form (T272)', () => {
+    const valid: IFacilityFormValue = {
+      name: 'Hala sportowa',
+      property: 'hala-sportowa',
+      city: 'siechnice',
+      email: 'hala@example.com',
+      phone: '609 996 064',
+      street: '',
+      zipCode: '',
+      sizes: ['1/1', '1/2'],
+      lighting: true,
+      toilets: false,
+      employees: '',
+      active: true,
+    };
+
+    describe('emptyFacilityForm', () => {
+      it('starts blank, with no size chosen and active by default', () => {
+        expect(emptyFacilityForm()).toEqual({
+          name: '',
+          property: '',
+          city: '',
+          email: '',
+          phone: '',
+          street: '',
+          zipCode: '',
+          sizes: [],
+          lighting: false,
+          toilets: false,
+          employees: '',
+          active: true,
+        });
+      });
+    });
+
+    describe('formFromFacility', () => {
+      it('reads the stored record, joining employees one per line', () => {
+        expect(formFromFacility(facility({street: 'ul. Sienkiewicza 1', zipCode: '55-010'}))).toEqual({
+          name: 'Hala sportowa',
+          property: 'hala-sportowa',
+          city: 'siechnice',
+          email: 'siechnice.hala@gmail.com',
+          phone: '609 996 064',
+          street: 'ul. Sienkiewicza 1',
+          zipCode: '55-010',
+          sizes: ['1/1', '1/2'],
+          lighting: true,
+          toilets: false,
+          employees: 'Bożena Kaczyńska\nBeata Hasiuk',
+          active: true,
+        });
+      });
+
+      it('reads an absent address and flag as empty and active (T059)', () => {
+        const value = formFromFacility(facility({street: undefined, zipCode: undefined, active: undefined}));
+        expect(value.street).toBe('');
+        expect(value.zipCode).toBe('');
+        expect(value.active).toBe(true);
+      });
+    });
+
+    describe('validateFacilityForm', () => {
+      it('accepts a complete facility', () => {
+        expect(validateFacilityForm(valid, t)).toEqual({});
+      });
+
+      it('requires a name within the server bound', () => {
+        expect(validateFacilityForm({...valid, name: 'ab'}, t).name).toBe(
+          'Nazwa musi mieć od 3 do 125 znaków'
+        );
+      });
+
+      it('requires a facility key', () => {
+        expect(validateFacilityForm({...valid, property: '   '}, t).property).toBe(
+          'Klucz obiektu jest wymagany'
+        );
+      });
+
+      it('requires a well-formed e-mail, distinguishing empty from malformed', () => {
+        expect(validateFacilityForm({...valid, email: ''}, t).email).toBe('E-mail jest wymagany');
+        expect(validateFacilityForm({...valid, email: 'nope'}, t).email).toBe(
+          'Podaj poprawny adres e-mail'
+        );
+      });
+
+      it('bounds the phone and the city', () => {
+        expect(validateFacilityForm({...valid, phone: '12'}, t).phone).toBe(
+          'Telefon musi mieć od 3 do 15 znaków'
+        );
+        expect(validateFacilityForm({...valid, city: 'x'}, t).city).toBe(
+          'Miasto musi mieć od 2 do 125 znaków'
+        );
+      });
+
+      it('accepts an empty optional address but validates a present one', () => {
+        expect(validateFacilityForm({...valid, street: '', zipCode: ''}, t)).toEqual({});
+        expect(validateFacilityForm({...valid, street: 'ab'}, t).street).toBe(
+          'Ulica musi mieć od 3 do 125 znaków'
+        );
+        expect(validateFacilityForm({...valid, zipCode: '123'}, t).zipCode).toBe(
+          'Kod pocztowy musi mieć 6 znaków (cyfry, kropki, ukośniki, myślniki)'
+        );
+      });
+
+      it('accepts a well-formed optional address', () => {
+        expect(validateFacilityForm({...valid, street: 'ul. Testowa 1', zipCode: '55-010'}, t)).toEqual({});
+      });
+
+      it('requires at least one rentable size (FR-008)', () => {
+        expect(validateFacilityForm({...valid, sizes: []}, t).sizes).toBe(
+          'Wybierz co najmniej jedną powierzchnię'
+        );
+      });
+    });
+
+    describe('parseEmployees', () => {
+      it('splits on newlines, trims and drops blank lines', () => {
+        expect(parseEmployees('  Anna \n\n Piotr  \n')).toEqual(['Anna', 'Piotr']);
+      });
+
+      it('returns an empty list for empty input', () => {
+        expect(parseEmployees('   \n  ')).toEqual([]);
+      });
+    });
+
+    describe('buildFacilityRequest', () => {
+      it('sends the required fields and omits empty optionals', () => {
+        expect(buildFacilityRequest(valid)).toEqual({
+          name: 'Hala sportowa',
+          property: 'hala-sportowa',
+          city: 'siechnice',
+          email: 'hala@example.com',
+          phone: '609 996 064',
+          sizes: ['1/1', '1/2'],
+          lighting: true,
+          toilets: false,
+          employees: [],
+          active: true,
+        });
+      });
+
+      it('includes a present optional address and parses employees', () => {
+        expect(
+          buildFacilityRequest({...valid, street: 'ul. 1', zipCode: '55-010', employees: 'Anna\nPiotr'})
+        ).toMatchObject({
+          street: 'ul. 1',
+          zipCode: '55-010',
+          employees: ['Anna', 'Piotr'],
+        });
+      });
+    });
+
+    describe('mapFacilityServerErrors', () => {
+      it('maps a named field message to that field with the UI wording', () => {
+        expect(mapFacilityServerErrors(['Property need to be filled.'], t)).toEqual({
+          fields: {property: 'Nieprawidłowa wartość.'},
+          general: null,
+        });
+      });
+
+      it('maps the server\'s hyphenated E-mail spelling to the email field', () => {
+        expect(mapFacilityServerErrors(['E-mail address need to contains correct pattern'], t).fields).toEqual(
+          {email: 'Nieprawidłowa wartość.'}
+        );
+      });
+
+      it('maps a size message to the sizes field', () => {
+        expect(mapFacilityServerErrors(['Size must be one of 1/1, 1/2, 1/3, 2/3, 1/4, 3/4.'], t).fields).toEqual(
+          {sizes: 'Nieprawidłowa wartość.'}
+        );
+      });
+
+      it('falls back to the general prompt for a message that names no field', () => {
+        expect(mapFacilityServerErrors(['Number of characters need to be between 3 and 125'], t)).toEqual({
+          fields: {},
+          general: 'Popraw dane i spróbuj ponownie.',
+        });
+      });
+    });
+
+    describe('deleteFailureMessage', () => {
+      it('names the conflict on a 409 and points at deactivation', () => {
+        const error = new HttpErrorResponse({status: 409});
+        expect(deleteFailureMessage(error, t)).toContain('Nie można usunąć obiektu');
+      });
+
+      it('shows a retry message for any other failure', () => {
+        expect(deleteFailureMessage(new HttpErrorResponse({status: 500}), t)).toBe(
+          'Nie udało się usunąć obiektu. Spróbuj ponownie później.'
+        );
+        expect(deleteFailureMessage(new Error('offline'), t)).toBe(
+          'Nie udało się usunąć obiektu. Spróbuj ponownie później.'
+        );
+      });
     });
   });
 });

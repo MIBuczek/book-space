@@ -2,7 +2,7 @@ import {facilityWallClock, instantFromLegacyLocal, startOfFacilityDay} from '@bo
 import {Types} from 'mongoose';
 import {TClientType, TPayment, IPlace} from '@models/booking.model';
 import {TSingleBookingStatus} from '@models/booked-time.model';
-import {TCity} from '@models/building.model';
+
 import {DEFAULT_CREATED_BY, DEFAULT_DISCOUNT, DEFAULT_MODIFIED_BY, DEFAULT_NICK} from './defaults';
 import {objectIdFromLegacyId} from './identity';
 import {
@@ -158,7 +158,7 @@ const transformSelectedOption = (option: ILegacySelectedOption) => ({
  */
 const toPlace = (city: string | undefined, building: string | undefined): IPlace => ({
   place: building ?? '',
-  city: (city ?? '') as TCity,
+  city: city ?? '',
 });
 
 /**
@@ -275,7 +275,7 @@ interface ITransformedBuilding {
   _id: Types.ObjectId;
   name: string;
   property: string;
-  city: TCity;
+  city: string;
   sizes: string[];
   lighting: boolean;
   toilets: boolean;
@@ -288,7 +288,7 @@ const transformBuilding = (legacy: ILegacyBuilding): ITransformedBuilding => ({
   _id: objectIdFromLegacyId(legacy._id),
   name: legacy.name ?? '',
   property: legacy.property ?? '',
-  city: (legacy.city ?? '') as TCity,
+  city: legacy.city ?? '',
   // `size` (a single value) becomes `sizes` (a list); the legacy field was already an array.
   sizes: legacy.size ?? [],
   // `extra.lighting` / `extra.toilets` are promoted to top-level booleans.

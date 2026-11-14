@@ -2,7 +2,7 @@ import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {TranslatePipe} from '@ngx-translate/core';
 import {injectTranslate} from '@booking/i18n';
-import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
+import {IPublicBuilding} from '@models/building.model';
 import {BookingsApi} from '../../core/bookings.api';
 import {FacilitiesApi} from '../../core/facilities.api';
 import {SessionStore} from '../../core/session.store';
@@ -21,7 +21,7 @@ import {
   weekColumns,
 } from './calendar-events';
 
-const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
+import {cityOptions as buildCityOptions, keepSelected} from '../../core/city-options';
 
 /**
  * The public calendar (FR-037, FR-038).
@@ -55,7 +55,7 @@ const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label:
       <div class="bs-calendar__controls">
         <book-space-select
           [label]="'calendar.city' | translate"
-          [options]="cityOptions"
+          [options]="cityOptions()"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
@@ -254,7 +254,6 @@ export class PublicCalendarComponent {
   private readonly session = inject(SessionStore);
   private readonly t = injectTranslate();
 
-  readonly cityOptions = CITY_OPTIONS;
   readonly views = computed<Array<{value: TCalendarView; label: string}>>(() => [
     {value: 'week', label: this.t('calendar.views.week')},
     {value: 'day', label: this.t('calendar.views.day')},
@@ -263,7 +262,6 @@ export class PublicCalendarComponent {
   ]);
   readonly hours = gridHours();
 
-  readonly city = signal<TCity>('siechnice');
   readonly view = signal<TCalendarView>('week');
   /** The day the view is centred on; `now` on first render, matching the legacy initial view. */
   readonly anchor = signal(new Date());
@@ -277,6 +275,22 @@ export class PublicCalendarComponent {
   readonly facilities = computed<IPublicBuilding[]>(() =>
     this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
   );
+
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly cityOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
+
+  /**
+   * The selected city.
+   *
+   * A `linkedSignal` on the facility list: cities are data (spec.md §9 open question 1), so the
+   * initial city is the first city the facilities carry rather than a compiled-in default, and
+   * the previous choice is kept while it is still valid so a background refresh does not reset
+   * it. It stays writable so the selector can set it.
+   */
+  readonly city = linkedSignal<ISelectOption[], string>({
+    source: () => this.cityOptions(),
+    computation: (options, previous) => keepSelected(options, previous?.value),
+  });
 
   /** The facilities of the selected city, as the selector's options. */
   readonly buildingOptions = computed<ISelectOption[]>(() =>
@@ -293,7 +307,7 @@ export class PublicCalendarComponent {
    * when it is still valid stops a background facility-list refresh from resetting a choice
    * the visitor already made.
    */
-  readonly building = linkedSignal<{city: TCity; options: ISelectOption[]}, string>({
+  readonly building = linkedSignal<{city: string; options: ISelectOption[]}, string>({
     source: () => ({city: this.city(), options: this.buildingOptions()}),
     computation: (source, previous) => {
       if (previous && source.options.some((option) => option.value === previous.value)) {
@@ -337,7 +351,7 @@ export class PublicCalendarComponent {
   });
 
   onCity(city: string): void {
-    this.city.set(city as TCity);
+    this.city.set(city);
   }
 
   onBuilding(building: string): void {
