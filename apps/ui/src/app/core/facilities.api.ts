@@ -1,6 +1,6 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
-import {IBuilding, IPublicBuilding} from '@models/building.model';
+import {IBuilding, IFacilityRequest, IFacilityUpdateRequest, IPublicBuilding} from '@models/building.model';
 import {Observable} from 'rxjs';
 
 /**
@@ -30,5 +30,21 @@ export class FacilitiesApi {
   /** The staff read: the full record, including the contact details and the employee list. */
   listStaff(): Observable<IBuilding[]> {
     return this.http.get<IBuilding[]>('/api/buildings');
+  }
+
+  /**
+   * The writes (FR-010, T272). Administrator-only on the server; the Facilities tab decides
+   * which controls to render from `canWriteFacilities`, and the server enforces the same rule.
+   */
+  create(body: IFacilityRequest): Observable<IBuilding> {
+    return this.http.post<IBuilding>('/api/buildings', body);
+  }
+
+  update(_id: string, body: IFacilityUpdateRequest): Observable<unknown> {
+    return this.http.put<unknown>(`/api/buildings/${_id}`, body);
+  }
+
+  remove(_id: string): Observable<unknown> {
+    return this.http.delete<unknown>(`/api/buildings/${_id}`);
   }
 }

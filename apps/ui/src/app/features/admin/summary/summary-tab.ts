@@ -1,6 +1,6 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IClient} from '@models/client.model';
-import {IBookedTimeSummary, IClientSummary, SUMMARY_CITIES, TSummaryCity} from '@models/reporting.model';
+import {IBookedTimeSummary, IClientSummary, cityBookings} from '@models/reporting.model';
 import {facilityWallClock, formatFacilityDate, formatFacilityTime} from '@booking/date-time';
 import {
   displayBoolean,
@@ -38,9 +38,9 @@ interface IDetailRow {
   value: string;
 }
 
-/** One city's total line, in the legacy order. */
+/** One city's total line. */
 interface ICityTotal {
-  city: TSummaryCity;
+  city: string;
   label: string;
   total: string;
 }
@@ -80,16 +80,16 @@ interface ICityReport extends ICityTotal {
  * business artefact and the enum is what the legacy report carried.
  */
 const CLIENT_DETAIL_FIELDS: Array<{key: keyof IClient; label: string}> = [
-  {key: 'name', label: COPY.summary.clientDetail.name},
-  {key: 'type', label: COPY.summary.clientDetail.type},
-  {key: 'contactPerson', label: COPY.summary.clientDetail.contactPerson},
-  {key: 'phone', label: COPY.summary.clientDetail.phone},
-  {key: 'email', label: COPY.summary.clientDetail.email},
-  {key: 'street', label: COPY.summary.clientDetail.street},
-  {key: 'city', label: COPY.summary.clientDetail.city},
-  {key: 'zipCode', label: COPY.summary.clientDetail.zipCode},
-  {key: 'nip', label: COPY.summary.clientDetail.nip},
-  {key: 'nick', label: COPY.summary.clientDetail.nick},
+  {key: 'name', label: 'summary.clientDetail.name'},
+  {key: 'type', label: 'summary.clientDetail.type'},
+  {key: 'contactPerson', label: 'summary.clientDetail.contactPerson'},
+  {key: 'phone', label: 'summary.clientDetail.phone'},
+  {key: 'email', label: 'summary.clientDetail.email'},
+  {key: 'street', label: 'summary.clientDetail.street'},
+  {key: 'city', label: 'summary.clientDetail.city'},
+  {key: 'zipCode', label: 'summary.clientDetail.zipCode'},
+  {key: 'nip', label: 'summary.clientDetail.nip'},
+  {key: 'nick', label: 'summary.clientDetail.nick'},
 ];
 
 /**
@@ -100,9 +100,9 @@ const CLIENT_DETAIL_FIELDS: Array<{key: keyof IClient; label: string}> = [
  * legacy read `date.getMonth()` in the viewer's zone, so a user abroad would see the neighbouring
  * month in the filename (R4). The year comes from the end month, as in the legacy.
  */
-const periodLabel = (period: IReportPeriod): string => {
+const periodLabel = (period: IReportPeriod, t: TranslateFn): string => {
   if (period.fromTheBeginning || period.fromMonth === null || period.toMonth === null) {
-    return COPY.summary.fromBeginningText;
+    return t('summary.fromBeginningText');
   }
   const from = facilityWallClock(period.fromMonth).month;
   const to = facilityWallClock(period.toMonth);
@@ -117,12 +117,17 @@ const periodLabel = (period: IReportPeriod): string => {
  * legacy early return — the tab only enables the button once a summary exists, so the fallback
  * is a guard rather than a path a user reaches. The name is lower-cased, as the legacy did.
  */
-const csvFilename = (clientName: string | null, period: IReportPeriod, forAll: boolean): string => {
+const csvFilename = (
+  clientName: string | null,
+  period: IReportPeriod,
+  forAll: boolean,
+  t: TranslateFn
+): string => {
   if (!forAll && clientName === null) {
-    return COPY.summary.csvFilename.clientFallback;
+    return t('summary.csvFilename.clientFallback');
   }
-  const base = forAll ? COPY.summary.csvFilename.all : clientName;
-  return `${base} (${periodLabel(period)}).csv`.toLowerCase();
+  const base = forAll ? t('summary.csvFilename.all') : clientName;
+  return `${base} (${periodLabel(period, t)}).csv`.toLowerCase();
 };
 
 /**
@@ -138,16 +143,17 @@ const csvFilename = (clientName: string | null, period: IReportPeriod, forAll: b
 const rangeError = (
   fromMonth: Date | null,
   toMonth: Date | null,
-  fromTheBeginning: boolean
+  fromTheBeginning: boolean,
+  t: TranslateFn
 ): string | null => {
   if (fromTheBeginning) {
     return null;
   }
   if (fromMonth === null || toMonth === null) {
-    return COPY.summary.rangeError.missing;
+    return t('summary.rangeError.missing');
   }
   if (fromMonth.getTime() > toMonth.getTime()) {
-    return COPY.summary.rangeError.inverted;
+    return t('summary.rangeError.inverted');
   }
   return null;
 };
@@ -158,9 +164,9 @@ const rangeError = (
  * The month numbers are read through the shared facility wall clock, so the label matches the
  * instant the server widens to a month (R4) rather than the browser's zone.
  */
-const periodText = (period: IReportPeriod): string => {
+const periodText = (period: IReportPeriod, t: TranslateFn): string => {
   if (period.fromTheBeginning || period.fromMonth === null || period.toMonth === null) {
-    return COPY.summary.fromBeginningText;
+    return t('summary.fromBeginningText');
   }
   return `${monthLabel(period.fromMonth)} – ${monthLabel(period.toMonth)}`;
 };
@@ -177,36 +183,45 @@ const monthLabel = (month: Date): string => {
  * A field with no value is dropped rather than rendered blank, matching the legacy
  * `!isEmpty(client[prop])` guard.
  */
-const clientDetailRows = (client: IClient): IDetailRow[] =>
+const clientDetailRows = (client: IClient, t: TranslateFn): IDetailRow[] =>
   CLIENT_DETAIL_FIELDS.reduce<IDetailRow[]>((rows, {key, label}) => {
     const raw = client[key];
     if (raw === undefined || raw === null || raw === '') {
       return rows;
     }
-    rows.push({label, value: String(raw)});
+    rows.push({label: t(label), value: String(raw)});
     return rows;
   }, []);
 
-/** The per-city totals, in the legacy city order, each as "N rezerwacji, w tym M zrealizowanych." */
+/**
+ * The per-city totals, one per city the summary actually carries (spec.md §9 open question 1).
+ *
+ * The cities are the keys of the summary, not a compiled-in list, so a city an administrator
+ * added is reported like any other. The order is the sorted city key so the report is stable
+ * between runs; the legacy constant's four-city order no longer applies once the list is data.
+ */
 const cityTotals = (summary: IClientSummary): ICityTotal[] =>
-  SUMMARY_CITIES.map((city) => ({
-    city,
-    label: displayValue(city),
-    total: summaryTotalBookingsNumber(summary[city]),
-  }));
+  Object.keys(summary)
+    .filter((key) => key !== 'client')
+    .sort((a, b) => a.localeCompare(b))
+    .map((city) => ({
+      city,
+      label: displayValue(city),
+      total: summaryTotalBookingsNumber(cityBookings(summary, city)),
+    }));
 
 /** One booking's slots, as the printable report renders them. */
-const reportSlots = (booking: IBookedTimeSummary): IReportSlot[] =>
+const reportSlots = (booking: IBookedTimeSummary, t: TranslateFn): IReportSlot[] =>
   booking.bookingTimeDetails.map((slot) => ({
     day: formatFacilityDate(new Date(slot.day)),
     hours: `${formatFacilityTime(new Date(slot.startHours))}–${formatFacilityTime(new Date(slot.endHours))}`,
-    participants: slot.participants === undefined ? COPY.common.noValue : String(slot.participants),
+    participants: slot.participants === undefined ? t('common.noValue') : String(slot.participants),
     status: displayValue(slot.status),
-    comments: slot.comments && slot.comments !== '' ? slot.comments : COPY.common.noValue,
+    comments: slot.comments && slot.comments !== '' ? slot.comments : t('common.noValue'),
   }));
 
 /** One booking's details, as the printable report renders them. */
-const reportEntry = (booking: IBookedTimeSummary): IReportEntry => {
+const reportEntry = (booking: IBookedTimeSummary, t: TranslateFn): IReportEntry => {
   const {generalBookingDetails} = booking;
   return {
     building: displayValue(generalBookingDetails.building),
@@ -218,8 +233,8 @@ const reportEntry = (booking: IBookedTimeSummary): IReportEntry => {
     comments:
       generalBookingDetails.comments && generalBookingDetails.comments !== ''
         ? generalBookingDetails.comments
-        : COPY.common.noValue,
-    slots: reportSlots(booking),
+        : t('common.noValue'),
+    slots: reportSlots(booking, t),
   };
 };
 
@@ -228,12 +243,12 @@ const reportEntry = (booking: IBookedTimeSummary): IReportEntry => {
  * slots (FR-030). The component renders this with Angular's escaping, so a client name or a
  * comment cannot inject markup into the report.
  */
-const cityReports = (summary: IClientSummary): ICityReport[] =>
+const cityReports = (summary: IClientSummary, t: TranslateFn): ICityReport[] =>
   cityTotals(summary).map(({city, label, total}) => ({
     city,
     label,
     total,
-    entries: summary[city].map((booking) => reportEntry(booking)),
+    entries: cityBookings(summary, city).map((booking) => reportEntry(booking, t)),
   }));
 
 export {

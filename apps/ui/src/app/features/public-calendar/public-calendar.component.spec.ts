@@ -5,6 +5,7 @@ import {IPublicBuilding} from '@models/building.model';
 import {IBooking} from '@models/booking.model';
 import {SessionStore} from '../../core/session.store';
 import {employeeUser} from '../../../testing/fixtures';
+import {provideTestI18n} from '../../../testing/i18n-testing';
 import {PublicCalendarComponent} from './public-calendar.component';
 
 const facility = (
@@ -62,7 +63,7 @@ describe('PublicCalendarComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [PublicCalendarComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -225,7 +226,7 @@ describe('PublicCalendarComponent', () => {
     expect(request.request.params.get('to')).toBe('2026-03-10T22:59:59.999Z');
   });
 
-  it('renders the month list with its Polish label', async () => {
+  it('renders the month list with its label', async () => {
     const fixture = await render();
     bookingsRequest().flush(page([]));
     await settle(fixture);
@@ -312,8 +313,10 @@ describe('PublicCalendarComponent', () => {
     expect(alert?.textContent).toContain('Nie udało się wczytać rezerwacji');
   });
 
-  it('prompts for a facility when the selected city has none', async () => {
-    const fixture = await render([facility('hala-radwanice', 'radwanice', 'Hala Radwanice')]);
+  it('prompts for a facility when there are no facilities', async () => {
+    // Cities derive from the facilities (FR-007), so the only way a selector has no facility to
+    // offer is an empty facility list; the prompt is the branch that renders then.
+    const fixture = await render([]);
     await settle(fixture);
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(

@@ -5,6 +5,7 @@ import {IClient} from '@models/client.model';
 import {IClientSummary} from '@models/reporting.model';
 import {ReportExport} from '../../../core/report-export.service';
 import {SummaryTabComponent} from './summary-tab.component';
+import {provideTestI18n} from '../../../../testing/i18n-testing';
 
 const client = (overrides: Partial<IClient> = {}): IClient => ({
   _id: 'c1',
@@ -56,7 +57,7 @@ describe('SummaryTabComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [SummaryTabComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     exportService = TestBed.inject(ReportExport);

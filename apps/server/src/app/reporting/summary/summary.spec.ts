@@ -1,5 +1,6 @@
 import {IClient} from '@models/client.model';
-import {ISummaryBooking, isSummaryCity, slotInRange, summariseClient, summaryTotalBookingsNumber} from './summary';
+import {cityBookings} from '@models/reporting.model';
+import {ISummaryBooking, slotInRange, summariseClient, summaryTotalBookingsNumber} from './summary';
 
 const client = {
   _id: 'c1',
@@ -66,19 +67,18 @@ describe('slotInRange', () => {
 describe('summariseClient', () => {
   const range = {fromTheBeginning: false, from: new Date('2026-03-01T00:00:00Z'), to: new Date('2026-03-31T23:59:59Z')};
 
-  it('returns the client with all four cities present and empty', () => {
+  it('returns the client with no city sections when there are no bookings', () => {
+    // Cities are data (spec.md §9 open question 1): a city with no in-range booking is simply
+    // absent, rather than emitted empty from a compiled-in list.
     const summary = summariseClient(client, [], range);
     expect(summary.client).toBe(client);
-    expect(summary.siechnice).toEqual([]);
-    expect(summary.radwanice).toEqual([]);
-    expect(summary['swieta-katarzyna']).toEqual([]);
-    expect(summary['zerniki-wroclawskie']).toEqual([]);
+    expect(Object.keys(summary)).toEqual(['client']);
   });
 
   it('groups an accepted booking under its facility city', () => {
     const summary = summariseClient(client, [booking()], range);
-    expect(summary.siechnice).toHaveLength(1);
-    expect(summary.siechnice[0].generalBookingDetails).toEqual({
+    expect(cityBookings(summary, 'siechnice')).toHaveLength(1);
+    expect(cityBookings(summary, 'siechnice')[0].generalBookingDetails).toEqual({
       payment: 'CASH',
       discount: '10%',
       extraOptions: false,
@@ -87,18 +87,24 @@ describe('summariseClient', () => {
       size: '1/2',
       building: 'hala-sportowa',
     });
-    expect(summary.siechnice[0].bookingTimeDetails).toHaveLength(1);
-    expect(summary.radwanice).toEqual([]);
+    expect(cityBookings(summary, 'siechnice')[0].bookingTimeDetails).toHaveLength(1);
+    expect(cityBookings(summary, 'radwanice')).toEqual([]);
   });
 
   it('drops an unaccepted booking', () => {
     const summary = summariseClient(client, [booking({accepted: false})], range);
-    expect(summary.siechnice).toEqual([]);
+    expect(cityBookings(summary, 'siechnice')).toEqual([]);
   });
 
-  it('drops a booking whose city is not one of the four', () => {
-    const summary = summariseClient(client, [booking({place: {place: 'hala-sportowa', city: 'wroclaw'}})], range);
-    expect(summary.siechnice).toEqual([]);
+  it('groups a booking under a city the compiled-in list never carried', () => {
+    // The list is data, so a city an administrator added is reported like any other.
+    const summary = summariseClient(
+      client,
+      [booking({place: {place: 'hala-sportowa', city: 'nowe-miasto'}})],
+      range
+    );
+    expect(cityBookings(summary, 'nowe-miasto')).toHaveLength(1);
+    expect(cityBookings(summary, 'siechnice')).toEqual([]);
   });
 
   it('keeps only the slots inside the range, and drops a booking with none left', () => {
@@ -115,7 +121,7 @@ describe('summariseClient', () => {
     });
 
     const summary = summariseClient(client, [inRange, outOfRange], range);
-    expect(summary.siechnice).toHaveLength(1);
+    expect(cityBookings(summary, 'siechnice')).toHaveLength(1);
 
     const mixed = booking({
       bookedTimes: [
@@ -128,19 +134,19 @@ describe('summariseClient', () => {
         },
       ],
     });
-    expect(summariseClient(client, [mixed], range).siechnice[0].bookingTimeDetails).toHaveLength(1);
+    expect(cityBookings(summariseClient(client, [mixed], range), 'siechnice')[0].bookingTimeDetails).toHaveLength(1);
   });
 
   it('normalises an absent discount to an empty string', () => {
     const summary = summariseClient(client, [booking({discount: undefined})], range);
-    expect(summary.siechnice[0].generalBookingDetails.discount).toBe('');
+    expect(cityBookings(summary, 'siechnice')[0].generalBookingDetails.discount).toBe('');
   });
 
   it('includes a booking with no linked client when it is passed in, since attribution is by client', () => {
     // The service resolves a client by id or by name and passes its accepted bookings; this
     // module only groups them, so a booking carrying no `clientId` still summarises.
     const summary = summariseClient(client, [booking({clientId: undefined})], range);
-    expect(summary.siechnice).toHaveLength(1);
+    expect(cityBookings(summary, 'siechnice')).toHaveLength(1);
   });
 });
 
@@ -170,17 +176,5 @@ describe('summaryTotalBookingsNumber', () => {
     expect(summaryTotalBookingsNumber([entry(['DONE', 'INITIAL']), entry(['DONE'])])).toBe(
       '3 rezerwacji, w tym 2 zrealizowanych.'
     );
-  });
-});
-
-describe('isSummaryCity', () => {
-  it('accepts the four facility cities', () => {
-    expect(isSummaryCity('siechnice')).toBe(true);
-    expect(isSummaryCity('zerniki-wroclawskie')).toBe(true);
-  });
-
-  it('rejects anything else', () => {
-    expect(isSummaryCity('wroclaw')).toBe(false);
-    expect(isSummaryCity('')).toBe(false);
   });
 });

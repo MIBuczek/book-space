@@ -7,6 +7,8 @@ import { SessionStore } from '../core/session.store';
 import { NavComponent } from './nav.component';
 import { adminUser, employeeUser } from '../../testing/fixtures';
 import { provideTestI18n } from '../../testing/i18n-testing';
+import { provideTestTenant } from '../../testing/tenant-testing';
+import { DEFAULT_TENANT_NAME } from '@models/tenant.model';
 
 @Component({ selector: 'book-space-route-stub', template: '' })
 class RouteStubComponent {}
@@ -27,6 +29,7 @@ describe('NavComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideTestI18n(),
+        provideTestTenant(),
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -49,6 +52,22 @@ describe('NavComponent', () => {
 
     expect(text).toContain('Zaloguj');
     expect(text).not.toContain('Administracja');
+  });
+
+  it('falls back to the product name before the tenant read resolves', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [NavComponent],
+      providers: [
+        provideRouter([{ path: '', component: RouteStubComponent }]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideTestI18n(),
+        provideTestTenant(null),
+      ],
+    });
+    const fixture = render();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(DEFAULT_TENANT_NAME);
   });
 
   it('links the public booking request form', () => {

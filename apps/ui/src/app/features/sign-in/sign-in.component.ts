@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { COPY } from '@booking/copy';
+import { TranslatePipe } from '@ngx-translate/core';
+import { injectTranslate } from '@booking/i18n';
 import { AuthService } from '../../core/auth.service';
 import { ButtonComponent, InputComponent } from '../../shared/ui';
 
@@ -26,26 +27,26 @@ const PASSWORD_MAX = 30;
  *
  * The failure message is one string for every rejection. The API does not distinguish an
  * unknown address from a wrong password (it answers one message for every rejection), and the
- * page must not invent a distinction the server refuses to make. The text comes from the shared
- * copy catalogue (NFR-005, T061): the API is English, so the UI maps the status to Polish copy
- * rather than rendering the server's `message`.
+ * page must not invent a distinction the server refuses to make. The text is translated
+ * (FR-001): the API is English, so the UI maps the status to localised copy rather than
+ * rendering the server's `message`.
  */
 @Component({
   selector: 'book-space-sign-in',
-  imports: [ButtonComponent, InputComponent],
+  imports: [ButtonComponent, InputComponent, TranslatePipe],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'signIn.title' | translate }}</h1>
       <form (submit)="submit($event)" novalidate>
         <book-space-input
-          [label]="copy.email"
+          [label]="'signIn.email' | translate"
           type="email"
           [value]="email()"
           [error]="emailError()"
           (valueChange)="onEmail($event)"
         />
         <book-space-input
-          [label]="copy.password"
+          [label]="'signIn.password' | translate"
           type="password"
           [value]="password()"
           [error]="passwordError()"
@@ -54,7 +55,9 @@ const PASSWORD_MAX = 30;
         @if (formError()) {
           <p class="bs-sign-in__error" role="alert">{{ formError() }}</p>
         }
-        <book-space-button type="submit" [disabled]="submitting()">{{ copy.submit }}</book-space-button>
+        <book-space-button type="submit" [disabled]="submitting()">
+          {{ 'signIn.submit' | translate }}
+        </book-space-button>
       </form>
     </section>
   `,
@@ -76,7 +79,7 @@ const PASSWORD_MAX = 30;
   ],
 })
 export class SignInComponent {
-  readonly copy = COPY.signIn;
+  private readonly translate = injectTranslate();
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -95,23 +98,23 @@ export class SignInComponent {
 
   private validateEmail(value: string): string | null {
     if (value === '') {
-      return COPY.validation.emailRequired;
+      return this.translate('validation.emailRequired');
     }
     if (!value.includes('@')) {
-      return COPY.validation.emailAt;
+      return this.translate('validation.emailAt');
     }
     if (value.length < EMAIL_MIN || value.length > EMAIL_MAX) {
-      return COPY.validation.emailRange(EMAIL_MIN, EMAIL_MAX);
+      return this.translate('validation.emailRange', { min: EMAIL_MIN, max: EMAIL_MAX });
     }
     return null;
   }
 
   private validatePassword(value: string): string | null {
     if (value === '') {
-      return COPY.validation.passwordRequired;
+      return this.translate('validation.passwordRequired');
     }
     if (value.length < PASSWORD_MIN || value.length > PASSWORD_MAX) {
-      return COPY.validation.passwordRange(PASSWORD_MIN, PASSWORD_MAX);
+      return this.translate('validation.passwordRange', { min: PASSWORD_MIN, max: PASSWORD_MAX });
     }
     return null;
   }
@@ -140,8 +143,8 @@ export class SignInComponent {
         this.submitting.set(false);
         this.formError.set(
           error instanceof HttpErrorResponse && error.status === 401
-            ? COPY.signIn.invalid
-            : COPY.signIn.genericFailure
+            ? this.translate('signIn.invalid')
+            : this.translate('signIn.genericFailure')
         );
       },
     });

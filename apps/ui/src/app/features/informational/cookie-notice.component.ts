@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
-import { COPY } from '@booking/copy';
+import { Component, computed, inject } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { CookieNoticeStore } from '../../core/cookie-notice.store';
+import { TenantStore } from '../../core/tenant.store';
 
 /**
  * The cookie notice (FR-039, FR-040, issue #44).
@@ -11,20 +12,27 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
  * `CookieNoticeStore`, which stores the acknowledgement as `'true'` rather than
  * the legacy `'false'`.
  *
- * The text comes from the shared copy catalogue (NFR-005, T061).
+ * The text is translated (FR-001). The "learn more" link points at the tenant's configured
+ * privacy policy (FR-007), so it is the same URL the footer renders; an unset value hides the
+ * link rather than rendering one with no destination (SC-005).
  */
 @Component({
   selector: 'book-space-cookie-notice',
+  imports: [TranslatePipe],
   template: `
     @if (!cookies.acknowledged()) {
-      <aside class="bs-cookies" [attr.aria-label]="copy.ariaLabel">
-        <h2 class="bs-cookies__header">{{ copy.heading }}</h2>
+      <aside class="bs-cookies" [attr.aria-label]="'cookieNotice.ariaLabel' | translate">
+        <h2 class="bs-cookies__header">{{ 'cookieNotice.heading' | translate }}</h2>
         <p class="bs-cookies__text">
-          {{ copy.text }}
-          <a [href]="privacyUrl" target="_blank" rel="noopener">{{ copy.learnMore }}</a>
+          {{ 'cookieNotice.text' | translate }}
+          @if (privacyUrl(); as privacy) {
+            <a [href]="privacy" target="_blank" rel="noopener">{{
+              'cookieNotice.learnMore' | translate
+            }}</a>
+          }
         </p>
         <button type="button" class="bs-cookies__accept" (click)="cookies.acknowledge()">
-          {{ copy.accept }}
+          {{ 'cookieNotice.accept' | translate }}
         </button>
       </aside>
     }
@@ -67,7 +75,8 @@ import { CookieNoticeStore } from '../../core/cookie-notice.store';
   ],
 })
 export class CookieNoticeComponent {
-  readonly copy = COPY.cookieNotice;
   readonly cookies = inject(CookieNoticeStore);
-  readonly privacyUrl = COPY.contact.privacyPolicyUrl;
+  private readonly tenants = inject(TenantStore);
+
+  readonly privacyUrl = computed(() => this.tenants.tenant()?.privacyUrl ?? null);
 }

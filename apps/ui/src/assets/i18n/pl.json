@@ -15,6 +15,7 @@
   },
   "nav": {
     "ariaLabel": "Nawigacja",
+    "brand": "{{tenant}}",
     "calendar": "Kalendarz",
     "bookingRequest": "Rezerwacja",
     "contact": "Kontakt",
@@ -199,6 +200,7 @@
       "delete": "Usuń / Odrzuć rezerwację"
     },
     "deleteConfirm": "Czy na pewno chcesz usunąć tą rezerwację? Odrzucenie wniosku usuwa go bezpowrotnie.",
+    "remove": "Usuń / Odrzuć",
     "fields": {
       "nick": "Nazwa w kalendarzu",
       "personName": "Imię i nazwisko",
@@ -345,6 +347,28 @@
     "sent": "Wiadomość została wysłana pomyślnie",
     "sendValidation": "Popraw dane i spróbuj ponownie.",
     "sendFailure": "Nie udało się wysłać wiadomości. Spróbuj ponownie później.",
+    "add": "Dodaj obiekt",
+    "createTitle": "Nowy obiekt",
+    "editTitle": "Edycja obiektu",
+    "deleteTitle": "Usuń obiekt",
+    "deleteConfirm": "Czy na pewno usunąć obiekt „{{name}}”?",
+    "deleteConflict": "Nie można usunąć obiektu, ponieważ odwołują się do niego rezerwacje lub przypisani pracownicy. Zamiast tego ustaw obiekt jako nieaktywny.",
+    "deleteFailure": "Nie udało się usunąć obiektu. Spróbuj ponownie później.",
+    "saveFailure": "Nie udało się zapisać obiektu. Spróbuj ponownie później.",
+    "fields": {
+      "name": "Nazwa obiektu",
+      "property": "Klucz obiektu",
+      "city": "Miejscowość",
+      "email": "E-mail",
+      "phone": "Telefon kontaktowy",
+      "street": "Ulica",
+      "zipCode": "Kod pocztowy",
+      "sizes": "Powierzchnie",
+      "lighting": "Oświetlenie",
+      "toilets": "Toalety",
+      "employees": "Pracownicy (każdy w nowej linii)",
+      "active": "Obiekt aktywny"
+    },
     "details": {
       "city": "Miejscowość",
       "name": "Nazwa obiektu",
@@ -435,10 +459,7 @@
     "office": {
       "address": "—",
       "phone": "—",
-      "phoneHref": "tel:",
-      "email": "kontakt@book-space.example",
-      "website": "book-space.example",
-      "websiteHref": "https://book-space.example/"
+      "phoneHref": "tel:"
     },
     "bookingContact": {
       "name": "—",
@@ -469,8 +490,6 @@
         "hours": "08:00 - 14:00"
       }
     ],
-    "privacyPolicyUrl": "https://book-space.example/polityka-prywatnosci",
-    "websiteUrl": "https://book-space.example/",
     "rodoClauseUrl": "https://book-space.example/klauzula-informacyjna.pdf"
   },
   "cookieNotice": {
@@ -530,7 +549,9 @@
     "emailRequired": "E-mail jest wymagany",
     "emailAt": "E-mail musi zawierać @",
     "emailRange": "E-mail musi mieć od {{min}} do {{max}} znaków",
-    "passwordRequired": "Hasło jest wymagane"
+    "passwordRequired": "Hasło jest wymagane",
+    "propertyRequired": "Klucz obiektu jest wymagany",
+    "sizesRequired": "Wybierz co najmniej jedną powierzchnię"
   },
   "labels": {
     "clientType": {

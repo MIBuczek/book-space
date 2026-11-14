@@ -1,7 +1,8 @@
 import {IBookedTime} from '@models/booked-time.model';
 import {displayValue, formatDate, formatTime} from '../../reporting/csv/display';
 import {renderTemplate, TTemplateVariables} from '../templates/render';
-import {DEFAULT_TENANT_NAME, NOTIFICATION_TEMPLATES, TTemplateId} from '../templates/templates';
+import {DEFAULT_TENANT_NAME} from '@models/tenant.model';
+import {NOTIFICATION_TEMPLATES, TTemplateId} from '../templates/templates';
 
 /**
  * The booking fields a notification e-mail reads. Structural, so the formatter is testable

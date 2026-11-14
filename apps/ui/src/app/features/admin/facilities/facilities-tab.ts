@@ -1,5 +1,6 @@
-import {COPY} from '@booking/copy';
-import {CITY_LABELS, IBuilding} from '@models/building.model';
+import {HttpErrorResponse} from '@angular/common/http';
+import {TranslateFn} from '@booking/i18n';
+import {cityLabel, IBuilding, IFacilityRequest, TSize} from '@models/building.model';
 import {IMessageRequest} from '@models/notification.model';
 
 /**
@@ -46,6 +47,244 @@ interface IEmployeeMessageValue {
 /** The field errors the form shows, keyed by the field they belong to. */
 type TEmployeeMessageErrors = Partial<Record<keyof IEmployeeMessageValue, string>>;
 
+/** The server's `BuildingDto`/`UpdateBuildingDto` bounds, restated where the form can read them. */
+const NAME_MIN = 3;
+const NAME_MAX = 125;
+const EMAIL_MIN = 3;
+const EMAIL_MAX = 125;
+const PHONE_MIN = 3;
+const PHONE_MAX = 15;
+const CITY_MIN = 2;
+const CITY_MAX = 125;
+const STREET_MIN = 3;
+const STREET_MAX = 125;
+const ZIP_LENGTH = 6;
+const ZIP_PATTERN = /^[\d./-]+$/;
+
+/**
+ * A facility form value, before it becomes a request body.
+ *
+ * Every field is a string because inputs and textareas yield strings; `sizes` is the one
+ * structured field (a list of fractions, chosen with a checkbox per size), and `employees` is
+ * edited as one name per line so the operator does not have to learn a list syntax.
+ */
+interface IFacilityFormValue {
+  name: string;
+  property: string;
+  city: string;
+  email: string;
+  phone: string;
+  street: string;
+  zipCode: string;
+  sizes: TSize[];
+  lighting: boolean;
+  toilets: boolean;
+  employees: string;
+  active: boolean;
+}
+
+/** The field errors the facility form shows, keyed by the field they belong to. */
+type TFacilityFieldErrors = Partial<Record<keyof IFacilityFormValue, string>>;
+
+/** The errors a failed facility write produced: the per-field map and any message matching no field. */
+interface IFacilityWriteErrors {
+  fields: TFacilityFieldErrors;
+  general: string | null;
+}
+
+/** An empty facility form. `active` defaults to true, matching the schema. */
+const emptyFacilityForm = (): IFacilityFormValue => ({
+  name: '',
+  property: '',
+  city: '',
+  email: '',
+  phone: '',
+  street: '',
+  zipCode: '',
+  sizes: [],
+  lighting: false,
+  toilets: false,
+  employees: '',
+  active: true,
+});
+
+/** The form value for an existing facility, so an edit starts from what is stored. */
+const formFromFacility = (facility: IBuilding): IFacilityFormValue => ({
+  name: facility.name,
+  property: facility.property,
+  city: facility.city,
+  email: facility.email,
+  phone: facility.phone,
+  street: facility.street ?? '',
+  zipCode: facility.zipCode ?? '',
+  sizes: [...facility.sizes],
+  lighting: facility.lighting,
+  toilets: facility.toilets,
+  employees: facility.employees.join('\n'),
+  // Absent on a legacy record, which reads as active (T059).
+  active: facility.active !== false,
+});
+
+/**
+ * Validates the form, returning one message per invalid field.
+ *
+ * The rules mirror the server's `BuildingDto` field by field. The server is the authority and
+ * answers `422`; the form checks the same rules so an obviously invalid facility never makes a
+ * round trip. `sizes` needs at least one entry, because a facility with no rentable size cannot
+ * be booked — the same rule the schema's non-empty validator enforces.
+ */
+const validateFacilityForm = (value: IFacilityFormValue, t: TranslateFn): TFacilityFieldErrors => {
+  const errors: TFacilityFieldErrors = {};
+
+  if (value.name.length < NAME_MIN || value.name.length > NAME_MAX) {
+    errors.name = t('validation.nameRange', {min: NAME_MIN, max: NAME_MAX});
+  }
+  if (value.property.trim() === '') {
+    errors.property = t('validation.propertyRequired');
+  }
+  if (value.email === '') {
+    errors.email = t('validation.emailRequired');
+  } else if (
+    !EMAIL_PATTERN.test(value.email) ||
+    value.email.length < EMAIL_MIN ||
+    value.email.length > EMAIL_MAX
+  ) {
+    errors.email = t('validation.emailInvalid');
+  }
+  if (value.phone.length < PHONE_MIN || value.phone.length > PHONE_MAX) {
+    errors.phone = t('validation.phoneRange', {min: PHONE_MIN, max: PHONE_MAX});
+  }
+  if (value.city.length < CITY_MIN || value.city.length > CITY_MAX) {
+    errors.city = t('validation.cityRange', {min: CITY_MIN, max: CITY_MAX});
+  }
+  // `street` and `zipCode` are optional; a present value is validated, an empty one is omitted
+  // from the request rather than sent as `''`, which the server's length rules would refuse.
+  if (value.street !== '' && (value.street.length < STREET_MIN || value.street.length > STREET_MAX)) {
+    errors.street = t('validation.streetRange', {min: STREET_MIN, max: STREET_MAX});
+  }
+  if (value.zipCode !== '' && (value.zipCode.length !== ZIP_LENGTH || !ZIP_PATTERN.test(value.zipCode))) {
+    errors.zipCode = t('validation.zipCodeRule', {length: ZIP_LENGTH});
+  }
+  if (value.sizes.length === 0) {
+    errors.sizes = t('validation.sizesRequired');
+  }
+
+  return errors;
+};
+
+/** The employees a form value names, one per line, with blank lines dropped. */
+const parseEmployees = (value: string): string[] =>
+  value
+    .split('\n')
+    .map((name) => name.trim())
+    .filter((name) => name !== '');
+
+/**
+ * Builds the request body from a validated form value.
+ *
+ * The optional fields are omitted when empty rather than sent as `''`: the server's
+ * `@IsOptional()` skips validation only for an absent value, so an empty `street`, `zipCode` or
+ * `employees` would be validated against its own rules and refused. `employees` is always sent
+ * as an array (an empty one clears the list on an edit, which is what emptying the textarea
+ * means).
+ */
+const buildFacilityRequest = (value: IFacilityFormValue): IFacilityRequest => {
+  const request: IFacilityRequest = {
+    name: value.name,
+    property: value.property,
+    city: value.city,
+    email: value.email,
+    phone: value.phone,
+    sizes: value.sizes,
+    lighting: value.lighting,
+    toilets: value.toilets,
+    employees: parseEmployees(value.employees),
+    active: value.active,
+  };
+  if (value.street !== '') {
+    request.street = value.street;
+  }
+  if (value.zipCode !== '') {
+    request.zipCode = value.zipCode;
+  }
+  return request;
+};
+
+/**
+ * The field each server error message names, in the order to test them.
+ *
+ * The server's length messages ("Number of characters need to be between 3 and 125") name no
+ * field, so those fall through to the general prompt; the messages that do name one are matched
+ * here. `e-mail` is listed beside `email` because the server spells the field with a hyphen
+ * ("E-mail address need to contains correct pattern"), and `size` matches both the "At least one
+ * rentable size" and the "Size must be one of…" messages.
+ */
+const FACILITY_ERROR_TOKENS: ReadonlyArray<readonly [keyof IFacilityFormValue, string]> = [
+  ['property', 'property'],
+  ['zipCode', 'zipcode'],
+  ['zipCode', 'zip code'],
+  ['employees', 'employee'],
+  ['lighting', 'lighting'],
+  ['toilets', 'toilets'],
+  ['email', 'e-mail'],
+  ['email', 'email'],
+  ['sizes', 'size'],
+  ['city', 'city'],
+  ['phone', 'phone'],
+  ['street', 'street'],
+  ['active', 'active'],
+  ['name', 'name'],
+];
+
+/** The field a server message belongs to, or `null` when it names none of them. */
+const facilityFieldForMessage = (message: string): keyof IFacilityFormValue | null => {
+  const lower = message.toLowerCase();
+  const match = FACILITY_ERROR_TOKENS.find(([, token]) => lower.includes(token));
+  return match ? match[0] : null;
+};
+
+/**
+ * Turns the API's `422` message list into field errors (T272).
+ *
+ * The server answers `{message: string[]}` for a validation failure; each message that names a
+ * field is used to *locate* it and the form shows its own Polish text against it, while the
+ * server's English sentence is never rendered (NFR-005, T061). A message that names no field —
+ * the length rules, which several fields share — becomes the generic prompt, because an error
+ * the user cannot see is an error they cannot act on.
+ */
+const mapFacilityServerErrors = (
+  messages: readonly string[],
+  t: TranslateFn
+): IFacilityWriteErrors => {
+  const fields: TFacilityFieldErrors = {};
+  let unmatched = false;
+
+  for (const message of messages) {
+    const field = facilityFieldForMessage(message);
+    if (field === null) {
+      unmatched = true;
+    } else {
+      fields[field] = t('errors.fieldInvalid');
+    }
+  }
+
+  return {fields, general: unmatched ? t('errors.generic') : null};
+};
+
+/**
+ * The message shown when a facility delete is refused (T059, T272).
+ *
+ * A facility a booking or a staff assignment still references is refused with `409` and points
+ * at deactivation; the modal shows the UI's own Polish for that status (NFR-005), never the
+ * server's English sentence. A delete that silently does nothing looks like a broken button.
+ */
+const deleteFailureMessage = (error: unknown, t: TranslateFn): string => {
+  if (error instanceof HttpErrorResponse && error.status === 409) {
+    return t('facilities.deleteConflict');
+  }
+  return t('facilities.deleteFailure');
+};
+
 /**
  * A pragmatic e-mail check: something before the `@`, and a dotted domain after it.
  *
@@ -55,8 +294,8 @@ type TEmployeeMessageErrors = Partial<Record<keyof IEmployeeMessageValue, string
  */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The yes/no labels for the boolean flags, from the shared copy catalogue (NFR-005, T061). */
-const yesNo = (value: boolean): string => (value ? COPY.common.yes : COPY.common.no);
+/** The yes/no labels for the boolean flags, as translation keys (FR-001). */
+const yesNo = (value: boolean): string => (value ? 'common.yes' : 'common.no');
 
 /**
  * The facility detail rows (FR-009).
@@ -66,21 +305,21 @@ const yesNo = (value: boolean): string => (value ? COPY.common.yes : COPY.common
  * the facility can actually be booked as. An absent facility yields no rows, which is how the
  * screen shows "nothing loaded" rather than a stale default.
  */
-const facilityDetails = (facility: IBuilding | null): IDetailRow[] => {
+const facilityDetails = (facility: IBuilding | null, t: TranslateFn): IDetailRow[] => {
   if (facility === null) {
     return [];
   }
   return [
-    {label: COPY.facilities.details.city, value: CITY_LABELS[facility.city]},
-    {label: COPY.facilities.details.name, value: facility.name},
-    {label: COPY.facilities.details.phone, value: facility.phone},
-    {label: COPY.facilities.details.email, value: facility.email},
-    {label: COPY.facilities.details.sizes, value: facility.sizes.join(', ')},
-    {label: COPY.facilities.details.lighting, value: yesNo(facility.lighting)},
-    {label: COPY.facilities.details.toilets, value: yesNo(facility.toilets)},
+    {label: t('facilities.details.city'), value: cityLabel(facility.city)},
+    {label: t('facilities.details.name'), value: facility.name},
+    {label: t('facilities.details.phone'), value: facility.phone},
+    {label: t('facilities.details.email'), value: facility.email},
+    {label: t('facilities.details.sizes'), value: facility.sizes.join(', ')},
+    {label: t('facilities.details.lighting'), value: t(yesNo(facility.lighting))},
+    {label: t('facilities.details.toilets'), value: t(yesNo(facility.toilets))},
     // The tab receives retired facilities too (T059), so the status is what tells an
     // administrator the facility is deactivated rather than simply in use.
-    {label: COPY.facilities.details.status, value: facility.active !== false ? COPY.facilities.active.yes : COPY.facilities.active.no},
+    {label: t('facilities.details.status'), value: t(facility.active !== false ? 'facilities.active.yes' : 'facilities.active.no')},
   ];
 };
 
@@ -110,17 +349,20 @@ const emptyEmployeeMessage = (facility: IBuilding | null): IEmployeeMessageValue
  * `recipient` must be an e-mail). The server is the authority and answers `422`; the form
  * checks the same rules so an obviously invalid message is caught before a round trip.
  */
-const validateEmployeeMessage = (value: IEmployeeMessageValue): TEmployeeMessageErrors => {
+const validateEmployeeMessage = (
+  value: IEmployeeMessageValue,
+  t: TranslateFn
+): TEmployeeMessageErrors => {
   const errors: TEmployeeMessageErrors = {};
 
   if (value.person.trim() === '') {
-    errors.person = COPY.validation.personRequired;
+    errors.person = t('validation.personRequired');
   }
   if (!EMAIL_PATTERN.test(value.recipient)) {
-    errors.recipient = COPY.validation.emailInvalid;
+    errors.recipient = t('validation.emailInvalid');
   }
   if (value.message.trim() === '') {
-    errors.message = COPY.validation.messageRequired;
+    errors.message = t('validation.messageRequired');
   }
 
   return errors;
@@ -152,18 +394,30 @@ const buildMessageRequest = (
  * and any other status — a `502` provider failure in particular — shows a retry message. There
  * is no status that returns `null`.
  */
-const sendFailureMessage = (status: number): string => {
+const sendFailureMessage = (status: number, t: TranslateFn): string => {
   // A `422` is a field problem the form already validates in Polish; the server's English
   // message list is not rendered (NFR-005, T061). Any other status is a provider failure
   // (FR-036), which is a retry prompt.
   if (status === 422) {
-    return COPY.facilities.sendValidation;
+    return t('facilities.sendValidation');
   }
-  return COPY.facilities.sendFailure;
+  return t('facilities.sendFailure');
 };
 
 export {
   EMAIL_PATTERN,
+  NAME_MIN,
+  NAME_MAX,
+  EMAIL_MIN,
+  EMAIL_MAX,
+  PHONE_MIN,
+  PHONE_MAX,
+  CITY_MIN,
+  CITY_MAX,
+  STREET_MIN,
+  STREET_MAX,
+  ZIP_LENGTH,
+  ZIP_PATTERN,
   yesNo,
   facilityDetails,
   employeeOptions,
@@ -171,5 +425,20 @@ export {
   validateEmployeeMessage,
   buildMessageRequest,
   sendFailureMessage,
+  emptyFacilityForm,
+  formFromFacility,
+  validateFacilityForm,
+  buildFacilityRequest,
+  parseEmployees,
+  mapFacilityServerErrors,
+  deleteFailureMessage,
 };
-export type {IDetailRow, IEmployeeOption, IEmployeeMessageValue, TEmployeeMessageErrors};
+export type {
+  IDetailRow,
+  IEmployeeOption,
+  IEmployeeMessageValue,
+  TEmployeeMessageErrors,
+  IFacilityFormValue,
+  TFacilityFieldErrors,
+  IFacilityWriteErrors,
+};

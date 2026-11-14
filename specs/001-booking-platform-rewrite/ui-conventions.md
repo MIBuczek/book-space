@@ -342,8 +342,10 @@ A component imports `COPY` and binds it; it never types a Polish literal into a 
   and cannot be argued with.
 - **A display vocabulary that a screen labels lives in the catalogue too** (`COPY.labels`,
   `COPY.users.roleLabels`, the tab labels). `CITY_LABELS` is the one exception: it labels the
-  selectors and lives in `libs/models/building.model.ts` beside `CITIES`, because the server's
-  reporting vocabulary is a different audience (see `reporting/`).
+  selectors and lives in `libs/models/building.model.ts`, because the server's reporting
+  vocabulary is a different audience (see `reporting/`). It is display decoration only — cities
+  are data (spec.md §9 open question 1, FR-007), so it is a `Record<string, string>` that falls
+  through to the stored value, not the compiled-in `CITIES` list it used to sit beside.
 - **English is not caught by the guard**, but the rendered-component specs pin the strings that
   matter; a stray `Previous` is a copy defect, not a localisation one.
 

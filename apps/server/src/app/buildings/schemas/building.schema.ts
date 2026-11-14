@@ -1,7 +1,7 @@
 import {HydratedDocument} from 'mongoose';
 import {Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
 import validator from 'validator';
-import {CITIES, SIZES, TCity, TSize} from '@models/building.model';
+import {SIZES, TSize} from '@models/building.model';
 
 export type TBuilding = HydratedDocument<Building>;
 
@@ -48,15 +48,23 @@ export class Building {
   })
   phone!: string;
 
+  /**
+   * The city the facility sits in, as free text (spec.md §9 open question 1, FR-007).
+   *
+   * There is no `enum`: cities are data, so an administrator adds one by adding a facility that
+   * names it. The length bound is the only constraint — the DTO enforces the same range at the
+   * boundary (`422`), and this is what stops a migration or a direct driver write storing an
+   * unbounded value. The `{city, property}` index below still makes the facility key unique per
+   * city.
+   */
   @Prop({
     type: String,
-    required: [true, 'Please add client name'],
-    enum: {
-      values: [...CITIES],
-      message: 'City must be one of siechnice, radwanice, swieta-katarzyna, zerniki-wroclawskie'
-    }
+    required: [true, 'Please add the city the facility sits in'],
+    trim: true,
+    minlength: 2,
+    maxlength: 125
   })
-  city!: TCity;
+  city!: string;
 
   /**
    * The facility's postal address. Optional, not required: neither spec.md §4, FR-009 nor

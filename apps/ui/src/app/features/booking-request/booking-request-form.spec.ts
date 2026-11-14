@@ -1,4 +1,4 @@
-import {CITY_LABELS, IPublicBuilding} from '@models/building.model';
+import {cityLabel, distinctCities, IPublicBuilding} from '@models/building.model';
 import {
   CLIENT_TYPE_LABELS,
   END_HOUR_OPTIONS,
@@ -17,6 +17,10 @@ import {
 } from './booking-request-form';
 import type {IBookingFormValue, IExtraOptionEntry} from './booking-request-form';
 import {facilityWallClock} from '@booking/date-time';
+import {testTranslate} from '../../../testing/i18n-testing';
+
+/** The shipped catalogue, the way the component passes it to this pure module (T235). */
+const t = testTranslate('pl');
 
 const facility = (overrides: Partial<IPublicBuilding> = {}): IPublicBuilding => ({
   _id: 'f1',
@@ -48,16 +52,39 @@ const value = (overrides: Partial<IBookingFormValue> = {}): IBookingFormValue =>
 const localDay = (iso: string): Date => new Date(`${iso}T12:00:00Z`);
 
 describe('booking request form labels and options', () => {
-  it('labels the client types as the legacy form did', () => {
-    expect(CLIENT_TYPE_LABELS).toEqual({INDIVIDUAL: 'Osoba prywatna', COMPANY: 'Firma'});
+  it('names the client-type label keys the catalogue carries', () => {
+    expect(CLIENT_TYPE_LABELS).toEqual({
+      INDIVIDUAL: 'labels.clientType.INDIVIDUAL',
+      COMPANY: 'labels.clientType.COMPANY',
+    });
+    expect(t(CLIENT_TYPE_LABELS.INDIVIDUAL)).toBe('Osoba prywatna');
+    expect(t(CLIENT_TYPE_LABELS.COMPANY)).toBe('Firma');
   });
 
-  it('labels the payment methods as the legacy form did', () => {
-    expect(PAYMENT_LABELS).toEqual({TRANSFER: 'Przelew', CASH: 'Gotówka', FREE: 'Bezpłatne'});
+  it('names the payment label keys the catalogue carries', () => {
+    expect(PAYMENT_LABELS).toEqual({
+      TRANSFER: 'labels.payment.TRANSFER',
+      CASH: 'labels.payment.CASH',
+      FREE: 'labels.payment.FREE',
+    });
+    expect(t(PAYMENT_LABELS.TRANSFER)).toBe('Przelew');
+    expect(t(PAYMENT_LABELS.FREE)).toBe('Bezpłatne');
   });
 
-  it('labels the four cities', () => {
-    expect(CITY_LABELS['zerniki-wroclawskie']).toBe('Żerniki Wrocławskie');
+  it('labels a known city and leaves an unknown one verbatim', () => {
+    expect(cityLabel('zerniki-wroclawskie')).toBe('Żerniki Wrocławskie');
+    // Cities are data, so an administrator-added city the label map does not name renders as
+    // typed rather than being dropped.
+    expect(cityLabel('nowe-miasto')).toBe('nowe-miasto');
+  });
+
+  it('derives the city options from the facilities, not a compiled-in list', () => {
+    const buildings = [
+      {city: 'siechnice'},
+      {city: 'radwanice'},
+      {city: 'siechnice'},
+    ] as IPublicBuilding[];
+    expect(distinctCities(buildings)).toEqual(['siechnice', 'radwanice']);
   });
 
   it('offers the start hours 09 through 23', () => {
@@ -120,41 +147,41 @@ describe('minSelectableDay', () => {
 
 describe('validateForm', () => {
   it('accepts a complete value', () => {
-    expect(validateForm(value())).toEqual({});
+    expect(validateForm(value(), t)).toEqual({});
   });
 
   it('rejects a nick outside 3–100', () => {
-    expect(validateForm(value({nick: 'ab'})).nick).toContain('3');
-    expect(validateForm(value({nick: 'x'.repeat(101)})).nick).toContain('100');
+    expect(validateForm(value({nick: 'ab'}), t).nick).toContain('3');
+    expect(validateForm(value({nick: 'x'.repeat(101)}), t).nick).toContain('100');
   });
 
   it('rejects a person name outside 3–125', () => {
-    expect(validateForm(value({personName: 'ab'})).personName).toBeDefined();
-    expect(validateForm(value({personName: 'x'.repeat(126)})).personName).toBeDefined();
+    expect(validateForm(value({personName: 'ab'}), t).personName).toBeDefined();
+    expect(validateForm(value({personName: 'x'.repeat(126)}), t).personName).toBeDefined();
   });
 
   it('rejects a company name longer than 125', () => {
-    expect(validateForm(value({personCompany: 'x'.repeat(126)})).personCompany).toBeDefined();
+    expect(validateForm(value({personCompany: 'x'.repeat(126)}), t).personCompany).toBeDefined();
   });
 
   it('rejects an e-mail without an @, or outside 3–125', () => {
-    expect(validateForm(value({personEmail: 'nope'})).personEmail).toBeDefined();
-    expect(validateForm(value({personEmail: 'a@b'})).personEmail).toBeDefined();
-    expect(validateForm(value({personEmail: `${'x'.repeat(124)}@`})).personEmail).toBeDefined();
+    expect(validateForm(value({personEmail: 'nope'}), t).personEmail).toBeDefined();
+    expect(validateForm(value({personEmail: 'a@b'}), t).personEmail).toBeDefined();
+    expect(validateForm(value({personEmail: `${'x'.repeat(124)}@`}), t).personEmail).toBeDefined();
   });
 
   it('rejects a phone outside 9–15', () => {
-    expect(validateForm(value({personPhone: '123'})).personPhone).toBeDefined();
-    expect(validateForm(value({personPhone: '1'.repeat(16)})).personPhone).toBeDefined();
+    expect(validateForm(value({personPhone: '123'}), t).personPhone).toBeDefined();
+    expect(validateForm(value({personPhone: '1'.repeat(16)}), t).personPhone).toBeDefined();
   });
 
   it('rejects comments longer than 525', () => {
-    expect(validateForm(value({comments: 'x'.repeat(526)})).comments).toBeDefined();
+    expect(validateForm(value({comments: 'x'.repeat(526)}), t).comments).toBeDefined();
   });
 
   it('rejects a discount that is not a percentage, and accepts a blank one', () => {
-    expect(validateForm(value({discount: '10'})).discount).toBeDefined();
-    expect(validateForm(value({discount: '10%'})).discount).toBeUndefined();
+    expect(validateForm(value({discount: '10'}), t).discount).toBeDefined();
+    expect(validateForm(value({discount: '10%'}), t).discount).toBeUndefined();
   });
 });
 

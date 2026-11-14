@@ -1,7 +1,7 @@
 import {IBooking} from '@models/booking.model';
 import {IBookedTime} from '@models/booked-time.model';
+import {testTranslate} from '../../../testing/i18n-testing';
 import {
-  DEFAULT_LABEL,
   EVENT_COLORS,
   bookingToEvents,
   bookingsToEvents,
@@ -21,6 +21,10 @@ import {
   weekColumns,
   weekDays,
 } from './calendar-events';
+
+/** The shipped catalogue, the way the component passes it to these pure functions (T235). */
+const t = testTranslate('pl');
+const DEFAULT_LABEL = t('calendar.defaultLabel');
 
 /** A booking with one slot per status, so the hide/label/colour rules can be asserted together. */
 const slot = (overrides: Partial<IBookedTime> = {}): IBookedTime => ({
@@ -79,19 +83,19 @@ describe('isCancelled', () => {
 
 describe('eventLabel', () => {
   it('shows the nickname to the public', () => {
-    expect(eventLabel(booking(), false)).toBe('Rezerwacja Kowalscy');
+    expect(eventLabel(booking(), false, t)).toBe('Rezerwacja Kowalscy');
   });
 
   it('falls back to "Rezerwacja" when a public booking carries no nickname', () => {
-    expect(eventLabel(booking({nick: ''}), false)).toBe(DEFAULT_LABEL);
+    expect(eventLabel(booking({nick: ''}), false, t)).toBe(DEFAULT_LABEL);
   });
 
   it('shows the tenant name to staff', () => {
-    expect(eventLabel(booking(), true)).toBe('Jan Kowalski');
+    expect(eventLabel(booking(), true, t)).toBe('Jan Kowalski');
   });
 
   it('falls back to "Rezerwacja" when a staff booking carries no tenant name', () => {
-    expect(eventLabel(booking({personName: ''}), true)).toBe(DEFAULT_LABEL);
+    expect(eventLabel(booking({personName: ''}), true, t)).toBe(DEFAULT_LABEL);
   });
 });
 
@@ -99,7 +103,8 @@ describe('bookingToEvents', () => {
   it('builds one event per non-cancelled slot', () => {
     const events = bookingToEvents(
       booking({bookedTimes: [slot(), slot({status: 'DONE'}), slot({status: 'CANCELED'})]}),
-      false
+      false,
+      t
     );
 
     expect(events).toHaveLength(2);
@@ -107,7 +112,7 @@ describe('bookingToEvents', () => {
   });
 
   it('carries the day, hours and size of the slot', () => {
-    const [event] = bookingToEvents(booking(), false);
+    const [event] = bookingToEvents(booking(), false, t);
 
     expect(event).toMatchObject({
       bookingId: 'b1',
@@ -120,13 +125,13 @@ describe('bookingToEvents', () => {
   });
 
   it('gives each slot a unique id', () => {
-    const events = bookingToEvents(booking({bookedTimes: [slot(), slot()]}), false);
+    const events = bookingToEvents(booking({bookedTimes: [slot(), slot()]}), false, t);
 
     expect(events[0].id).not.toBe(events[1].id);
   });
 
   it('returns nothing for a booking with no slots', () => {
-    expect(bookingToEvents(booking({bookedTimes: []}), false)).toEqual([]);
+    expect(bookingToEvents(booking({bookedTimes: []}), false, t)).toEqual([]);
   });
 });
 
@@ -134,7 +139,8 @@ describe('bookingsToEvents', () => {
   it('flattens every booking into its events', () => {
     const events = bookingsToEvents(
       [booking({_id: 'a'}), booking({_id: 'b', bookedTimes: [slot(), slot()]})],
-      false
+      false,
+      t
     );
 
     expect(events).toHaveLength(3);
@@ -159,7 +165,7 @@ describe('bookingsToEvents', () => {
     );
 
     const started = performance.now();
-    const events = bookingsToEvents(year, true);
+    const events = bookingsToEvents(year, true, t);
     const ms = performance.now() - started;
 
     console.log(`[T050] calendar transform, year of bookings: ${ms.toFixed(1)} ms`);
@@ -193,15 +199,15 @@ describe('weekDays', () => {
 
 describe('statusLabel', () => {
   it('labels a completed slot', () => {
-    expect(statusLabel(true, 'DONE')).toBe('Zakończona');
+    expect(statusLabel(true, 'DONE', t)).toBe('Zakończona');
   });
 
   it('labels an accepted, unfinished slot', () => {
-    expect(statusLabel(true, 'INITIAL')).toBe('Zatwierdzona');
+    expect(statusLabel(true, 'INITIAL', t)).toBe('Zatwierdzona');
   });
 
   it('labels an unaccepted slot', () => {
-    expect(statusLabel(false, 'INITIAL')).toBe('Oczekująca');
+    expect(statusLabel(false, 'INITIAL', t)).toBe('Oczekująca');
   });
 });
 
@@ -213,14 +219,16 @@ describe('gridHours', () => {
 
 describe('eventsOnDay', () => {
   it('keeps only that day, sorted by start hour', () => {
-    const early = bookingToEvents(booking({_id: 'a'}), false)[0];
+    const early = bookingToEvents(booking({_id: 'a'}), false, t)[0];
     const late = bookingToEvents(
       booking({_id: 'b', bookedTimes: [slot({startHours: new Date('2026-03-04T14:00:00Z'), endHours: new Date('2026-03-04T15:00:00Z')})]}),
-      false
+      false,
+      t
     )[0];
     const otherDay = bookingToEvents(
       booking({_id: 'c', bookedTimes: [slot({day: new Date('2026-03-05T00:00:00Z')})]}),
-      false
+      false,
+      t
     )[0];
 
     const result = eventsOnDay([late, early, otherDay], '2026-03-04');
@@ -229,8 +237,8 @@ describe('eventsOnDay', () => {
 });
 
 describe('weekColumns', () => {
-  it('pairs each day with its Polish weekday label', () => {
-    const columns = weekColumns(new Date('2026-03-04T12:00:00Z'));
+  it('pairs each day with its weekday label', () => {
+    const columns = weekColumns(new Date('2026-03-04T12:00:00Z'), t);
     expect(columns[0]).toEqual({day: '2026-03-02', label: 'pon'});
     expect(columns[6]).toEqual({day: '2026-03-08', label: 'nie'});
   });
@@ -239,7 +247,7 @@ describe('weekColumns', () => {
 describe('dayColumn', () => {
   it('labels the anchor day with its weekday', () => {
     // 2026-03-04 is a Wednesday.
-    expect(dayColumn(new Date('2026-03-04T12:00:00Z'))).toEqual({day: '2026-03-04', label: 'śr'});
+    expect(dayColumn(new Date('2026-03-04T12:00:00Z'), t)).toEqual({day: '2026-03-04', label: 'śr'});
   });
 });
 
@@ -257,13 +265,13 @@ describe('monthDays', () => {
 });
 
 describe('monthLabel', () => {
-  it('names the month and year in Polish', () => {
-    expect(monthLabel(new Date('2026-03-15T12:00:00Z'))).toBe('marzec 2026');
+  it('names the month and year', () => {
+    expect(monthLabel(new Date('2026-03-15T12:00:00Z'), t)).toBe('marzec 2026');
   });
 
   it('handles the year boundary', () => {
-    expect(monthLabel(new Date('2026-01-15T12:00:00Z'))).toBe('styczeń 2026');
-    expect(monthLabel(new Date('2026-12-15T12:00:00Z'))).toBe('grudzień 2026');
+    expect(monthLabel(new Date('2026-01-15T12:00:00Z'), t)).toBe('styczeń 2026');
+    expect(monthLabel(new Date('2026-12-15T12:00:00Z'), t)).toBe('grudzień 2026');
   });
 });
 

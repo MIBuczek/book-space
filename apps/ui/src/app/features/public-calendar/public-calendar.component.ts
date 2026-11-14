@@ -1,7 +1,8 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {COPY} from '@booking/copy';
-import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
+import {IPublicBuilding} from '@models/building.model';
 import {BookingsApi} from '../../core/bookings.api';
 import {FacilitiesApi} from '../../core/facilities.api';
 import {SessionStore} from '../../core/session.store';
@@ -20,7 +21,7 @@ import {
   weekColumns,
 } from './calendar-events';
 
-const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
+import {cityOptions as buildCityOptions, keepSelected} from '../../core/city-options';
 
 /**
  * The public calendar (FR-037, FR-038).
@@ -41,32 +42,32 @@ const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label:
  * label rule is `eventLabel`, and the redaction is the API's, so the client cannot show what
  * it was not given.
  *
- * Every label, heading and notice comes from the shared copy catalogue (NFR-005, T061), so no
- * Polish text is hardcoded in the template.
+ * Every label, heading and notice is translated (FR-001), so no user-facing text is hardcoded
+ * in the template.
  */
 @Component({
   selector: 'book-space-public-calendar',
-  imports: [SelectComponent, ButtonComponent],
+  imports: [SelectComponent, ButtonComponent, TranslatePipe],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'calendar.title' | translate }}</h1>
 
       <div class="bs-calendar__controls">
         <book-space-select
-          [label]="copy.city"
-          [options]="cityOptions"
+          [label]="'calendar.city' | translate"
+          [options]="cityOptions()"
           [value]="city()"
           (valueChange)="onCity($event)"
         />
         <book-space-select
-          [label]="copy.facility"
+          [label]="'calendar.facility' | translate"
           [options]="buildingOptions()"
           [value]="building()"
-          [placeholder]="copy.facilityPlaceholder"
+          [placeholder]="'calendar.facilityPlaceholder' | translate"
           (valueChange)="onBuilding($event)"
         />
-        <div class="bs-calendar__views" role="group" [attr.aria-label]="copy.viewAria">
-          @for (option of views; track option.value) {
+        <div class="bs-calendar__views" role="group" [attr.aria-label]="'calendar.viewAria' | translate">
+          @for (option of views(); track option.value) {
             <book-space-button
               [variant]="view() === option.value ? 'primary' : 'secondary'"
               [attr.aria-pressed]="view() === option.value"
@@ -79,18 +80,18 @@ const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label:
       </div>
 
       <div class="bs-calendar__period">
-        <book-space-button variant="secondary" (pressed)="step(-1)">{{ copy.previous }}</book-space-button>
-        <book-space-button variant="secondary" (pressed)="today()">{{ copy.today }}</book-space-button>
-        <book-space-button variant="secondary" (pressed)="step(1)">{{ copy.next }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="step(-1)">{{ 'calendar.previous' | translate }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="today()">{{ 'calendar.today' | translate }}</book-space-button>
+        <book-space-button variant="secondary" (pressed)="step(1)">{{ 'calendar.next' | translate }}</book-space-button>
         <span class="bs-calendar__title">{{ periodLabel() }}</span>
       </div>
 
       @if (building() === '') {
-        <p>{{ copy.chooseFacility }}</p>
+        <p>{{ 'calendar.chooseFacility' | translate }}</p>
       } @else if (bookingsResource.isLoading()) {
-        <p role="status">{{ copy.loading }}</p>
+        <p role="status">{{ 'calendar.loading' | translate }}</p>
       } @else if (bookingsResource.status() === 'error') {
-        <p role="alert">{{ copy.loadError }}</p>
+        <p role="alert">{{ 'calendar.loadError' | translate }}</p>
       } @else if (view() === 'list' || view() === 'month') {
         <ul class="bs-calendar__list">
           @for (event of events(); track event.id) {
@@ -103,7 +104,7 @@ const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label:
               </button>
             </li>
           } @empty {
-            <li>{{ copy.empty }}</li>
+            <li>{{ 'calendar.empty' | translate }}</li>
           }
         </ul>
       } @else {
@@ -139,34 +140,34 @@ const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label:
       }
 
       @if (!isStaff()) {
-        <p class="bs-calendar__notice">{{ copy.publicNotice }}</p>
+        <p class="bs-calendar__notice">{{ 'calendar.publicNotice' | translate }}</p>
       }
 
       @if (selected(); as event) {
-        <section class="bs-calendar__details" [attr.aria-label]="copy.detailsAria">
-          <h2>{{ copy.detailsTitle }}</h2>
+        <section class="bs-calendar__details" [attr.aria-label]="'calendar.detailsAria' | translate">
+          <h2>{{ 'calendar.detailsTitle' | translate }}</h2>
           <dl>
-            <dt>{{ copy.fields.name }}</dt>
+            <dt>{{ 'calendar.fields.name' | translate }}</dt>
             <dd>{{ event.title }}</dd>
-            <dt>{{ copy.fields.day }}</dt>
+            <dt>{{ 'calendar.fields.day' | translate }}</dt>
             <dd>{{ event.day }}</dd>
-            <dt>{{ copy.fields.hours }}</dt>
+            <dt>{{ 'calendar.fields.hours' | translate }}</dt>
             <dd>{{ event.start }}–{{ event.end }}</dd>
-            <dt>{{ copy.fields.size }}</dt>
+            <dt>{{ 'calendar.fields.size' | translate }}</dt>
             <dd>{{ event.size }}</dd>
-            <dt>{{ copy.fields.status }}</dt>
+            <dt>{{ 'calendar.fields.status' | translate }}</dt>
             <dd>{{ statusText(event) }}</dd>
             @if (isStaff()) {
-              <dt>{{ copy.staffFields.client }}</dt>
+              <dt>{{ 'calendar.staffFields.client' | translate }}</dt>
               <dd>{{ event.booking.personName }}</dd>
-              <dt>{{ copy.staffFields.email }}</dt>
+              <dt>{{ 'calendar.staffFields.email' | translate }}</dt>
               <dd>{{ event.booking.personEmail }}</dd>
-              <dt>{{ copy.staffFields.phone }}</dt>
+              <dt>{{ 'calendar.staffFields.phone' | translate }}</dt>
               <dd>{{ event.booking.personPhone }}</dd>
             }
           </dl>
           <book-space-button variant="secondary" (pressed)="clearSelection()">
-            {{ common.close }}
+            {{ 'common.close' | translate }}
           </book-space-button>
         </section>
       }
@@ -251,19 +252,16 @@ export class PublicCalendarComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly bookingsApi = inject(BookingsApi);
   private readonly session = inject(SessionStore);
+  private readonly t = injectTranslate();
 
-  readonly copy = COPY.calendar;
-  readonly common = COPY.common;
-  readonly cityOptions = CITY_OPTIONS;
-  readonly views: Array<{value: TCalendarView; label: string}> = [
-    {value: 'week', label: COPY.calendar.views.week},
-    {value: 'day', label: COPY.calendar.views.day},
-    {value: 'list', label: COPY.calendar.views.list},
-    {value: 'month', label: COPY.calendar.views.month},
-  ];
+  readonly views = computed<Array<{value: TCalendarView; label: string}>>(() => [
+    {value: 'week', label: this.t('calendar.views.week')},
+    {value: 'day', label: this.t('calendar.views.day')},
+    {value: 'list', label: this.t('calendar.views.list')},
+    {value: 'month', label: this.t('calendar.views.month')},
+  ]);
   readonly hours = gridHours();
 
-  readonly city = signal<TCity>('siechnice');
   readonly view = signal<TCalendarView>('week');
   /** The day the view is centred on; `now` on first render, matching the legacy initial view. */
   readonly anchor = signal(new Date());
@@ -277,6 +275,22 @@ export class PublicCalendarComponent {
   readonly facilities = computed<IPublicBuilding[]>(() =>
     this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
   );
+
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly cityOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
+
+  /**
+   * The selected city.
+   *
+   * A `linkedSignal` on the facility list: cities are data (spec.md §9 open question 1), so the
+   * initial city is the first city the facilities carry rather than a compiled-in default, and
+   * the previous choice is kept while it is still valid so a background refresh does not reset
+   * it. It stays writable so the selector can set it.
+   */
+  readonly city = linkedSignal<ISelectOption[], string>({
+    source: () => this.cityOptions(),
+    computation: (options, previous) => keepSelected(options, previous?.value),
+  });
 
   /** The facilities of the selected city, as the selector's options. */
   readonly buildingOptions = computed<ISelectOption[]>(() =>
@@ -293,7 +307,7 @@ export class PublicCalendarComponent {
    * when it is still valid stops a background facility-list refresh from resetting a choice
    * the visitor already made.
    */
-  readonly building = linkedSignal<{city: TCity; options: ISelectOption[]}, string>({
+  readonly building = linkedSignal<{city: string; options: ISelectOption[]}, string>({
     source: () => ({city: this.city(), options: this.buildingOptions()}),
     computation: (source, previous) => {
       if (previous && source.options.some((option) => option.value === previous.value)) {
@@ -318,25 +332,26 @@ export class PublicCalendarComponent {
   readonly events = computed<ICalendarEvent[]>(() =>
     bookingsToEvents(
       this.bookingsResource.hasValue() ? this.bookingsResource.value().items : [],
-      this.isStaff()
+      this.isStaff(),
+      this.t
     )
   );
 
   /** The day columns the week and day views render: the week, or the single day. */
   readonly columns = computed(() =>
-    this.view() === 'day' ? [dayColumn(this.anchor())] : weekColumns(this.anchor())
+    this.view() === 'day' ? [dayColumn(this.anchor(), this.t)] : weekColumns(this.anchor(), this.t)
   );
 
-  /** The Polish label for the period on screen: the month name, or the period's first day. */
+  /** The label for the period on screen: the month name, or the period's first day. */
   readonly periodLabel = computed(() => {
     if (this.view() === 'month') {
-      return monthLabel(this.anchor());
+      return monthLabel(this.anchor(), this.t);
     }
     return this.columns()[0].day;
   });
 
   onCity(city: string): void {
-    this.city.set(city as TCity);
+    this.city.set(city);
   }
 
   onBuilding(building: string): void {
@@ -369,6 +384,6 @@ export class PublicCalendarComponent {
   }
 
   statusText(event: ICalendarEvent): string {
-    return statusLabel(event.accepted, event.status);
+    return statusLabel(event.accepted, event.status, this.t);
   }
 }

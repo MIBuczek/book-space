@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { NotFoundComponent } from './not-found.component';
+import { provideTestI18n } from '../../../testing/i18n-testing';
 
 describe('NotFoundComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [NotFoundComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideTestI18n()],
     }).compileComponents();
   });
 

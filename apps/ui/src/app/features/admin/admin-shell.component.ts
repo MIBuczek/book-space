@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { COPY } from '@booking/copy';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SessionStore } from '../../core/session.store';
 import { ButtonComponent } from '../../shared/ui';
@@ -19,10 +19,10 @@ import { visibleAdminTabs } from '../../shell/navigation';
  */
 @Component({
   selector: 'book-space-admin-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, TranslatePipe],
   template: `
     <div class="bs-admin">
-      <nav class="bs-admin__tabs" [attr.aria-label]="copy.sectionsAria">
+      <nav class="bs-admin__tabs" [attr.aria-label]="'admin.sectionsAria' | translate">
         <ul>
           @for (tab of tabs(); track tab.path) {
             <li>
@@ -32,13 +32,13 @@ import { visibleAdminTabs } from '../../shell/navigation';
                 ariaCurrentWhenActive="page"
                 [routerLinkActiveOptions]="{ exact: false }"
               >
-                {{ tab.label }}
+                {{ tab.label | translate }}
               </a>
             </li>
           }
         </ul>
         <book-space-button variant="secondary" (pressed)="signOut()">
-          {{ copy.signOut }}
+          {{ 'admin.signOut' | translate }}
         </book-space-button>
       </nav>
       <section class="bs-admin__content">
@@ -77,7 +77,6 @@ import { visibleAdminTabs } from '../../shell/navigation';
   ],
 })
 export class AdminShellComponent {
-  readonly copy = COPY.admin;
   private readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

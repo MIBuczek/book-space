@@ -1,6 +1,6 @@
 import {CLIENT_TYPES, PAYMENTS, IBooking, IPlace} from '@models/booking.model';
 import {BOOKING_STATUSES} from '@models/booked-time.model';
-import {CITIES, SIZES, IBuilding} from '@models/building.model';
+import {SIZES, IBuilding, distinctCities, cityLabel} from '@models/building.model';
 import {IClient} from '@models/client.model';
 import {USER_ROLES, IUser} from '@models/user.model';
 import {IPaginated} from '@models/pagination.model';
@@ -43,13 +43,20 @@ describe('shared model values match data-model.md', () => {
     expect(USER_ROLES).toEqual(['ADMIN', 'OFFICE', 'EMPLOYEE']);
   });
 
-  it('cities', () => {
-    expect(CITIES).toEqual([
-      'siechnice',
-      'radwanice',
-      'swieta-katarzyna',
-      'zerniki-wroclawskie',
-    ]);
+  it('ships no compiled-in city list, because cities are data (spec.md §9 open question 1)', () => {
+    // `CITIES`/`TCity` were removed: a facility's `city` is free text and the city selectors
+    // derive their options from the facilities that exist. `distinctCities` is the derivation,
+    // and `cityLabel` prettifies the sample slugs; neither constrains the values.
+    const buildings = [
+      {city: 'siechnice'},
+      {city: 'radwanice'},
+      {city: 'siechnice'},
+    ] as IBuilding[];
+    expect(distinctCities(buildings)).toEqual(['siechnice', 'radwanice']);
+    expect(cityLabel('siechnice')).toBe('Siechnice');
+    // A city the map does not name renders verbatim, so an administrator-added city is not
+    // dropped from the selectors.
+    expect(cityLabel('nowe-miasto')).toBe('nowe-miasto');
   });
 
   it('sizes', () => {

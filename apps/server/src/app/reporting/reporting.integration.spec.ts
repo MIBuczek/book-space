@@ -138,8 +138,10 @@ describe('reporting over HTTP', () => {
       });
 
       const response = await get(`/reporting/summary?clientId=${clientId}&${range}`, token);
-      const body = (await response.json()) as {siechnice: unknown[]};
-      expect(body.siechnice).toHaveLength(0);
+      const body = (await response.json()) as {siechnice?: unknown[]};
+      // Cities are data (spec.md §9 open question 1): a city with no in-range booking is absent
+      // from the summary rather than emitted empty.
+      expect(body.siechnice ?? []).toHaveLength(0);
     });
 
     it('includes every accepted booking when fromTheBeginning is set', async () => {

@@ -44,6 +44,24 @@ paths:
                       shared with the UI footer, so the two report the same build.
                     example: 1.0.0+63
 
+  /tenant:
+    get:
+      tags: [system]
+      summary: The public tenant identity
+      description: >
+        The values that used to be the previous tenant's brand compiled into the UI (FR-007).
+        Public and credential-free: the footer and the contact page render on the pages an
+        anonymous visitor sees. A `null` field is a value the deployment has not set, and the UI
+        hides the element rather than rendering an empty link (SC-005). Never carries the staff
+        inbox, which stays server-side.
+      responses:
+        '200':
+          description: The configured tenant identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
   /auth/sign-in:
     post:
       tags: [auth]
@@ -943,6 +961,35 @@ components:
         canWriteFacilities: {type: boolean}
         canSendFacilityMessages: {type: boolean}
 
+    Tenant:
+      description: >
+        The public tenant identity (FR-007, contracts/tenant.md). Configured on the server, so a
+        rebrand is a settings change and not a rebuild. `contactEmail`, `websiteUrl` and
+        `privacyUrl` are `null` when unset, and the UI hides the element rather than rendering an
+        empty link (SC-005). The staff inbox is deliberately absent.
+      type: object
+      required: [name, contactEmail, websiteUrl, privacyUrl]
+      properties:
+        name:
+          type: string
+          description: The brand; falls back to the product name when unconfigured.
+          example: Book Space
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+          example: office@example.com
+        websiteUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com
+        privacyUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/privacy
+
     ClientDto:
       type: object
       required: [type, name, contactPerson, phone, email, street, city, zipCode]
@@ -1010,7 +1057,14 @@ components:
       properties:
         name: {type: string, minLength: 3, maxLength: 125}
         property: {type: string}
-        city: {type: string, enum: [siechnice, radwanice, swieta-katarzyna, zerniki-wroclawskie]}
+        city:
+          type: string
+          minLength: 2
+          maxLength: 125
+          description: >
+            Free text, not a compiled-in list (spec.md §9 open question 1, FR-007). Cities are
+            data: an administrator adds one by creating a facility that names it, and the city
+            selectors offer the distinct stored values.
         sizes:
           type: array
           items: {type: string, enum: ['1/1', '1/2', '1/3', '2/3', '1/4', '3/4']}

@@ -925,22 +925,43 @@ Three things that are easy to get wrong:
   separate — `email` is the facility's contact address (the sender a reply returns to) and
   `recipient` is the employee's destination. `buildMessageRequest` reads the sender from the
   facility record, never from the form.
-- **`CITY_LABELS` lives in `libs/models/building.model.ts`, beside `CITIES` (T038).** It was
-  duplicated in the public calendar, the booking form and the bookings tab; the Facilities tab
-  was the fourth copy. Four copies of a display label is the drift the shared model exists to
-  prevent — a renamed city would render correctly on one screen and not another, with nothing to
-  catch it. Import it; do not re-declare it. (It is *not* in `@booking/copy`: it labels the
-  screen selectors and answers to the UI, while the reporting vocabulary is a separate audience.)
-- **All user-facing Polish copy lives in `libs/copy` (`@booking/copy`), and a guard test enforces
-  it (T061, NFR-005).** A component imports `COPY` and binds it; it does not type a Polish
-  literal into a template. `apps/ui/src/app/no-hardcoded-copy.spec.ts` walks `apps/ui/src`, skips
-  specs and the catalogue, and fails on a Polish character outside a comment — a *character*
-  check, not a "looks like a sentence" one, so it cannot be argued with. English is not caught;
-  the rendered-component specs cover the strings that matter.
-- **The API is English and the UI owns the Polish wording (T061, NFR-005).** A `422` body's
-  `message` list is used to *locate* the field it names, and the form shows `COPY.errors.fieldInvalid`
-  against it; a message that names no field becomes `COPY.errors.generic`. A `409` is keyed by its
-  status (`COPY.clients.deleteConflict`, `COPY.users.deactivateConflict`), not by its body. The
+- **`CITY_LABELS` lives in `libs/models/building.model.ts`, and the compiled-in city *list* is gone
+  (T038, T270–T274).** `CITY_LABELS` was duplicated in the public calendar, the booking form and
+  the bookings tab; the Facilities tab was the fourth copy. Four copies of a display label is the
+  drift the shared model exists to prevent — a renamed city would render correctly on one screen
+  and not another, with nothing to catch it. Import it; do not re-declare it. (It is *not* in the
+  i18n catalogue: it labels the screen selectors and answers to the UI, while the reporting
+  vocabulary is a separate audience.) It is now a *label map* over a free-text `city`, not an
+  enumeration of the cities that exist: spec.md §9 open question 1 was answered "cities and
+  facilities are fully administrator-managed from day one", so the `CITIES`/`CITY_OPTIONS`/
+  `SUMMARY_CITIES` constants were retired (T270). A city is a plain bounded `string` on the
+  building schema and DTO (length bounds, no `enum`), and a screen's city list is the set of
+  distinct stored values: `distinctCities` in `libs/models` feeds `cityOptions`
+  (`apps/ui/src/app/core/city-options.ts`), which the five selectors (public calendar, booking
+  request, bookings tab, facilities tab, users tab) read. A city with no facility is a city that
+  does not exist yet, so "add city" is "add a facility that names it" — the Facilities tab's
+  create/edit form (T272) is where that happens, and it sends a free-text city so the create
+  succeeds with no compiled-in list. `cityLabel` falls through to the stored value for a city the
+  label map does not name, on the screen *and* in the report (`REPORT_VALUE_LABELS`, T273), so a
+  new city renders as its own key rather than as a blank.
+- **All user-facing copy lives in the i18n catalogue, and two guards enforce it (T061/T240,
+  NFR-005, FR-012).** A component binds a key (`{{ 'nav.calendar' | translate }}`, or
+  `t('key')` from `injectTranslate` for a non-template read); it does not type the wording into a
+  template. The data is `apps/ui/src/assets/i18n/pl.json` and `en.json`, loaded at runtime through
+  `@ngx-translate/core`; `libs/copy` (`@booking/copy`) was deleted once every consumer was
+  migrated (T234), so there is no `COPY` object to read and no `@booking/copy` alias.
+  `apps/ui/src/app/no-hardcoded-copy.spec.ts` is retargeted (T240) from a Polish-*character*
+  check to a language-agnostic **user-facing-literal** check: it flags a static text node
+  (`>Some text<`) and a literal for a read/heard attribute (`aria-label`, `placeholder`, `title`,
+  `alt`), while accepting an interpolation, a binding and a structural block (`@if`, `@for`). It
+  reads only the `template: \`...\`` regions — a whole-file scan flags TypeScript generics
+  (`Array<string>`) as text — and it is *stricter* than the character check it replaced, because
+  an English literal is exactly what the old one could not see. `libs/i18n/src/lib/translations.spec.ts`
+  is the other guard: it iterates every key of both catalogues and asserts the two agree (FR-006).
+- **The API is English and the UI owns the wording (T061, NFR-005).** A `422` body's
+  `message` list is used to *locate* the field it names, and the form shows `errors.fieldInvalid`
+  against it; a message that names no field becomes `errors.generic`. A `409` is keyed by its
+  status (`clients.deleteConflict`, `users.deactivateConflict`), not by its body. The
   server's sentence is never rendered — a Polish sentence must not travel in a response body, and
   the API must not be asked to produce Polish.
 - **The `ui-e2e` specs assert the rendered copy, so a catalogue rename is an E2E change.** The
@@ -1030,7 +1051,8 @@ Three things that are easy to get wrong:
   it, so the server's existing import sites are unchanged. The server's `display.ts` keeps the
   date/time formatting (its projection of `@booking/date-time`) and nothing else.
 - **The slot status labels agree between the screen and the report, and a spec holds them there
-  (T063, CHK014, issue #55).** The UI label map (`COPY.bookings.statusLabels` in `libs/copy`) and
+  (T063, CHK014, issue #55).** The UI label map (`bookings.statusLabels` in
+  `assets/i18n/pl.json`) and
   the report map (`REPORT_VALUE_LABELS` in `libs/reporting`) stay separate on purpose — the copy is
   translatable, the report vocabulary is the legacy Polish a business artefact prints — so nothing
   but a test stops them drifting. They did drift: the legacy dropdown labelled `QUIT` "Odwołana"
@@ -1041,9 +1063,9 @@ Three things that are easy to get wrong:
   instead. The guard is the second assertion in `bookings-table.spec.ts`'s "labels each status
   exactly as the CSV and the printable report do", which asserts each UI label equals
   `displayValue(status)`; if you add a status value, add it to both maps and the loop covers it.
-  Do not "unify" by importing one map into the other: `libs/copy` is UI copy and `libs/reporting`
-  is the server's report vocabulary, and the whole point is that each answers to a different
-  audience.
+  Do not "unify" by importing one map into the other: the i18n catalogue is UI copy and
+  `libs/reporting` is the server's report vocabulary, and the whole point is that each answers to a
+  different audience.
 - **There is no `REJECTED` status: rejecting a request is the staff delete (#196, spec.md §9 Q4).**
   The tenant removes a request it will not fulfil rather than keeping a rejected record, so
   `DELETE /bookings/{_id}` (staff-only, `assertCanModify`) *is* the rejection — a hard delete, not
@@ -1312,11 +1334,11 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `coverage/libs/booking-rules/coverage-summary.json` row) — a new library has to be added to
   *both* the run-many list and the summary-merge table or its coverage never reaches the gate.
   `libs/version` (`@booking/version`, T040) is the third: `ci.yml` now runs
-  `--projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy,i18n`
-  and prints each summary row. `libs/copy` (`@booking/copy`, T061) is the fourth of the
-  `libs/*` ones and the copy catalogue (below). `libs/i18n` (`@booking/i18n`, T210) is the
-  fifth and the runtime-translation layer (below) — it replaces `libs/copy` once every consumer
-  is migrated (T234).
+  `--projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,i18n`
+  and prints each summary row. `libs/copy` (`@booking/copy`, T061) was the fourth; it is **deleted**
+  (T234) once every consumer moved to the catalogue, so it is no longer in the list. `libs/i18n`
+  (`@booking/i18n`, T210) is the fourth and the runtime-translation layer (below) — the
+  `pl.json`/`en.json` catalogues, the language store and `provideAppI18n()`.
 - **The build number is a task input, not just a task dependency.** `libs/version` stamps
   `git rev-list --count HEAD` into a gitignored `generated/build-number.ts`, and both apps swap
   it in through `fileReplacements`. Depending on `version:build` is *not* enough: Nx keys a
@@ -1473,7 +1495,8 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   #189).** `SISK`/`SISK Siechnice` was replaced by `Book Space` and the previous tenant's
   contact details by placeholders, across identifiers (`SISK_CONTACT_EMAIL` →
   `TENANT_STAFF_EMAIL`, `siskUrl` → `websiteUrl`, `COPY.contact.siskWebsiteUrl` →
-  `websiteUrl`), user-facing copy (`libs/copy`), the e-mail signature and defaults
+  `contact.websiteUrl`, which was later retired with the tenant move), user-facing copy (the
+  i18n catalogue, which replaced `libs/copy`), the e-mail signature and defaults
   (`DEFAULT_CREATED_BY`, the bootstrap-admin surname) and the test
   fixtures (`@sisk.pl` → `@example.com`). `tools/scan-brand.js` fails CI on a `SISK` token in
   `apps`/`libs`/`tools`; it does **not** read `README.md`, `AGENTS.md` or `specs/`, because the
@@ -1482,6 +1505,25 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
   `siskWebsiteUrl` would slip through the token check and is caught only by the rename.
   `siechnice` is **not** a brand token: it is the city the twelve reference facilities sit in
   (`CITIES`, `facility-seed.ts` and their fixtures), which is real business data.
+- **The tenant identity is a public read, and the UI hides an absent value (T251/T252, FR-007,
+  SC-005).** `GET /api/tenant` (`TenantController`, unguarded) answers
+  `ITenant {name, contactEmail, websiteUrl, privacyUrl}` from `ConfigService`; the type lives in
+  `libs/models/tenant.model.ts` with `DEFAULT_TENANT_NAME`. `TenantService.setting` maps an
+  absent **or blank** setting to `null` (`value ? value : null`, because `Number('')`-style traps
+  and an operator who writes `TENANT_WEBSITE_URL=` means "no site"), and the service never reads
+  `TENANT_STAFF_EMAIL` — the staff inbox is operational and stays server-side. The UI's
+  `TenantStore` is filled by an app initializer that **swallows** a failure (`error: () =>
+  undefined`): the tenant values are decoration, so a failed read must not blank the shell or
+  block a route — the elements simply stay hidden. `tenant()?.field ?? null` in each consumer is
+  the fail-closed shape the contract asks for, and the `?? DEFAULT_TENANT_NAME` brand fallback is
+  what an unconfigured deployment renders. `provideTestTenant(null)` is how a spec proves the
+  hidden case; passing a tenant whose *fields* are null does not exercise the `?.` short-circuit
+  and leaves the branch uncovered. The `contact.office.email`, `contact.office.website`,
+  `contact.office.websiteHref`, `contact.websiteUrl` and `contact.privacyPolicyUrl` catalogue
+  keys were retired with the move (contact e-mail/website and the privacy link are tenant
+  values now); `contact.office.address`, `contact.office.phone`, `contact.office.phoneHref`,
+  `contact.rodoClauseUrl` and the opening hours stay in the catalogue, because they are the
+  deployment's sample content and not per-tenant settings.
 - **The Summary deny-list is removed entirely (#195), not merely defaulted to empty.** The legacy
   default named a real person at the previous tenant (`mkulakowski@umsiechnice.pl`) — a privacy
   leak in a generic product and a meaningless restriction for any other deployment. T033 first
@@ -1501,5 +1543,5 @@ contracts, `ui-conventions.md`, `backend-conventions.md`) and
 - **The licence is proprietary, and the repository is private (decision, #189).**
   `package.json` carries `"license": "UNLICENSED"` and `"author": "Gecko Web Services"`, and
   `LICENSE` states "© 2026 Gecko Web Services. All rights reserved." The footer renders the same
-  copyright (`COPY.footer.copyright`). Do not relicense to an OSS identifier without the owner's
+  copyright (`footer.copyright` in the catalogue). Do not relicense to an OSS identifier without the owner's
   decision; `private: true` already keeps the package out of any registry.

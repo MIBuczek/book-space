@@ -17,6 +17,7 @@ import {AuthorizationModule} from './authorization/authorization.module';
 import {validateEnv} from './config/env.validation';
 import {LoggingModule} from './logging/logging.module';
 import {SecurityModule} from './security/security.module';
+import {TenantModule} from './tenant/tenant.module';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import {SecurityModule} from './security/security.module';
     UsersModule,
     ClientModule,
     BuildingModule,
-    ReportingModule
+    ReportingModule,
+    TenantModule
   ],
   controllers: [AppController],
   providers: [AppService]

@@ -1,12 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { CookieNoticeComponent } from './cookie-notice.component';
+import { provideTestI18n } from '../../../testing/i18n-testing';
+import { provideTestTenant } from '../../../testing/tenant-testing';
 
 const KEY = 'book-space.cookies-acknowledged';
 
 describe('CookieNoticeComponent', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ imports: [CookieNoticeComponent] });
+    TestBed.configureTestingModule({
+      imports: [CookieNoticeComponent],
+      providers: [provideTestI18n(), provideTestTenant()],
+    });
   });
 
   const render = () => {
@@ -19,10 +24,19 @@ describe('CookieNoticeComponent', () => {
     expect(render().textContent).toContain('Pliki Cookies');
   });
 
-  it('links to the privacy policy', () => {
+  it('links to the tenant privacy policy (FR-007)', () => {
     const link = render().querySelector('a');
-    expect(link?.getAttribute('href')).toContain('polityka-prywatnosci');
+    expect(link?.getAttribute('href')).toBe('https://example.com/privacy');
     expect(link?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('hides the learn-more link when the tenant has no privacy policy (SC-005)', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [CookieNoticeComponent],
+      providers: [provideTestI18n(), provideTestTenant(null)],
+    });
+    expect(render().querySelector('a')).toBeNull();
   });
 
   it('hides the notice and persists the acknowledgement when accepted', () => {

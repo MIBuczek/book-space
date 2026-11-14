@@ -3,15 +3,6 @@ import {IClient} from './client.model';
 import {ISelectedExtraOption} from './selected-extra-option.model';
 
 /**
- * The cities a summary is grouped by, in the legacy order (`summary-data-const.ts`).
- *
- * Kept as a runtime list and a type from one declaration, like `CITIES`/`CLIENT_TYPES`, so a
- * consumer that iterates the list and a consumer that types a field cannot drift.
- */
-const SUMMARY_CITIES = ['siechnice', 'radwanice', 'swieta-katarzyna', 'zerniki-wroclawskie'] as const;
-type TSummaryCity = (typeof SUMMARY_CITIES)[number];
-
-/**
  * The booking-level fields a summary repeats for each of its slots (legacy
  * `IGeneralBookingDetails`). They describe the booking, not the slot, so they are held once
  * per booking rather than duplicated onto every slot.
@@ -34,18 +25,33 @@ interface IBookedTimeSummary {
   bookingTimeDetails: IBookedTime[];
 }
 
-/** One city's list of bookings, keyed by the city key. */
-type TCitySummary = Record<TSummaryCity, IBookedTimeSummary[]>;
+/**
+ * The per-client summary: the client record plus one list per city, keyed by the city the
+ * booking's facility names.
+ *
+ * The city keys are open (spec.md §9 open question 1): the summary groups by the cities
+ * **actually present in the data**, not a compiled-in list, so an administrator-added city is
+ * reported like any other. That is why the index signature is a union with the `client` field
+ * rather than a `Record<city, …>` — a `client` key would not be assignable to a city's row list,
+ * and a closed key union would be the compiled-in list the decision removes.
+ */
+interface IClientSummary {
+  client: IClient;
+  [city: string]: IClient | IBookedTimeSummary[];
+}
 
 /**
- * The per-client summary: the client record plus one list per city. A booking with no linked
- * client is attributed by name, so `client` is `null` only when the caller asked for a client
- * id that does not resolve — the service refuses that case rather than returning a summary
- * with a null client.
+ * The bookings a summary holds for a city, or `[]` when the city has none.
+ *
+ * The index signature is a union because the object also carries `client`, so a read has to
+ * narrow before it can be treated as the city's rows; every consumer that walks the cities
+ * (`cityTotals`, `cityReports`, `summariseClient`) goes through this so the narrowing lives in
+ * one place.
  */
-interface IClientSummary extends TCitySummary {
-  client: IClient;
-}
+const cityBookings = (summary: IClientSummary, city: string): IBookedTimeSummary[] => {
+  const rows = summary[city];
+  return Array.isArray(rows) ? rows : [];
+};
 
 /**
  * One CSV column: the legacy header label and the key its value is read from. The label set
@@ -79,14 +85,12 @@ interface ISummaryQuery {
   fromTheBeginning?: boolean;
 }
 
-export {SUMMARY_CITIES};
 export type {
-  TSummaryCity,
   IGeneralBookingDetails,
   IBookedTimeSummary,
-  TCitySummary,
   IClientSummary,
   ICSVColumn,
   TCSVRow,
   ISummaryQuery,
 };
+export {cityBookings};

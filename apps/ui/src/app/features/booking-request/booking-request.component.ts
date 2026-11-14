@@ -1,8 +1,9 @@
 import {Component, computed, inject, linkedSignal, signal} from '@angular/core';
 import {HttpErrorResponse} from '@angular/common/http';
 import {rxResource} from '@angular/core/rxjs-interop';
-import {COPY} from '@booking/copy';
-import {CITIES, CITY_LABELS, IPublicBuilding, TCity} from '@models/building.model';
+import {TranslatePipe} from '@ngx-translate/core';
+import {injectTranslate} from '@booking/i18n';
+import {IPublicBuilding} from '@models/building.model';
 import {TClientType, TPayment} from '@models/booking.model';
 import {BookingRequestsApi} from '../../core/booking-requests.api';
 import {FacilitiesApi} from '../../core/facilities.api';
@@ -31,21 +32,10 @@ import {
 } from './booking-request-form';
 import type {ICyclicalEntry, IExtraOptionEntry, IBookingFormValue, ISlotEntry} from './booking-request-form';
 import {formatFacilityDate, formatFacilityTime} from '@booking/date-time';
-
-const CITY_OPTIONS: ISelectOption[] = CITIES.map((city) => ({value: city, label: CITY_LABELS[city]}));
-
-const CLIENT_OPTIONS: ISelectOption[] = (Object.keys(CLIENT_TYPE_LABELS) as TClientType[]).map(
-  (type) => ({value: type, label: CLIENT_TYPE_LABELS[type]})
-);
-
-const PAYMENT_OPTIONS: ISelectOption[] = (Object.keys(PAYMENT_LABELS) as TPayment[]).map(
-  (payment) => ({value: payment, label: PAYMENT_LABELS[payment]})
-);
+import {cityOptions as buildCityOptions, keepSelected} from '../../core/city-options';
 
 const HOUR_OPTIONS = (hours: number[]): ISelectOption[] =>
   hours.map((hour) => ({value: String(hour), label: `${String(hour).padStart(2, '0')}:00`}));
-
-const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
 
 /**
  * The public booking request form (FR-011, FR-012, FR-013, issue #39).
@@ -77,33 +67,34 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
     DatePickerComponent,
     InputComponent,
     SelectComponent,
+    TranslatePipe,
   ],
   template: `
     <section class="bs-page">
-      <h1>{{ copy.title }}</h1>
+      <h1>{{ 'bookingRequest.title' | translate }}</h1>
 
       @if (submitted()) {
-        <p class="bs-request__success" role="status">{{ copy.success }}</p>
+        <p class="bs-request__success" role="status">{{ 'bookingRequest.success' | translate }}</p>
       } @else {
         <form (submit)="submit($event)" novalidate>
           <fieldset>
-            <legend>{{ copy.legends.facility }}</legend>
+            <legend>{{ 'bookingRequest.legends.facility' | translate }}</legend>
             <book-space-select
-              [label]="copy.city"
-              [options]="cityOptions"
+              [label]="'bookingRequest.city' | translate"
+              [options]="cityOptions()"
               [value]="city()"
               (valueChange)="onCity($event)"
             />
             <book-space-select
-              [label]="copy.facility"
+              [label]="'bookingRequest.facility' | translate"
               [options]="buildingOptions()"
               [value]="facilityProperty()"
-              [placeholder]="copy.facilityPlaceholder"
+              [placeholder]="'bookingRequest.facilityPlaceholder' | translate"
               (valueChange)="onFacility($event)"
             />
             @if (selectedFacility(); as facility) {
               <book-space-select
-                [label]="copy.size"
+                [label]="'bookingRequest.size' | translate"
                 [options]="sizeSelectOptions()"
                 [value]="value().size"
                 (valueChange)="update({size: $event})"
@@ -112,60 +103,60 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
           </fieldset>
 
           <fieldset>
-            <legend>{{ copy.legends.requester }}</legend>
+            <legend>{{ 'bookingRequest.legends.requester' | translate }}</legend>
             <book-space-select
-              [label]="copy.type"
-              [options]="clientOptions"
+              [label]="'bookingRequest.type' | translate"
+              [options]="clientOptions()"
               [value]="value().type"
               (valueChange)="onType($event)"
             />
             <book-space-input
-              [label]="copy.nick"
+              [label]="'bookingRequest.nick' | translate"
               [value]="value().nick"
               [error]="errors().nick ?? null"
               (valueChange)="update({nick: $event})"
             />
             <book-space-input
-              [label]="copy.personName"
+              [label]="'bookingRequest.personName' | translate"
               [value]="value().personName"
               [error]="errors().personName ?? null"
               (valueChange)="update({personName: $event})"
             />
             @if (value().type === 'COMPANY') {
               <book-space-input
-                [label]="copy.personCompany"
+                [label]="'bookingRequest.personCompany' | translate"
                 [value]="value().personCompany"
                 [error]="errors().personCompany ?? null"
                 (valueChange)="update({personCompany: $event})"
               />
             }
             <book-space-input
-              [label]="copy.email"
+              [label]="'bookingRequest.email' | translate"
               type="email"
               [value]="value().personEmail"
               [error]="errors().personEmail ?? null"
               (valueChange)="update({personEmail: $event})"
             />
             <book-space-input
-              [label]="copy.phone"
+              [label]="'bookingRequest.phone' | translate"
               [value]="value().personPhone"
               [error]="errors().personPhone ?? null"
               (valueChange)="update({personPhone: $event})"
             />
             <book-space-select
-              [label]="copy.payment"
-              [options]="paymentOptions"
+              [label]="'bookingRequest.payment' | translate"
+              [options]="paymentOptions()"
               [value]="value().paymentMethod"
               (valueChange)="onPayment($event)"
             />
             <book-space-input
-              [label]="copy.discount"
+              [label]="'bookingRequest.discount' | translate"
               [value]="value().discount"
               [error]="errors().discount ?? null"
               (valueChange)="update({discount: $event})"
             />
             <label class="bs-field">
-              <span class="bs-field__label">{{ copy.comments }}</span>
+              <span class="bs-field__label">{{ 'bookingRequest.comments' | translate }}</span>
               <textarea
                 [value]="value().comments"
                 (input)="update({comments: $any($event.target).value})"
@@ -174,36 +165,36 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
           </fieldset>
 
           <fieldset>
-            <legend>{{ copy.legends.slots }}</legend>
+            <legend>{{ 'bookingRequest.legends.slots' | translate }}</legend>
             <book-space-date-picker
-              [label]="copy.day"
+              [label]="'bookingRequest.day' | translate"
               [value]="draftDay()"
               [min]="minDay()"
               [max]="maxDay()"
               (valueChange)="draftDay.set($event)"
             />
             <book-space-select
-              [label]="copy.fromHour"
+              [label]="'bookingRequest.fromHour' | translate"
               [options]="startHourOptions"
               [value]="hourValue(draftStartHour())"
               (valueChange)="draftStartHour.set(parseHour($event))"
             />
             <book-space-select
-              [label]="copy.toHour"
+              [label]="'bookingRequest.toHour' | translate"
               [options]="endHourOptions"
               [value]="hourValue(draftEndHour())"
               (valueChange)="draftEndHour.set(parseHour($event))"
             />
-            <book-space-button variant="secondary" (pressed)="addSlot()">{{ copy.addSlot }}</book-space-button>
+            <book-space-button variant="secondary" (pressed)="addSlot()">{{ 'bookingRequest.addSlot' | translate }}</book-space-button>
 
             <book-space-checkbox
-              [label]="copy.cyclical"
+              [label]="'bookingRequest.cyclical' | translate"
               [checked]="cyclical()"
               (checkedChange)="cyclical.set($event)"
             />
             @if (cyclical()) {
               <book-space-date-picker
-                [label]="copy.untilDay"
+                [label]="'bookingRequest.untilDay' | translate"
                 [value]="cyclicalEndDay()"
                 [min]="minDay()"
                 [max]="maxDay()"
@@ -217,54 +208,54 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
                   {{ formatDay(slot.day) }} {{ formatHour(slot.startHours) }}–{{ formatHour(slot.endHours) }}
                 </li>
               } @empty {
-                <li>{{ copy.noSlots }}</li>
+                <li>{{ 'bookingRequest.noSlots' | translate }}</li>
               }
             </ul>
             @if (plainSlots().length > 0) {
               <book-space-button variant="secondary" (pressed)="removeSlot(plainSlots().length - 1)">
-                {{ copy.removeLastSlot }}
+                {{ 'bookingRequest.removeLastSlot' | translate }}
               </book-space-button>
             }
             @if (overlapWarning(); as day) {
               <p class="bs-request__warning" role="alert">
-                {{ copy.overlapWarning(formatDay(day)) }}
+                {{ 'bookingRequest.overlapWarning' | translate: {day: formatDay(day)} }}
               </p>
             }
           </fieldset>
 
           @if (supportsExtras()) {
             <fieldset>
-              <legend>{{ copy.legends.extras }}</legend>
+              <legend>{{ 'bookingRequest.legends.extras' | translate }}</legend>
               <book-space-checkbox
-                [label]="copy.lights"
+                [label]="'bookingRequest.lights' | translate"
                 [checked]="extraLights()"
                 (checkedChange)="extraLights.set($event)"
               />
               <book-space-checkbox
-                [label]="copy.toilets"
+                [label]="'bookingRequest.toilets' | translate"
                 [checked]="extraToilets()"
                 (checkedChange)="extraToilets.set($event)"
               />
               <book-space-select
-                [label]="copy.fromHour"
+                [label]="'bookingRequest.fromHour' | translate"
                 [options]="startHourOptions"
                 [value]="hourValue(extraFromHour())"
                 (valueChange)="extraFromHour.set(parseHour($event))"
               />
               <book-space-select
-                [label]="copy.toHour"
+                [label]="'bookingRequest.toHour' | translate"
                 [options]="endHourOptions"
                 [value]="hourValue(extraToHour())"
                 (valueChange)="extraToHour.set(parseHour($event))"
               />
               <book-space-button variant="secondary" (pressed)="addExtraOption()">
-                {{ copy.addExtra }}
+                {{ 'bookingRequest.addExtra' | translate }}
               </book-space-button>
               <ul class="bs-request__slots">
                 @for (option of extraOptions(); track $index) {
                   <li>{{ describeExtraOption(option) }}</li>
                 } @empty {
-                  <li>{{ copy.noExtras }}</li>
+                  <li>{{ 'bookingRequest.noExtras' | translate }}</li>
                 }
               </ul>
             </fieldset>
@@ -272,11 +263,11 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
 
           <div class="bs-request__rodo">
             <book-space-checkbox
-              [label]="copy.rodo"
+              [label]="'bookingRequest.rodo' | translate"
               [checked]="value().rodoAcknowledgement"
               (checkedChange)="update({rodoAcknowledgement: $event})"
             />
-            <a [href]="rodoClauseUrl" target="_blank" rel="noopener">{{ copy.rodoLink }}</a>
+            <a [href]="rodoClauseUrl" target="_blank" rel="noopener">{{ 'bookingRequest.rodoLink' | translate }}</a>
           </div>
 
           @if (formError(); as message) {
@@ -290,7 +281,7 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
             keyboard order, which is what keeps the mitigation accessible (NFR-006).
           -->
           <label class="bs-request__decoy" aria-hidden="true">
-            <span>{{ copy.website }}</span>
+            <span>{{ 'bookingRequest.website' | translate }}</span>
             <input
               type="text"
               name="website"
@@ -301,7 +292,7 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
             />
           </label>
 
-          <book-space-button type="submit" [disabled]="!canSubmit()">{{ copy.submit }}</book-space-button>
+          <book-space-button type="submit" [disabled]="!canSubmit()">{{ 'bookingRequest.submit' | translate }}</book-space-button>
         </form>
       }
     </section>
@@ -359,16 +350,53 @@ const RODO_CLAUSE_URL = COPY.contact.rodoClauseUrl;
 export class BookingRequestComponent {
   private readonly facilitiesApi = inject(FacilitiesApi);
   private readonly requestsApi = inject(BookingRequestsApi);
+  private readonly t = injectTranslate();
 
-  readonly copy = COPY.bookingRequest;
-  readonly cityOptions = CITY_OPTIONS;
-  readonly clientOptions = CLIENT_OPTIONS;
-  readonly paymentOptions = PAYMENT_OPTIONS;
+  readonly clientOptions = computed<ISelectOption[]>(() =>
+    (Object.keys(CLIENT_TYPE_LABELS) as TClientType[]).map((type) => ({
+      value: type,
+      label: this.t(CLIENT_TYPE_LABELS[type]),
+    }))
+  );
+  readonly paymentOptions = computed<ISelectOption[]>(() =>
+    (Object.keys(PAYMENT_LABELS) as TPayment[]).map((payment) => ({
+      value: payment,
+      label: this.t(PAYMENT_LABELS[payment]),
+    }))
+  );
   readonly startHourOptions = HOUR_OPTIONS(START_HOUR_OPTIONS);
   readonly endHourOptions = HOUR_OPTIONS(END_HOUR_OPTIONS);
-  readonly rodoClauseUrl = RODO_CLAUSE_URL;
+  readonly rodoClauseUrl = this.t('contact.rodoClauseUrl');
 
-  readonly city = signal<TCity>('siechnice');
+  readonly facilitiesResource = rxResource({stream: () => this.facilitiesApi.list()});
+
+  readonly facilities = computed<IPublicBuilding[]>(() =>
+    this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
+  );
+
+  /** The city selector's options: the cities the facilities actually sit in (FR-007). */
+  readonly cityOptions = computed<ISelectOption[]>(() => buildCityOptions(this.facilities()));
+
+  /**
+   * The selected city. A `linkedSignal` on the facility list, so the initial city is the first
+   * city the facilities carry rather than a compiled-in default (spec.md §9 open question 1).
+   */
+  readonly city = linkedSignal<ISelectOption[], string>({
+    source: () => this.cityOptions(),
+    computation: (options, previous) => keepSelected(options, previous?.value),
+  });
+
+  readonly buildingOptions = computed<ISelectOption[]>(() =>
+    this.facilities()
+      .filter((facility) => facility.city === this.city())
+      .map((facility) => ({value: facility.property, label: facility.name}))
+  );
+
+  readonly facilityProperty = linkedSignal<{city: string; options: ISelectOption[]}, string>({
+    source: () => ({city: this.city(), options: this.buildingOptions()}),
+    computation: (source, previous) => keepSelected(source.options, previous?.value),
+  });
+
   readonly value = signal<IBookingFormValue>({
     type: 'INDIVIDUAL',
     size: '',
@@ -404,28 +432,6 @@ export class BookingRequestComponent {
   readonly submitting = signal(false);
   readonly formError = signal<string | null>(null);
 
-  readonly facilitiesResource = rxResource({stream: () => this.facilitiesApi.list()});
-
-  readonly facilities = computed<IPublicBuilding[]>(() =>
-    this.facilitiesResource.hasValue() ? this.facilitiesResource.value() : []
-  );
-
-  readonly buildingOptions = computed<ISelectOption[]>(() =>
-    this.facilities()
-      .filter((facility) => facility.city === this.city())
-      .map((facility) => ({value: facility.property, label: facility.name}))
-  );
-
-  readonly facilityProperty = linkedSignal<{city: TCity; options: ISelectOption[]}, string>({
-    source: () => ({city: this.city(), options: this.buildingOptions()}),
-    computation: (source, previous) => {
-      if (previous && source.options.some((option) => option.value === previous.value)) {
-        return previous.value;
-      }
-      return source.options[0]?.value ?? '';
-    },
-  });
-
   readonly selectedFacility = computed<IPublicBuilding | undefined>(() =>
     this.facilities().find(
       (facility) => facility.property === this.facilityProperty() && facility.city === this.city()
@@ -439,7 +445,9 @@ export class BookingRequestComponent {
   readonly supportsExtras = computed(() => supportsExtraOptions(this.selectedFacility()));
 
   /** The form errors, but only after the first submit, so typing is not punished. */
-  readonly errors = computed(() => (this.attempted() ? validateForm(this.value()) : {}));
+  readonly errors = computed(() =>
+    this.attempted() ? validateForm(this.value(), this.t) : {}
+  );
 
   private readonly attempted = signal(false);
 
@@ -456,7 +464,7 @@ export class BookingRequestComponent {
   );
 
   onCity(city: string): void {
-    this.city.set(city as TCity);
+    this.city.set(city);
   }
 
   onFacility(property: string): void {
@@ -478,13 +486,13 @@ export class BookingRequestComponent {
   /** Adds the draft slot: a plain slot, or a cyclical series when the box is ticked. */
   addSlot(): void {
     if (!slotHoursValid(this.draftStartHour(), this.draftEndHour())) {
-      this.formError.set(COPY.bookingRequest.endBeforeStart);
+      this.formError.set(this.t('bookingRequest.endBeforeStart'));
       return;
     }
     if (this.cyclical() && this.cyclicalEndDay().getTime() < this.draftDay().getTime()) {
       // The shared expansion refuses a backwards series with a `RangeError`; refusing it here
       // turns that into a message rather than a broken submit.
-      this.formError.set(COPY.bookingRequest.seriesBackwards);
+      this.formError.set(this.t('bookingRequest.seriesBackwards'));
       return;
     }
     this.formError.set(null);
@@ -531,10 +539,10 @@ export class BookingRequestComponent {
   describeExtraOption(option: IExtraOptionEntry): string {
     const parts: string[] = [];
     if (option.lights) {
-      parts.push(COPY.bookingRequest.lights);
+      parts.push(this.t('bookingRequest.lights'));
     }
     if (option.toilets) {
-      parts.push(COPY.bookingRequest.toilets);
+      parts.push(this.t('bookingRequest.toilets'));
     }
     const hours = `${String(option.fromHour).padStart(2, '0')}:00–${String(option.toHour).padStart(2, '0')}:00`;
     return `${parts.join(', ')} (${hours})`;
@@ -565,10 +573,10 @@ export class BookingRequestComponent {
 
     const facility = this.selectedFacility();
     if (!facility) {
-      this.formError.set(COPY.bookingRequest.chooseFacility);
+      this.formError.set(this.t('bookingRequest.chooseFacility'));
       return;
     }
-    if (Object.keys(validateForm(this.value())).length > 0 || this.slots().length === 0) {
+    if (Object.keys(validateForm(this.value(), this.t)).length > 0 || this.slots().length === 0) {
       return;
     }
 
@@ -584,8 +592,8 @@ export class BookingRequestComponent {
           this.submitting.set(false);
           this.formError.set(
             error instanceof HttpErrorResponse && error.status === 422
-              ? COPY.bookingRequest.sendValidation
-              : COPY.bookingRequest.sendGeneric
+              ? this.t('bookingRequest.sendValidation')
+              : this.t('bookingRequest.sendGeneric')
           );
         },
       });

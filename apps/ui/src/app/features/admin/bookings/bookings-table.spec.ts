@@ -21,6 +21,7 @@ import {
   toRow,
   toSlotRows,
 } from './bookings-table';
+import {testTranslate} from '../../../../testing/i18n-testing';
 
 const slot = (overrides: Partial<IBookedTime> = {}): IBookedTime => ({
   day: new Date('2026-08-03T22:00:00.000Z'),
@@ -49,9 +50,11 @@ const booking = (overrides: Partial<IBooking> = {}): IBooking => ({
   ...overrides,
 });
 
+const t = testTranslate();
+
 describe('periodOptions', () => {
   it('lists "from the beginning" first, then the academic years newest first', () => {
-    const options = periodOptions(new Date('2026-09-15T12:00:00+02:00'), 2024);
+    const options = periodOptions(new Date('2026-09-15T12:00:00+02:00'), t, 2024);
 
     expect(options.map((option) => option.label)).toEqual([
       'Od początku',
@@ -64,13 +67,13 @@ describe('periodOptions', () => {
   it('uses the corrected academic-year start, not the legacy month-late one', () => {
     // August belongs to the year that begins that August; the legacy test switched in
     // September, so it omitted the year that had just started.
-    const options = periodOptions(new Date('2026-08-15T12:00:00+02:00'), 2024);
+    const options = periodOptions(new Date('2026-08-15T12:00:00+02:00'), t, 2024);
 
     expect(options[1].label).toBe('2026/2027');
   });
 
   it('gives the first option the from-the-beginning value and a null start year', () => {
-    const [first] = periodOptions(new Date('2026-09-15T12:00:00+02:00'), 2026);
+    const [first] = periodOptions(new Date('2026-09-15T12:00:00+02:00'), t, 2026);
 
     expect(first.value).toBe(FROM_THE_BEGINNING);
     expect(first.startYear).toBeNull();
@@ -78,7 +81,7 @@ describe('periodOptions', () => {
 });
 
 describe('resolvePeriod', () => {
-  const options = periodOptions(new Date('2026-09-15T12:00:00+02:00'), 2024);
+  const options = periodOptions(new Date('2026-09-15T12:00:00+02:00'), t, 2024);
   const now = new Date('2026-09-15T12:00:00+02:00');
 
   it('resolves an academic year to its facility-local bounds', () => {
@@ -114,24 +117,24 @@ describe('conflict marking', () => {
     const marked = booking({_id: 'b1', accepted: false});
 
     expect(hasConflict(marked, ['b1', 'b2'])).toBe(true);
-    expect(conflictLabel(marked, ['b1'])).toBe('Konflikt');
+    expect(conflictLabel(marked, ['b1'], t)).toBe('Konflikt');
   });
 
   it('never marks an accepted booking, even when its id is in the set', () => {
     const accepted = booking({_id: 'b1', accepted: true});
 
     expect(hasConflict(accepted, ['b1'])).toBe(false);
-    expect(conflictLabel(accepted, ['b1'])).toBe('');
+    expect(conflictLabel(accepted, ['b1'], t)).toBe('');
   });
 
   it('leaves an unaccepted booking with no conflict unmarked', () => {
-    expect(conflictLabel(booking({_id: 'b1'}), ['b2'])).toBe('');
+    expect(conflictLabel(booking({_id: 'b1'}), ['b2'], t)).toBe('');
   });
 });
 
 describe('toRow', () => {
   it('carries the labels the table renders and the accepted flag', () => {
-    const row = toRow(booking({accepted: true}), []);
+    const row = toRow(booking({accepted: true}), [], t);
 
     expect(row).toMatchObject({
       _id: 'b1',
@@ -147,13 +150,13 @@ describe('toRow', () => {
   });
 
   it('shows the accepted label as "Nie" for an unaccepted booking', () => {
-    expect(toRow(booking({accepted: false}), [])['acceptedLabel']).toBe('Nie');
+    expect(toRow(booking({accepted: false}), [], t)['acceptedLabel']).toBe('Nie');
   });
 
   it('includes the booking itself so the detail template can read its fields', () => {
     const source = booking();
 
-    expect(toRow(source, [])['booking']).toBe(source);
+    expect(toRow(source, [], t)['booking']).toBe(source);
   });
 });
 
@@ -206,7 +209,7 @@ describe('toSlotRows', () => {
   it('shapes each slot with its labels and resolved flag', () => {
     const rows = toSlotRows(
       booking({bookedTimes: [slot({status: 'DONE', participants: 4, comments: 'ok'})]})
-    );
+    , t);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -224,7 +227,7 @@ describe('toSlotRows', () => {
   });
 
   it('leaves the optional fields undefined when the slot carries none', () => {
-    const [row] = toSlotRows(booking({bookedTimes: [slot()]}));
+    const [row] = toSlotRows(booking({bookedTimes: [slot()]}), t);
 
     expect(row.participants).toBeUndefined();
     expect(row.comments).toBeUndefined();
@@ -265,11 +268,11 @@ describe('constants', () => {
   it('labels every slot status with the report vocabulary', () => {
     // The same labels the CSV and the printable report print (CHK014, #55): the screen and the
     // report must not disagree on a status, which is the defect the legacy app had.
-    expect(STATUS_LABELS).toEqual({
-      INITIAL: 'Nie rozpoczęta',
-      DONE: 'Zakończona',
-      CANCELED: 'Rezygnacja',
-    });
+    expect(Object.values(STATUS_LABELS).map((key) => t(key))).toEqual([
+      'Nie rozpoczęta',
+      'Zakończona',
+      'Rezygnacja',
+    ]);
   });
 
   it('labels each status exactly as the CSV and the printable report do', () => {
@@ -279,7 +282,7 @@ describe('constants', () => {
     // "Odwołana" while its own CSV said "Rezygnacja" (issue #55). The report side is read
     // through `displayValue`, the function the CSV and the report both render with.
     for (const status of Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>) {
-      expect(STATUS_LABELS[status]).toBe(displayValue(status));
+      expect(t(STATUS_LABELS[status])).toBe(displayValue(status));
     }
   });
 });

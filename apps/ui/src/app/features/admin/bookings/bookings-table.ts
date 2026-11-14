@@ -1,7 +1,6 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
-import {CITY_LABELS} from '@models/building.model';
 import {
   academicYearStartYear,
   atFacilityTime,
@@ -58,10 +57,10 @@ const PAGE_SIZES = [20, 50, 100];
  * option is the year currently running and the list is continuous back to the first season the
  * platform covers.
  */
-const periodOptions = (now: Date, firstYear = 2022): IPeriodOption[] => {
+const periodOptions = (now: Date, t: TranslateFn, firstYear = 2022): IPeriodOption[] => {
   const currentStart = academicYearStartYear(now);
   const options: IPeriodOption[] = [
-    {value: FROM_THE_BEGINNING, label: COPY.bookings.fromBeginning, startYear: null},
+    {value: FROM_THE_BEGINNING, label: t('bookings.fromBeginning'), startYear: null},
   ];
 
   for (let year = currentStart; year >= firstYear; year -= 1) {
@@ -99,11 +98,11 @@ const resolvePeriod = (value: string, options: IPeriodOption[], now: Date): IRes
 
 /** The columns the table renders, in the legacy order (`RECORDS_BOOKINGS_HEADERS`). */
 const BOOKING_COLUMNS = [
-  {key: 'nick', label: COPY.bookings.columns.nick},
-  {key: 'personPhone', label: COPY.bookings.columns.personPhone},
-  {key: 'personEmail', label: COPY.bookings.columns.personEmail},
-  {key: 'acceptedLabel', label: COPY.bookings.columns.accepted},
-  {key: 'conflictLabel', label: COPY.bookings.columns.conflict},
+  {key: 'nick', label: 'bookings.columns.nick'},
+  {key: 'personPhone', label: 'bookings.columns.personPhone'},
+  {key: 'personEmail', label: 'bookings.columns.personEmail'},
+  {key: 'acceptedLabel', label: 'bookings.columns.accepted'},
+  {key: 'conflictLabel', label: 'bookings.columns.conflict'},
 ];
 
 /**
@@ -114,10 +113,15 @@ const BOOKING_COLUMNS = [
  * "Odwołana" and `transformValue` (the table, the summary, the CSV) said "Rezygnacja". The
  * `bookings-table.spec.ts` guard pins the two maps together.
  */
-const STATUS_LABELS: Record<TSingleBookingStatus, string> = COPY.bookings.statusLabels;
+const STATUS_LABELS: Record<TSingleBookingStatus, string> = {
+  INITIAL: 'bookings.statusLabels.INITIAL',
+  DONE: 'bookings.statusLabels.DONE',
+  CANCELED: 'bookings.statusLabels.CANCELED',
+};
 
 /** The label for the accepted flag, never colour alone (NFR-006, FR-037). */
-const acceptedLabel = (accepted: boolean): string => (accepted ? COPY.common.yes : COPY.common.no);
+const acceptedLabel = (accepted: boolean, t: TranslateFn): string =>
+  accepted ? t('common.yes') : t('common.no');
 
 /**
  * Whether a booking is in the conflict set (FR-015).
@@ -131,8 +135,11 @@ const hasConflict = (booking: IBooking, conflicts: readonly string[]): boolean =
   !booking.accepted && conflicts.includes(booking._id);
 
 /** The conflict cell: a word when there is a conflict, empty otherwise (never colour alone). */
-const conflictLabel = (booking: IBooking, conflicts: readonly string[]): string =>
-  hasConflict(booking, conflicts) ? COPY.bookings.conflict : '';
+const conflictLabel = (
+  booking: IBooking,
+  conflicts: readonly string[],
+  t: TranslateFn
+): string => (hasConflict(booking, conflicts) ? t('bookings.conflict') : '');
 
 /** One slot's facility-local day and hour range, `YYYY-MM-DD HH:MM–HH:MM`. */
 const slotLabel = (slot: IBookedTime): string =>
@@ -148,15 +155,19 @@ const slotsLabel = (booking: IBooking): string => booking.bookedTimes.map(slotLa
  * and so the conflict rule is unit-tested rather than reachable only through a rendered cell.
  * `slots` is the slot list itself, because the detail template renders one row per slot.
  */
-const toRow = (booking: IBooking, conflicts: readonly string[]): Record<string, unknown> => ({
+const toRow = (
+  booking: IBooking,
+  conflicts: readonly string[],
+  t: TranslateFn
+): Record<string, unknown> => ({
   _id: booking._id,
   nick: booking.nick,
   personName: booking.personName,
   personPhone: booking.personPhone,
   personEmail: booking.personEmail,
   accepted: booking.accepted,
-  acceptedLabel: acceptedLabel(booking.accepted),
-  conflictLabel: conflictLabel(booking, conflicts),
+  acceptedLabel: acceptedLabel(booking.accepted, t),
+  conflictLabel: conflictLabel(booking, conflicts, t),
   hasConflict: hasConflict(booking, conflicts),
   archive: booking.archive,
   slotsLabel: slotsLabel(booking),
@@ -240,12 +251,12 @@ interface ISlotRow {
 const hourOf = (instant: Date): number => Number(formatFacilityTime(instant).slice(0, 2));
 
 /** Shapes a booking's slots into the detail table's rows. */
-const toSlotRows = (booking: IBooking): ISlotRow[] =>
+const toSlotRows = (booking: IBooking, t: TranslateFn): ISlotRow[] =>
   booking.bookedTimes.map((slot, index) => ({
     index,
     dayLabel: formatFacilityDate(new Date(slot.day)),
     hoursLabel: `${formatFacilityTime(new Date(slot.startHours))}–${formatFacilityTime(new Date(slot.endHours))}`,
-    statusLabel: STATUS_LABELS[slot.status],
+    statusLabel: t(STATUS_LABELS[slot.status]),
     status: slot.status,
     participants: slot.participants,
     comments: slot.comments,
@@ -283,7 +294,6 @@ export {
   BOOKING_COLUMNS,
   STATUS_LABELS,
   STATUS_OPTIONS,
-  CITY_LABELS,
   PAGE_SIZES,
   OPENING_HOUR,
   END_OF_DAY_HOUR,

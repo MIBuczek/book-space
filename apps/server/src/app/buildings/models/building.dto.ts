@@ -1,14 +1,14 @@
 import * as Validator from 'class-validator';
-import {CITIES, SIZES, TCity, TSize} from '@models/building.model';
+import {SIZES, TSize} from '@models/building.model';
 
 /**
  * The payload for creating a facility (contracts/openapi.yaml `BuildingDto`).
  *
  * `property` and `sizes` are required: `property` is what a booking references, and a
- * facility with no rentable size cannot be booked. `city` is restricted to the four cities
- * the business operates in, and every entry of `sizes` to the six fractions a hall can be
- * split into. The uniqueness of `{city, property}` is enforced by the schema index rather
- * than here, because a DTO cannot see the other records.
+ * facility with no rentable size cannot be booked. `city` is free text (spec.md §9 open
+ * question 1, FR-007): cities are data, so the DTO bounds the length rather than restricting
+ * the value to a compiled-in list. The uniqueness of `{city, property}` is enforced by the
+ * schema index rather than here, because a DTO cannot see the other records.
  *
  * It does not `implements Building`: `lighting`, `toilets` and `employees` carry schema
  * defaults and are optional in the contract, and a class property declared optional is not
@@ -37,10 +37,11 @@ export class BuildingDto {
   })
   phone!: string;
 
-  @Validator.IsIn(CITIES, {
-    message: 'City must be one of siechnice, radwanice, swieta-katarzyna, zerniki-wroclawskie.'
+  @Validator.IsString({message: 'City need to be a string.'})
+  @Validator.Length(2, 125, {
+    message: 'Number of characters need to be between 2 and 125'
   })
-  city!: TCity;
+  city!: string;
 
   @Validator.IsOptional()
   @Validator.Length(3, 125, {
@@ -112,10 +113,11 @@ export class UpdateBuildingDto {
   phone?: string;
 
   @Validator.IsOptional()
-  @Validator.IsIn(CITIES, {
-    message: 'City must be one of siechnice, radwanice, swieta-katarzyna, zerniki-wroclawskie.'
+  @Validator.IsString({message: 'City need to be a string.'})
+  @Validator.Length(2, 125, {
+    message: 'Number of characters need to be between 2 and 125'
   })
-  city?: TCity;
+  city?: string;
 
   @Validator.IsOptional()
   @Validator.Length(3, 125, {

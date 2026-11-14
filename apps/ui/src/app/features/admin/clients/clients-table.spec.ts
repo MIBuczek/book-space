@@ -15,6 +15,7 @@ import {
   validateClientForm,
 } from './clients-table';
 import type {IClientFormValue} from './clients-table';
+import {testTranslate} from '../../../../testing/i18n-testing';
 
 const validForm = (overrides: Partial<IClientFormValue> = {}): IClientFormValue => ({
   type: 'COMPANY',
@@ -45,10 +46,12 @@ const client = (overrides: Partial<IClient> = {}): IClient => ({
   ...overrides,
 });
 
+const t = testTranslate();
+
 describe('nameLabelFor', () => {
   it('switches the label by type, matching the legacy ClientForm', () => {
-    expect(nameLabelFor('COMPANY')).toBe('Nazwa firmy');
-    expect(nameLabelFor('INDIVIDUAL')).toBe('Imię i nazwisko');
+    expect(t(nameLabelFor('COMPANY'))).toBe('Nazwa firmy');
+    expect(t(nameLabelFor('INDIVIDUAL'))).toBe('Imię i nazwisko');
   });
 });
 
@@ -61,13 +64,14 @@ describe('isNipRequired', () => {
 
 describe('CLIENT_TYPE_LABELS', () => {
   it('labels the types as the legacy CLIENT_OPTIONS did', () => {
-    expect(CLIENT_TYPE_LABELS).toEqual({INDIVIDUAL: 'Osoba prywatna', COMPANY: 'Firma'});
+    expect(CLIENT_TYPE_LABELS['INDIVIDUAL']).toBe('clients.typeLabels.INDIVIDUAL');
+    expect(CLIENT_TYPE_LABELS['COMPANY']).toBe('clients.typeLabels.COMPANY');
   });
 });
 
 describe('CLIENT_COLUMNS', () => {
   it('lists the columns in the legacy header order', () => {
-    expect(CLIENT_COLUMNS.map((column) => column.label)).toEqual([
+    expect(CLIENT_COLUMNS.map((column) => t(column.label))).toEqual([
       'Nazwa',
       'Osoba kontaktowa',
       'Telefon',
@@ -134,63 +138,63 @@ describe('formFromClient', () => {
 
 describe('validateClientForm', () => {
   it('accepts a complete company form', () => {
-    expect(validateClientForm(validForm())).toEqual({});
+    expect(validateClientForm(validForm(), t)).toEqual({});
   });
 
   it('accepts an individual with no NIP', () => {
-    expect(validateClientForm(validForm({type: 'INDIVIDUAL', nip: ''}))).toEqual({});
+    expect(validateClientForm(validForm({type: 'INDIVIDUAL', nip: ''}), t)).toEqual({});
   });
 
   it('requires a NIP for a company', () => {
     // The rule the issue names: selecting company type reveals and requires NIP.
-    expect(validateClientForm(validForm({nip: ''})).nip).toMatch(/NIP jest wymagany/);
+    expect(validateClientForm(validForm({nip: ''}), t).nip).toMatch(/NIP jest wymagany/);
   });
 
   it('rejects a malformed NIP', () => {
-    expect(validateClientForm(validForm({nip: '12'})).nip).toBeDefined();
-    expect(validateClientForm(validForm({nip: '89912345ab'})).nip).toBeDefined();
+    expect(validateClientForm(validForm({nip: '12'}), t).nip).toBeDefined();
+    expect(validateClientForm(validForm({nip: '89912345ab'}), t).nip).toBeDefined();
   });
 
   it('refuses a NIP on an individual rather than ignoring it', () => {
-    expect(validateClientForm(validForm({type: 'INDIVIDUAL', nip: '8991234567'})).nip).toBe(
+    expect(validateClientForm(validForm({type: 'INDIVIDUAL', nip: '8991234567'}), t).nip).toBe(
       'NIP nie dotyczy osoby prywatnej'
     );
   });
 
   it('bounds the name', () => {
-    expect(validateClientForm(validForm({name: 'ab'})).name).toBeDefined();
-    expect(validateClientForm(validForm({name: 'x'.repeat(126)})).name).toBeDefined();
+    expect(validateClientForm(validForm({name: 'ab'}), t).name).toBeDefined();
+    expect(validateClientForm(validForm({name: 'x'.repeat(126)}), t).name).toBeDefined();
   });
 
   it('accepts an empty optional nick but bounds a supplied one', () => {
-    expect(validateClientForm(validForm({nick: ''})).nick).toBeUndefined();
-    expect(validateClientForm(validForm({nick: 'ab'})).nick).toBeDefined();
-    expect(validateClientForm(validForm({nick: 'x'.repeat(126)})).nick).toBeDefined();
+    expect(validateClientForm(validForm({nick: ''}), t).nick).toBeUndefined();
+    expect(validateClientForm(validForm({nick: 'ab'}), t).nick).toBeDefined();
+    expect(validateClientForm(validForm({nick: 'x'.repeat(126)}), t).nick).toBeDefined();
   });
 
   it('bounds the contact person', () => {
-    expect(validateClientForm(validForm({contactPerson: 'ab'})).contactPerson).toBeDefined();
+    expect(validateClientForm(validForm({contactPerson: 'ab'}), t).contactPerson).toBeDefined();
   });
 
   it('bounds the phone', () => {
-    expect(validateClientForm(validForm({phone: '12'})).phone).toBeDefined();
-    expect(validateClientForm(validForm({phone: '1'.repeat(16)})).phone).toBeDefined();
+    expect(validateClientForm(validForm({phone: '12'}), t).phone).toBeDefined();
+    expect(validateClientForm(validForm({phone: '1'.repeat(16)}), t).phone).toBeDefined();
   });
 
   it('requires a plausible e-mail', () => {
-    expect(validateClientForm(validForm({email: 'not-an-email'})).email).toBeDefined();
-    expect(validateClientForm(validForm({email: 'a@b'})).email).toBeDefined();
+    expect(validateClientForm(validForm({email: 'not-an-email'}), t).email).toBeDefined();
+    expect(validateClientForm(validForm({email: 'a@b'}), t).email).toBeDefined();
   });
 
   it('bounds the street and the city', () => {
-    expect(validateClientForm(validForm({street: 'ab'})).street).toBeDefined();
-    expect(validateClientForm(validForm({city: 'ab'})).city).toBeDefined();
+    expect(validateClientForm(validForm({street: 'ab'}), t).street).toBeDefined();
+    expect(validateClientForm(validForm({city: 'ab'}), t).city).toBeDefined();
   });
 
   it('requires a six-character zip code of digits, dots, slashes and dashes', () => {
-    expect(validateClientForm(validForm({zipCode: '55-01'})).zipCode).toBeDefined();
-    expect(validateClientForm(validForm({zipCode: '55-01a'})).zipCode).toBeDefined();
-    expect(validateClientForm(validForm({zipCode: '55-010'})).zipCode).toBeUndefined();
+    expect(validateClientForm(validForm({zipCode: '55-01'}), t).zipCode).toBeDefined();
+    expect(validateClientForm(validForm({zipCode: '55-01a'}), t).zipCode).toBeDefined();
+    expect(validateClientForm(validForm({zipCode: '55-010'}), t).zipCode).toBeUndefined();
   });
 });
 
@@ -222,7 +226,7 @@ describe('mapServerErrors', () => {
       'city must be longer than or equal to 3 characters',
       'NIP is required for a company (10–15 characters, digits, dots, slashes and dashes).',
       'Zip code may only contain digits, dots, slashes and dashes',
-    ]);
+    ], t);
 
     // The field is located from the server's message; the text shown is the UI's own Polish
     // (NFR-005, T061), so the server's English is never rendered.
@@ -236,33 +240,33 @@ describe('mapServerErrors', () => {
     const {fields} = mapServerErrors([
       'contactPerson must be longer than or equal to 3 characters',
       'name must be longer than or equal to 3 characters',
-    ]);
+    ], t);
 
     expect(fields.contactPerson).toBeDefined();
     expect(fields.name).toBeDefined();
   });
 
   it('returns the generic prompt for a message that names no field rather than dropping it', () => {
-    const {fields, general} = mapServerErrors(['property nonsense should not exist']);
+    const {fields, general} = mapServerErrors(['property nonsense should not exist'], t);
 
     expect(fields).toEqual({});
     expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
   it('shows one generic prompt for several unmatched messages', () => {
-    const {general} = mapServerErrors(['first unknown', 'second unknown']);
+    const {general} = mapServerErrors(['first unknown', 'second unknown'], t);
 
     expect(general).toBe('Popraw dane i spróbuj ponownie.');
   });
 
   it('returns no general message for an empty list', () => {
-    expect(mapServerErrors([])).toEqual({fields: {}, general: null});
+    expect(mapServerErrors([], t)).toEqual({fields: {}, general: null});
   });
 });
 
 describe('toRow', () => {
   it('shapes a company into the row the table renders', () => {
-    const row = toRow(client());
+    const row = toRow(client(), t);
 
     expect(row).toMatchObject({
       _id: 'c1',
@@ -278,15 +282,15 @@ describe('toRow', () => {
   });
 
   it('shows a dash for a client with no NIP', () => {
-    const row = toRow(client({type: 'INDIVIDUAL', nip: undefined}));
+    const row = toRow(client({type: 'INDIVIDUAL', nip: undefined}), t);
 
     expect(row['typeLabel']).toBe('Osoba prywatna');
     expect(row['nipLabel']).toBe('—');
   });
 
   it('labels a retired client and reads an absent flag as active (T059)', () => {
-    expect(toRow(client({active: false}))['activeLabel']).toBe('Nieaktywny');
-    expect(toRow(client({active: undefined}))['activeLabel']).toBe('Aktywny');
+    expect(toRow(client({active: false}), t)['activeLabel']).toBe('Nieaktywny');
+    expect(toRow(client({active: undefined}), t)['activeLabel']).toBe('Aktywny');
   });
 });
 
@@ -297,29 +301,29 @@ describe('deleteFailureMessage', () => {
   it('shows the UI own Polish message for a 409, not the server English (T061)', () => {
     // The status is what identifies the reason; the API's sentence is English and is not
     // rendered (NFR-005).
-    expect(deleteFailureMessage(conflict('This client is referenced by a booking.'))).toContain(
+    expect(deleteFailureMessage(conflict('This client is referenced by a booking.'), t)).toContain(
       'dezaktywuj klienta'
     );
   });
 
   it('falls back to a Polish message when the 409 body carries no message', () => {
-    expect(deleteFailureMessage(conflict(undefined))).toContain('dezaktywuj klienta');
+    expect(deleteFailureMessage(conflict(undefined), t)).toContain('dezaktywuj klienta');
   });
 
   it('falls back to a Polish message when a 409 carries no body at all', () => {
     const error = new HttpErrorResponse({status: 409, statusText: 'Conflict', error: undefined});
 
-    expect(deleteFailureMessage(error)).toContain('dezaktywuj klienta');
+    expect(deleteFailureMessage(error, t)).toContain('dezaktywuj klienta');
   });
 
   it('shows a generic message for any other failure', () => {
     const error = new HttpErrorResponse({status: 500, statusText: 'Server Error'});
 
-    expect(deleteFailureMessage(error)).toBe('Nie udało się usunąć klienta. Spróbuj ponownie później.');
+    expect(deleteFailureMessage(error, t)).toBe('Nie udało się usunąć klienta. Spróbuj ponownie później.');
   });
 
   it('shows a generic message for a non-HTTP error', () => {
-    expect(deleteFailureMessage(new Error('boom'))).toBe(
+    expect(deleteFailureMessage(new Error('boom'), t)).toBe(
       'Nie udało się usunąć klienta. Spróbuj ponownie później.'
     );
   });

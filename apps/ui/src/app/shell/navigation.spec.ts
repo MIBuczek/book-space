@@ -6,39 +6,43 @@ import { adminUser, employeeUser, makeCapabilities, officeUser } from '../../tes
  *
  * It is a pure function so the navigation rule is testable without rendering a component:
  * the acceptance criterion "an employee sees only Calendar and Bookings" is a property of
- * this function, and the shell is only a view of it.
+ * this function, and the shell is only a view of it. A tab now carries a translation key
+ * (FR-001), so the assertions name the keys; the shell renders them through `translate`.
  */
 describe('visibleAdminTabs', () => {
   const labels = (capabilities: Parameters<typeof visibleAdminTabs>[0]) =>
     visibleAdminTabs(capabilities).map((tab) => tab.label);
 
   it('shows an employee only Calendar and Bookings', () => {
-    expect(labels(employeeUser().capabilities)).toEqual(['Kalendarz', 'Rezerwacje']);
+    expect(labels(employeeUser().capabilities)).toEqual([
+      'admin.tabs.calendar',
+      'admin.tabs.bookings',
+    ]);
   });
 
   it('shows office Calendar, Bookings, Clients, Facilities and Summary', () => {
     expect(labels(officeUser().capabilities)).toEqual([
-      'Kalendarz',
-      'Rezerwacje',
-      'Najemcy',
-      'Obiekty',
-      'Podsumowanie',
+      'admin.tabs.calendar',
+      'admin.tabs.bookings',
+      'admin.tabs.clients',
+      'admin.tabs.facilities',
+      'admin.tabs.summary',
     ]);
   });
 
   it('shows an administrator all six tabs, including Users', () => {
     expect(labels(adminUser().capabilities)).toEqual([
-      'Kalendarz',
-      'Rezerwacje',
-      'Najemcy',
-      'Obiekty',
-      'Podsumowanie',
-      'Użytkownicy',
+      'admin.tabs.calendar',
+      'admin.tabs.bookings',
+      'admin.tabs.clients',
+      'admin.tabs.facilities',
+      'admin.tabs.summary',
+      'admin.tabs.users',
     ]);
   });
 
   it('shows office the tabs but not Users, which is administrator-only (FR-045)', () => {
-    expect(labels(officeUser().capabilities)).not.toContain('Użytkownicy');
+    expect(labels(officeUser().capabilities)).not.toContain('admin.tabs.users');
   });
 
   it('drops Summary for an office account without the capability but keeps the other tabs', () => {
@@ -48,7 +52,12 @@ describe('visibleAdminTabs', () => {
       canSeeSummaryTab: false,
     });
 
-    expect(labels(capabilities)).toEqual(['Kalendarz', 'Rezerwacje', 'Najemcy', 'Obiekty']);
+    expect(labels(capabilities)).toEqual([
+      'admin.tabs.calendar',
+      'admin.tabs.bookings',
+      'admin.tabs.clients',
+      'admin.tabs.facilities',
+    ]);
   });
 
   it('shows nothing when the capabilities are absent', () => {

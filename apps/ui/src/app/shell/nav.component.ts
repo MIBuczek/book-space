@@ -1,8 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { DEFAULT_TENANT_NAME } from '@models/tenant.model';
 import { AuthService } from '../core/auth.service';
 import { SessionStore } from '../core/session.store';
+import { TenantStore } from '../core/tenant.store';
 import { ButtonComponent } from '../shared/ui';
 import { LanguageSwitchComponent } from './language-switch.component';
 
@@ -23,7 +25,7 @@ import { LanguageSwitchComponent } from './language-switch.component';
   imports: [RouterLink, RouterLinkActive, ButtonComponent, TranslatePipe, LanguageSwitchComponent],
   template: `
     <nav class="bs-nav" [attr.aria-label]="'nav.ariaLabel' | translate">
-      <a class="bs-nav__brand" routerLink="/">Book Space</a>
+      <a class="bs-nav__brand" routerLink="/">{{ 'nav.brand' | translate: { tenant: brand() } }}</a>
       <ul class="bs-nav__links">
         <li>
           <a
@@ -99,6 +101,10 @@ import { LanguageSwitchComponent } from './language-switch.component';
   ],
 })
 export class NavComponent {
+  private readonly tenants = inject(TenantStore);
+
+  /** The configured brand, or the product name until the tenant read resolves (FR-007). */
+  readonly brand = computed(() => this.tenants.tenant()?.name ?? DEFAULT_TENANT_NAME);
   readonly session = inject(SessionStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);

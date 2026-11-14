@@ -46,26 +46,30 @@
 
 **Purpose**: replace every `COPY.x` read with a `translate` key. The compiler drives this.
 
-- [~] **T230** Migrate the shell: `nav.component.ts` and `footer.component.ts` are done
+- [x] **T230** Migrate the shell: `nav.component.ts` and `footer.component.ts` are done
       (with the language switch, T220–T223); `navigation.ts` moves with the admin frame (T232),
       because `admin-shell.component.ts` renders its label.
-- [ ] **T231** [P] Migrate the public features: `public-calendar`, `booking-request`,
+- [x] **T231** [P] Migrate the public features: `public-calendar`, `booking-request`,
       `informational/*`.
-- [ ] **T232** [P] Migrate the admin features: `bookings`, `clients`, `users`, `facilities`,
+- [x] **T232** [P] Migrate the admin features: `bookings`, `clients`, `users`, `facilities`,
       `summary`, `admin-shell`, `admin-tab-placeholder`.
-- [ ] **T233** Migrate `sign-in`.
-- [ ] **T234** Replace `libs/copy/src/lib/copy.spec.ts` with the completeness spec; **delete**
-      `libs/copy` and its `project.json`; remove it from any `tsconfig` path alias.
-- [ ] **T235** Update the migrated component specs to assert against the translation (or a test
+- [x] **T233** Migrate `sign-in`.
+- [x] **T234** Replace `libs/copy/src/lib/copy.spec.ts` with the completeness spec; **delete**
+      `libs/copy` and its `project.json`; remove it from any `tsconfig` path alias. The
+      completeness spec is `libs/i18n/src/lib/translations.spec.ts` (T217).
+- [x] **T235** Update the migrated component specs to assert against the translation (or a test
       translation stub).
-- [ ] **T236** Confirm `nx build ui` compiles (no stale `COPY` import) and the UI coverage
+- [x] **T236** Confirm `nx build ui` compiles (no stale `COPY` import) and the UI coverage
       threshold is met.
 
 ## Phase 4 — Retarget the guard (User Story 3)
 
-- [ ] **T240** Rewrite `no-hardcoded-copy.spec.ts` from a Polish-character check to a
-      user-facing-literal check (FR-012); a spec proves it fails on a literal.
-- [ ] **T241** Fix any literal the retargeted guard finds.
+- [x] **T240** Rewrite `no-hardcoded-copy.spec.ts` from a Polish-character check to a
+      user-facing-literal check (FR-012); a spec proves it fails on a literal. The walk reads
+      only the `template:` regions (a whole-file scan flags TypeScript generics), and two cases
+      pin the rule by feeding it a literal and a translated/bound value.
+- [x] **T241** Fix any literal the retargeted guard finds. It found one: the nav's hardcoded
+      `Book Space` brand, now `nav.brand` with the name as an interpolation parameter.
 
 ## Phase 5 — De-branding (User Story 2)
 
@@ -73,30 +77,46 @@
 > layer: the previous tenant's brand is gone from shipped source (identifiers, UI copy, e-mail
 > signature, defaults and fixtures) and `tools/scan-brand.js` guards it in CI. That covers
 > **T253**, **T254**, **T255**, **T256** and the rename half of **T250**
-> (`SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`, `TENANT_NAME` added). What remains here is the
-> *configurable* design — the tenant model and `GET /api/tenant` (**T251**) and the UI reading
-> the tenant rather than the hardcoded `Book Space` values (**T252**) — plus the rest of
-> **T250** (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`).
+> (`SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`, `TENANT_NAME` added). The *configurable* design
+> has since landed too: the tenant model and `GET /api/tenant` (**T251**), the UI reading the
+> tenant rather than the hardcoded `Book Space` values (**T252**), and the rest of **T250**
+> (`TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`, `TENANT_PRIVACY_URL`). **T258** is the one task
+> left in this phase and it is blocked on a spec question (see below), not on implementation.
 
-- [ ] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
+- [x] **T250** `env.validation.ts`: add `TENANT_NAME`, `TENANT_CONTACT_EMAIL`, `TENANT_WEBSITE_URL`,
       `TENANT_PRIVACY_URL`; rename `SISK_CONTACT_EMAIL` → `TENANT_STAFF_EMAIL`; update
       `.env.example`.
-- [ ] **T251** [P] `libs/models/tenant.model.ts`: `ITenant`; a `GET /api/tenant` route (public)
-      returning the public subset.
-- [ ] **T252** [P] The UI reads the tenant and renders the footer/contact from it; an absent value
-      hides the element (SC-005).
-- [ ] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
+- [x] **T251** [P] `libs/models/tenant.model.ts`: `ITenant`; a `GET /api/tenant` route (public)
+      returning the public subset. `TenantService` reads `ConfigService`; an absent or blank
+      setting is `null` and the staff inbox is never read. `tenant.integration.spec.ts` pins the
+      anonymous read and the absence of the inbox.
+- [x] **T252** [P] The UI reads the tenant and renders the footer/contact from it; an absent value
+      hides the element (SC-005). `TenantStore` is filled by an app initializer (a failure is
+      swallowed, so the shell is never blanked); the nav brand, the footer, the contact page, the
+      cookie notice and the server-error page read it. The catalogue's `contact.office.email`,
+      `contact.office.website`, `contact.office.websiteHref`, `contact.websiteUrl` and
+      `contact.privacyPolicyUrl` are retired with the move. The `@api/tenant` route and schema
+      are in `contracts/openapi.yaml`.
+- [x] **T253** `apps/server/src/app/notification/templates/templates.ts`: the signature is
       `TENANT_NAME`, not "SISK Siechnice"; update the template spec.
-- [ ] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the
+- [x] **T254** [P] `apps/server/src/app/reporting/deny-list.ts`: **removed entirely** (#195) — the
       Summary restriction is gone, not merely defaulted to empty; update the spec.
-- [ ] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
+- [x] **T255** [P] Confirm `apps/server/src/app/buildings/seed/facility-seed.ts` carries no SISK
       brand (decision 5: the sample facilities stay as they are).
-- [ ] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
+- [x] **T256** Replace the SISK test fixtures (`@sisk.pl`, `admin@sisk.pl`) with neutral addresses
       (`@example.com`) across the UI and server specs.
-- [ ] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
+- [x] **T257** `libs/copy`'s SISK values are gone with the library (Phase 3); confirm no
       replacement reintroduces a brand.
-- [ ] **T258** A bundle scan in CI: `grep -ri "sisk\|siechnice" dist/apps/ui` fails the build
-      (SC-002).
+- [x] **T258** A bundle scan in CI: the built `dist/apps/ui` fails the build if it carries the
+      `SISK` brand or the `sisk-siechnice.pl` domain (SC-002). **Implemented by extending
+      `tools/scan-bundle.js`**, not by a new `grep`: the pattern list lives in one script so the
+      CI gate and a local run cannot drift, and the bundle scan already owns the client-bundle
+      patterns. SC-002 was narrowed to the *brand tokens* — the original wording named `siechnice`
+      too, but `siechnice` is the sample facilities' city name (`CITIES` in
+      `libs/models/building.model.ts`) and legitimately reaches the client, so a `siechnice` check
+      would fail a correct bundle (decision 5, AGENTS.md). `scan-brand.js` still guards the source
+      tree (an identifier such as `SISK_CONTACT_EMAIL` never reaches a bundle); this is the bundle
+      half.
 
 ## Phase 6 — Docs and conventions
 

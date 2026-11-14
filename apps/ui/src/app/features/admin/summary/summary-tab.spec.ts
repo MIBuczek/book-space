@@ -14,6 +14,7 @@ import {
   reportSlots,
 } from './summary-tab';
 import type {IReportPeriod} from './summary-tab';
+import {testTranslate} from '../../../../testing/i18n-testing';
 
 const client = (overrides: Partial<IClient> = {}): IClient => ({
   _id: 'c1',
@@ -65,15 +66,17 @@ const period = (overrides: Partial<IReportPeriod> = {}): IReportPeriod => ({
   ...overrides,
 });
 
+const t = testTranslate();
+
 describe('periodLabel', () => {
   it('names the month range "from-to.year" from the end month', () => {
-    expect(periodLabel(period())).toBe('3-5.2026');
+    expect(periodLabel(period(), t)).toBe('3-5.2026');
   });
 
   it('is "od początku" for the from-the-beginning option or a missing bound', () => {
-    expect(periodLabel(period({fromTheBeginning: true}))).toBe('od początku');
-    expect(periodLabel(period({fromMonth: null}))).toBe('od początku');
-    expect(periodLabel(period({toMonth: null}))).toBe('od początku');
+    expect(periodLabel(period({fromTheBeginning: true}), t)).toBe('od początku');
+    expect(periodLabel(period({fromMonth: null}), t)).toBe('od początku');
+    expect(periodLabel(period({toMonth: null}), t)).toBe('od początku');
   });
 });
 
@@ -86,61 +89,61 @@ describe('monthLabel', () => {
 
 describe('periodText', () => {
   it('labels the range with both months', () => {
-    expect(periodText(period())).toBe('03.2026 – 05.2026');
+    expect(periodText(period(), t)).toBe('03.2026 – 05.2026');
   });
 
   it('collapses to "od początku" when unbounded', () => {
-    expect(periodText(period({fromTheBeginning: true}))).toBe('od początku');
-    expect(periodText(period({toMonth: null}))).toBe('od początku');
+    expect(periodText(period({fromTheBeginning: true}), t)).toBe('od początku');
+    expect(periodText(period({toMonth: null}), t)).toBe('od początku');
   });
 });
 
 describe('csvFilename', () => {
   it('names a client export after the client and the range', () => {
-    expect(csvFilename('Klub Sportowy', period(), false)).toBe('klub sportowy (3-5.2026).csv');
+    expect(csvFilename('Klub Sportowy', period(), false, t)).toBe('klub sportowy (3-5.2026).csv');
   });
 
   it('names the all-clients export after every client', () => {
-    expect(csvFilename(null, period(), true)).toBe('wszyscy klienci (3-5.2026).csv');
+    expect(csvFilename(null, period(), true, t)).toBe('wszyscy klienci (3-5.2026).csv');
   });
 
   it('uses "od początku" for a from-the-beginning export', () => {
-    expect(csvFilename('Klub', period({fromTheBeginning: true}), false)).toBe(
+    expect(csvFilename('Klub', period({fromTheBeginning: true}), false, t)).toBe(
       'klub (od początku).csv'
     );
   });
 
   it('falls back to the legacy name when a client export has no client', () => {
-    expect(csvFilename(null, period(), false)).toBe('Raport clienta.csv');
+    expect(csvFilename(null, period(), false, t)).toBe('Raport clienta.csv');
   });
 });
 
 describe('rangeError', () => {
   it('accepts a complete range', () => {
-    expect(rangeError(period().fromMonth, period().toMonth, false)).toBeNull();
+    expect(rangeError(period().fromMonth, period().toMonth, false, t)).toBeNull();
   });
 
   it('accepts an incomplete range when reading from the beginning', () => {
-    expect(rangeError(null, null, true)).toBeNull();
+    expect(rangeError(null, null, true, t)).toBeNull();
   });
 
   it('refuses an incomplete range', () => {
-    expect(rangeError(null, period().toMonth, false)).toBe('Wybierz miesiąc początkowy i końcowy.');
-    expect(rangeError(period().fromMonth, null, false)).toBe(
+    expect(rangeError(null, period().toMonth, false, t)).toBe('Wybierz miesiąc początkowy i końcowy.');
+    expect(rangeError(period().fromMonth, null, false, t)).toBe(
       'Wybierz miesiąc początkowy i końcowy.'
     );
   });
 
   it('refuses an inverted range, rather than silently moving the end month', () => {
     expect(
-      rangeError(new Date('2026-05-01T00:00:00.000Z'), new Date('2026-03-01T00:00:00.000Z'), false)
+      rangeError(new Date('2026-05-01T00:00:00.000Z'), new Date('2026-03-01T00:00:00.000Z'), false, t)
     ).toBe('Miesiąc początkowy nie może być późniejszy niż końcowy.');
   });
 });
 
 describe('clientDetailRows', () => {
   it('lists the legacy fields that carry a value, in the legacy order', () => {
-    expect(clientDetailRows(client())).toEqual([
+    expect(clientDetailRows(client(), t)).toEqual([
       {label: 'Imię i nazwisko', value: 'Klub Sportowy'},
       {label: 'Typ', value: 'COMPANY'},
       {label: 'Osoba kontaktowa', value: 'Jan Kowalski'},
@@ -154,13 +157,13 @@ describe('clientDetailRows', () => {
   });
 
   it('drops an empty field rather than rendering it blank', () => {
-    const rows = clientDetailRows(client({nip: '', nick: undefined}));
+    const rows = clientDetailRows(client({nip: '', nick: undefined}), t);
     expect(rows.map((row) => row.label)).not.toContain('NIP');
     expect(rows.map((row) => row.label)).not.toContain('Nick');
   });
 
   it('includes an optional field when it is present', () => {
-    const rows = clientDetailRows(client({nick: 'Orzeł'}));
+    const rows = clientDetailRows(client({nick: 'Orzeł'}), t);
     expect(rows.at(-1)).toEqual({label: 'Nick', value: 'Orzeł'});
   });
 
@@ -181,7 +184,7 @@ describe('clientDetailRows', () => {
 });
 
 describe('cityTotals', () => {
-  it('lists every city in the legacy order with its counter', () => {
+  it('lists every city the summary carries, sorted, with its counter', () => {
     const totals = cityTotals(
       summary({
         siechnice: [summaryEntry()],
@@ -189,12 +192,20 @@ describe('cityTotals', () => {
       })
     );
 
+    // Cities are data (spec.md §9 open question 1): the report lists the cities present in the
+    // data, sorted by city key so the report is stable between runs, rather than a compiled-in
+    // four-city order.
     expect(totals.map((total) => [total.city, total.label, total.total])).toEqual([
-      ['siechnice', 'Siechnice', '1 rezerwacji, w tym 0 zrealizowanych.'],
       ['radwanice', 'Radwanice', '2 rezerwacji, w tym 0 zrealizowanych.'],
+      ['siechnice', 'Siechnice', '1 rezerwacji, w tym 0 zrealizowanych.'],
       ['swieta-katarzyna', 'Święta Katarzyna', '0 rezerwacji.'],
       ['zerniki-wroclawskie', 'Żerniki Wrocławskie', '0 rezerwacji.'],
     ]);
+  });
+
+  it('reports a city the compiled-in list never carried', () => {
+    const totals = cityTotals({client: client(), 'nowe-miasto': [summaryEntry()]});
+    expect(totals.map((total) => total.city)).toEqual(['nowe-miasto']);
   });
 });
 
@@ -212,7 +223,8 @@ describe('reportSlots', () => {
             comments: 'Uwaga',
           },
         ],
-      })
+      }),
+      t
     );
 
     expect(slots).toEqual([
@@ -227,7 +239,7 @@ describe('reportSlots', () => {
   });
 
   it('uses "[Brak]" for a missing participant count and comment', () => {
-    const [slot] = reportSlots(summaryEntry());
+    const [slot] = reportSlots(summaryEntry(), t);
     expect(slot.participants).toBe('[Brak]');
     expect(slot.comments).toBe('[Brak]');
   });
@@ -244,7 +256,8 @@ describe('reportSlots', () => {
             comments: '',
           },
         ],
-      })
+      }),
+      t
     );
     expect(slot.comments).toBe('[Brak]');
   });
@@ -252,7 +265,7 @@ describe('reportSlots', () => {
 
 describe('reportEntry', () => {
   it('renders the booking details with the shared vocabulary', () => {
-    const entry = reportEntry(summaryEntry());
+    const entry = reportEntry(summaryEntry(), t);
 
     expect(entry.building).toBe('Hala sportowa');
     expect(entry.size).toBe('50%');
@@ -281,7 +294,8 @@ describe('reportEntry', () => {
           size: '1/1',
           building: 'kort_1',
         },
-      })
+      }),
+      t
     );
 
     expect(entry.discount).toBe('10%');
@@ -293,17 +307,18 @@ describe('reportEntry', () => {
 });
 
 describe('cityReports', () => {
-  it('carries the total and the bookings for each city, in the legacy order', () => {
-    const reports = cityReports(summary({siechnice: [summaryEntry()]}));
+  it('carries the total and the bookings for each city, sorted by city key', () => {
+    const reports = cityReports(summary({siechnice: [summaryEntry()]}), t);
 
     expect(reports.map((report) => report.city)).toEqual([
-      'siechnice',
       'radwanice',
+      'siechnice',
       'swieta-katarzyna',
       'zerniki-wroclawskie',
     ]);
-    expect(reports[0].total).toBe('1 rezerwacji, w tym 0 zrealizowanych.');
-    expect(reports[0].entries).toHaveLength(1);
-    expect(reports[1].entries).toEqual([]);
+    expect(reports[0].total).toBe('0 rezerwacji.');
+    expect(reports[0].entries).toEqual([]);
+    expect(reports[1].total).toBe('1 rezerwacji, w tym 0 zrealizowanych.');
+    expect(reports[1].entries).toHaveLength(1);
   });
 });

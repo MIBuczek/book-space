@@ -6,6 +6,7 @@ import {IBuilding} from '@models/building.model';
 import {SessionStore} from '../../../core/session.store';
 import {adminUser} from '../../../../testing/fixtures';
 import {UsersTableComponent} from './users-table.component';
+import {provideTestI18n} from '../../../../testing/i18n-testing';
 
 const user = (overrides: Partial<IUser> = {}): IUser => ({
   _id: 'u1',
@@ -40,7 +41,7 @@ describe('UsersTableComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [UsersTableComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
     session = TestBed.inject(SessionStore);

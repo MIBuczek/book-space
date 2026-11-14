@@ -1,5 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IClient, IClientRequest} from '@models/client.model';
 import {TClientType} from '@models/booking.model';
 
@@ -49,24 +49,27 @@ const NIP_PATTERN = /^[\d./-]+$/;
  */
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** The client-type labels, from the shared copy catalogue (NFR-005, T061). */
-const CLIENT_TYPE_LABELS: Record<TClientType, string> = COPY.clients.typeLabels;
+/** The client-type label keys (FR-001), read through `translate` at the call site. */
+const CLIENT_TYPE_LABELS: Record<TClientType, string> = {
+  INDIVIDUAL: 'clients.typeLabels.INDIVIDUAL',
+  COMPANY: 'clients.typeLabels.COMPANY',
+};
 
-/** The name field's label, which the legacy `ClientForm` switched by type. */
+/** The name field's label key, which the legacy `ClientForm` switched by type. */
 const nameLabelFor = (type: TClientType): string =>
-  type === 'COMPANY' ? COPY.clients.fields.nameCompany : COPY.clients.fields.namePerson;
+  type === 'COMPANY' ? 'clients.fields.nameCompany' : 'clients.fields.namePerson';
 
 /** The page sizes the tab offers, matching the bookings table. */
 const PAGE_SIZES = [20, 50, 100];
 
 /** The columns the table renders, in the legacy `RECORDS_CLIENTS_HEADERS` order. */
 const CLIENT_COLUMNS = [
-  {key: 'name', label: COPY.clients.columns.name},
-  {key: 'contactPerson', label: COPY.clients.columns.contactPerson},
-  {key: 'phone', label: COPY.clients.columns.phone},
-  {key: 'email', label: COPY.clients.columns.email},
-  {key: 'city', label: COPY.clients.columns.city},
-  {key: 'activeLabel', label: COPY.clients.columns.status},
+  {key: 'name', label: 'clients.columns.name'},
+  {key: 'contactPerson', label: 'clients.columns.contactPerson'},
+  {key: 'phone', label: 'clients.columns.phone'},
+  {key: 'email', label: 'clients.columns.email'},
+  {key: 'city', label: 'clients.columns.city'},
+  {key: 'activeLabel', label: 'clients.columns.status'},
 ];
 
 /** A form value, before it is turned into a request body. Strings because inputs yield strings. */
@@ -134,43 +137,43 @@ const isNipRequired = (type: TClientType): boolean => type === 'COMPANY';
  * type-driven: a company without one is refused, and an individual with one is refused rather
  * than silently ignored — dropping input is how a user comes to believe a tax id was saved.
  */
-const validateClientForm = (value: IClientFormValue): TClientFieldErrors => {
+const validateClientForm = (value: IClientFormValue, t: TranslateFn): TClientFieldErrors => {
   const errors: TClientFieldErrors = {};
 
   if (value.name.length < NAME_MIN || value.name.length > NAME_MAX) {
-    errors.name = COPY.validation.nameRange(NAME_MIN, NAME_MAX);
+    errors.name = t('validation.nameRange', {min: NAME_MIN, max: NAME_MAX});
   }
   if (value.nick !== '' && (value.nick.length < NICK_MIN || value.nick.length > NICK_MAX)) {
-    errors.nick = COPY.validation.nickRange(NICK_MIN, NICK_MAX);
+    errors.nick = t('validation.nickRange', {min: NICK_MIN, max: NICK_MAX});
   }
   if (value.contactPerson.length < CONTACT_MIN || value.contactPerson.length > CONTACT_MAX) {
-    errors.contactPerson = COPY.validation.contactPersonRange(CONTACT_MIN, CONTACT_MAX);
+    errors.contactPerson = t('validation.contactPersonRange', {min: CONTACT_MIN, max: CONTACT_MAX});
   }
   if (value.phone.length < PHONE_MIN || value.phone.length > PHONE_MAX) {
-    errors.phone = COPY.validation.phoneRange(PHONE_MIN, PHONE_MAX);
+    errors.phone = t('validation.phoneRange', {min: PHONE_MIN, max: PHONE_MAX});
   }
   if (
     !EMAIL_PATTERN.test(value.email) ||
     value.email.length < EMAIL_MIN ||
     value.email.length > EMAIL_MAX
   ) {
-    errors.email = COPY.validation.emailInvalid;
+    errors.email = t('validation.emailInvalid');
   }
   if (value.street.length < STREET_MIN || value.street.length > STREET_MAX) {
-    errors.street = COPY.validation.streetRange(STREET_MIN, STREET_MAX);
+    errors.street = t('validation.streetRange', {min: STREET_MIN, max: STREET_MAX});
   }
   if (value.city.length < CITY_MIN || value.city.length > CITY_MAX) {
-    errors.city = COPY.validation.cityRange(CITY_MIN, CITY_MAX);
+    errors.city = t('validation.cityRange', {min: CITY_MIN, max: CITY_MAX});
   }
   if (value.zipCode.length !== ZIP_LENGTH || !ZIP_PATTERN.test(value.zipCode)) {
-    errors.zipCode = COPY.validation.zipCodeRule(ZIP_LENGTH);
+    errors.zipCode = t('validation.zipCodeRule', {length: ZIP_LENGTH});
   }
   if (isNipRequired(value.type)) {
     if (value.nip.length < NIP_MIN || value.nip.length > NIP_MAX || !NIP_PATTERN.test(value.nip)) {
-      errors.nip = COPY.validation.nipRequired(NIP_MIN, NIP_MAX);
+      errors.nip = t('validation.nipRequired', {min: NIP_MIN, max: NIP_MAX});
     }
   } else if (value.nip !== '') {
-    errors.nip = COPY.validation.nipNotIndividual;
+    errors.nip = t('validation.nipNotIndividual');
   }
 
   return errors;
@@ -245,7 +248,7 @@ const fieldForMessage = (message: string): keyof IClientFormValue | null => {
  * A message that names no field becomes the generic prompt, because an error the user cannot
  * see is an error they cannot act on.
  */
-const mapServerErrors = (messages: readonly string[]): IClientWriteErrors => {
+const mapServerErrors = (messages: readonly string[], t: TranslateFn): IClientWriteErrors => {
   const fields: TClientFieldErrors = {};
   let unmatched = false;
 
@@ -254,24 +257,24 @@ const mapServerErrors = (messages: readonly string[]): IClientWriteErrors => {
     if (field === null) {
       unmatched = true;
     } else {
-      fields[field] = COPY.errors.fieldInvalid;
+      fields[field] = t('errors.fieldInvalid');
     }
   }
 
-  return {fields, general: unmatched ? COPY.errors.generic : null};
+  return {fields, general: unmatched ? t('errors.generic') : null};
 };
 
 /** Shapes a client into the row the table renders. */
-const toRow = (client: IClient): Record<string, unknown> => ({
+const toRow = (client: IClient, t: TranslateFn): Record<string, unknown> => ({
   _id: client._id,
   name: client.name,
   contactPerson: client.contactPerson,
   phone: client.phone,
   email: client.email,
   city: client.city,
-  typeLabel: CLIENT_TYPE_LABELS[client.type],
-  nipLabel: client.nip ?? COPY.common.dash,
-  activeLabel: client.active !== false ? COPY.clients.active.yes : COPY.clients.active.no,
+  typeLabel: t(CLIENT_TYPE_LABELS[client.type]),
+  nipLabel: client.nip ?? t('common.dash'),
+  activeLabel: t(client.active !== false ? 'clients.active.yes' : 'clients.active.no'),
   client,
 });
 
@@ -283,14 +286,14 @@ const toRow = (client: IClient): Record<string, unknown> => ({
  * generic one: a delete that silently does nothing looks like a broken button. The `409` body
  * is the global filter's `{statusCode, message, error}` shape, so `message` is a string.
  */
-const deleteFailureMessage = (error: unknown): string => {
+const deleteFailureMessage = (error: unknown, t: TranslateFn): string => {
   if (error instanceof HttpErrorResponse && error.status === 409) {
     // The `409` body carries the server's English reason, but the UI shows its own Polish
     // text (NFR-005, T061): the status is what says "referenced by a booking", and the client
     // must not render the API's sentence.
-    return COPY.clients.deleteConflict;
+    return t('clients.deleteConflict');
   }
-  return COPY.clients.deleteFailure;
+  return t('clients.deleteFailure');
 };
 
 export {

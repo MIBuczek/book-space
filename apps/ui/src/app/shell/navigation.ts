@@ -1,5 +1,4 @@
 import { IUserCapabilities } from '@models/user.model';
-import { COPY } from '@booking/copy';
 
 /**
  * The admin area's tabs and the capability each one needs.
@@ -10,13 +9,13 @@ import { COPY } from '@booking/copy';
  * capabilities rather than from the role — an office account without the Summary capability
  * loses it here without the client knowing why.
  *
- * The labels are read from the shared copy catalogue (NFR-005, T061): the tab list is the
- * single declaration of a tab's path and capability, and its label comes from the catalogue
- * rather than a literal here.
+ * The labels are translation keys (FR-001): the tab list is the single declaration of a tab's
+ * path, label key and capability, so the shell renders the active language without a second list.
  */
 export interface IAdminTab {
   /** The child route path, relative to `/admin`. */
   path: string;
+  /** The translation key for the tab's label. */
   label: string;
   capability: keyof IUserCapabilities;
 }
@@ -28,12 +27,12 @@ export interface IAdminTab {
  * that is hidden and the route behind it cannot disagree.
  */
 export const ADMIN_TABS: readonly IAdminTab[] = [
-  { path: 'calendar', label: COPY.admin.tabs.calendar, capability: 'staff' },
-  { path: 'bookings', label: COPY.admin.tabs.bookings, capability: 'staff' },
-  { path: 'clients', label: COPY.admin.tabs.clients, capability: 'canSeeClientsTab' },
-  { path: 'facilities', label: COPY.admin.tabs.facilities, capability: 'canSeeFacilitiesTab' },
-  { path: 'summary', label: COPY.admin.tabs.summary, capability: 'canSeeSummaryTab' },
-  { path: 'users', label: COPY.admin.tabs.users, capability: 'canManageUsers' },
+  { path: 'calendar', label: 'admin.tabs.calendar', capability: 'staff' },
+  { path: 'bookings', label: 'admin.tabs.bookings', capability: 'staff' },
+  { path: 'clients', label: 'admin.tabs.clients', capability: 'canSeeClientsTab' },
+  { path: 'facilities', label: 'admin.tabs.facilities', capability: 'canSeeFacilitiesTab' },
+  { path: 'summary', label: 'admin.tabs.summary', capability: 'canSeeSummaryTab' },
+  { path: 'users', label: 'admin.tabs.users', capability: 'canManageUsers' },
 ];
 
 /**

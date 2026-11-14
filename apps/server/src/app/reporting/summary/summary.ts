@@ -1,13 +1,7 @@
 import {IClient} from '@models/client.model';
 import {IBookedTime} from '@models/booked-time.model';
 import {ISelectedExtraOption} from '@models/selected-extra-option.model';
-import {
-  IClientSummary,
-  IGeneralBookingDetails,
-  SUMMARY_CITIES,
-  TCitySummary,
-  TSummaryCity,
-} from '@models/reporting.model';
+import {cityBookings, IClientSummary, IGeneralBookingDetails} from '@models/reporting.model';
 import {summaryTotalBookingsNumber} from '@booking/reporting';
 
 /**
@@ -59,16 +53,6 @@ const slotInRange = (day: Date, range: ISummaryRange): boolean => {
   return time >= range.from.getTime() && time <= range.to.getTime();
 };
 
-/** The empty per-city structure, so a city with no bookings is still present in the answer. */
-const emptyCitySummary = (): TCitySummary =>
-  SUMMARY_CITIES.reduce((acc, city) => {
-    acc[city] = [];
-    return acc;
-  }, {} as TCitySummary);
-
-const isSummaryCity = (value: string): value is TSummaryCity =>
-  (SUMMARY_CITIES as readonly string[]).includes(value);
-
 /**
  * The booking-level fields a summary repeats for each slot.
  *
@@ -90,29 +74,34 @@ const generalDetails = (booking: ISummaryBooking): IGeneralBookingDetails => ({
  * with each booking's slots filtered to the range. A booking whose slots all fall outside the
  * range is dropped entirely, matching the legacy `isEmpty(bookingTimeDetails)` early return —
  * otherwise the report would list a booking with no rented time against it.
+ *
+ * The city is free text (spec.md §9 open question 1), so the summary is keyed by whatever cities
+ * the bookings actually name rather than a compiled-in list; a city with no in-range booking is
+ * simply absent. The legacy report iterated a fixed four-city constant and emitted an empty
+ * section per city, but that constant is the compiled-in list this task removes.
  */
 const summariseClient = (
   client: IClient,
   bookings: ISummaryBooking[],
   range: ISummaryRange
 ): IClientSummary => {
-  const summary: IClientSummary = {client, ...emptyCitySummary()};
+  const summary: IClientSummary = {client};
 
   for (const booking of bookings) {
     if (!booking.accepted) {
       continue;
     }
     const city = booking.place.city;
-    if (!isSummaryCity(city)) {
-      continue;
-    }
 
     const bookingTimeDetails = booking.bookedTimes.filter((slot) => slotInRange(slot.day, range));
     if (bookingTimeDetails.length === 0) {
       continue;
     }
 
-    summary[city] = [...summary[city], {generalBookingDetails: generalDetails(booking), bookingTimeDetails}];
+    summary[city] = [
+      ...cityBookings(summary, city),
+      {generalBookingDetails: generalDetails(booking), bookingTimeDetails},
+    ];
   }
 
   return summary;
@@ -124,5 +113,5 @@ const summariseClient = (
  * and the UI import it. Re-exporting keeps the existing import sites (`reporting/` specs and the
  * service) unchanged.
  */
-export {slotInRange, summariseClient, summaryTotalBookingsNumber, isSummaryCity};
+export {slotInRange, summariseClient, summaryTotalBookingsNumber};
 export type {ISummaryRange, ISummaryBooking};

@@ -107,15 +107,16 @@ municipal links. The facility **sample data** may remain.
 **Why this priority**: it is an explicit requirement, and it is the prerequisite for the platform
 being reusable by another tenant.
 
-**Independent Test**: build the UI bundle and grep it for `sisk`/`siechnice` — no hit. Grep the
-server source and the seed for the same — only the legacy provenance in documentation remains.
-Boot the app with no tenant configuration and confirm it renders a neutral name and no broken
-links.
+**Independent Test**: build the UI bundle and grep it for `SISK` — no hit. Grep the server source
+and the seed for the same — only the legacy provenance in documentation remains. Boot the app with
+no tenant configuration and confirm it renders a neutral name and no broken links. (The sample
+facilities' city name `siechnice` is *allowed* in the bundle: it is real business data, decision 5.)
 
 **Acceptance Scenarios**:
 
-1. **Given** the built UI bundle, **When** it is searched for `sisk` or `siechnice`,
-   **Then** there is no match.
+1. **Given** the built UI bundle, **When** it is searched for the `SISK` brand or the
+   `sisk-siechnice.pl` domain, **Then** there is no match. The sample facilities' city name
+   `siechnice` is exempt (decision 5) — it is the data, not the brand.
 2. **Given** the application with no tenant configuration, **When** it renders, **Then** the
    footer shows the product name and no SISK link, and the contact page shows no SISK address.
 3. **Given** the notification templates, **When** a notification is sent, **Then** the signature
@@ -229,7 +230,10 @@ switch to it — the keys that exist render, the rest fall back to the default, 
 
 - **SC-001**: A user can switch between Polish and English and see every screen change, with no
   reload and no untranslated string.
-- **SC-002**: The built UI bundle contains **no** `sisk` or `siechnice` string.
+- **SC-002**: The built UI bundle contains **no** `SISK` brand string and no `sisk-siechnice.pl`
+  domain (guarded by `tools/scan-bundle.js`). The sample facilities' city name `siechnice` is
+  **exempt** — it is real business data (decision 5), not a brand, and the bundle legitimately
+  carries it as a city label.
 - **SC-003**: Every key in the default language exists in every other language file (enforced by
   a spec), so no screen silently falls back.
 - **SC-004**: A new language can be added with one JSON file and one list entry, proven by doing

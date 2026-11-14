@@ -1,22 +1,21 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { COPY } from '@booking/copy';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * The 404 page (FR-039, issue #44).
  *
  * It offers a link back to the calendar rather than relying on the browser's
- * back button, which is what the legacy `NoMatch` did. The copy comes from the
- * shared catalogue (NFR-005, T061).
+ * back button, which is what the legacy `NoMatch` did. The copy is translated (FR-001).
  */
 @Component({
   selector: 'book-space-not-found',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   template: `
     <main class="bs-not-found">
-      <h1>{{ copy.title }}</h1>
-      <p>{{ copy.code }}</p>
-      <a routerLink="/">{{ common.backToCalendar }}</a>
+      <h1>{{ 'notFound.title' | translate }}</h1>
+      <p>{{ 'notFound.code' | translate }}</p>
+      <a routerLink="/">{{ 'common.backToCalendar' | translate }}</a>
     </main>
   `,
   styles: [
@@ -34,7 +33,4 @@ import { COPY } from '@booking/copy';
     `,
   ],
 })
-export class NotFoundComponent {
-  readonly copy = COPY.notFound;
-  readonly common = COPY.common;
-}
+export class NotFoundComponent {}

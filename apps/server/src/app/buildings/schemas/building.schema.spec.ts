@@ -68,8 +68,12 @@ describe('BuildingSchema validation', () => {
     expect(errorsFor({sizes: ['1/1', '2/5']})).toHaveProperty('sizes');
   });
 
-  it('rejects a city outside the four the business operates in', () => {
-    expect(errorsFor({city: 'wroclaw'})).toHaveProperty('city');
+  it('accepts a city outside the sample four, because cities are data', () => {
+    expect(errorsFor({city: 'wroclaw'})).toEqual({});
+  });
+
+  it('rejects a city shorter than the two-character bound', () => {
+    expect(errorsFor({city: 'x'})).toHaveProperty('city');
   });
 
   it('accepts a facility with no street or zipCode', () => {

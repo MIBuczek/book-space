@@ -1,4 +1,4 @@
-import {COPY} from '@booking/copy';
+import {TranslateFn} from '@booking/i18n';
 import {IBooking} from '@models/booking.model';
 import {IBookedTime, TSingleBookingStatus} from '@models/booked-time.model';
 import {
@@ -30,7 +30,7 @@ const EVENT_COLORS = {
 } as const;
 
 /** The public label when a booking carries no `nick` (legacy `booking.nick || 'Rezerwacja'`). */
-const DEFAULT_LABEL = COPY.calendar.defaultLabel;
+const defaultLabel = (t: TranslateFn): string => t('calendar.defaultLabel');
 
 /** Whether a slot is hidden from the calendar: the legacy `bt.status !== QUIT` check (T055: `QUIT` → `CANCELED`). */
 const isCancelled = (status: TSingleBookingStatus): boolean => status === 'CANCELED';
@@ -53,11 +53,11 @@ const eventColor = (accepted: boolean, status: TSingleBookingStatus): string => 
  * A public booking carries no `personName` — the API redacts it — so the staff branch is
  * only ever taken by a caller who is entitled to it.
  */
-const eventLabel = (booking: IBooking, staff: boolean): string => {
+const eventLabel = (booking: IBooking, staff: boolean, t: TranslateFn): string => {
   if (staff) {
-    return booking.personName || DEFAULT_LABEL;
+    return booking.personName || defaultLabel(t);
   }
-  return booking.nick || DEFAULT_LABEL;
+  return booking.nick || defaultLabel(t);
 };
 
 /**
@@ -67,11 +67,11 @@ const eventLabel = (booking: IBooking, staff: boolean): string => {
  * cannot distinguish the three colours would see three identical blocks. The label is
  * derived from the same two fields as the colour, so the two cannot disagree.
  */
-const statusLabel = (accepted: boolean, status: TSingleBookingStatus): string => {
+const statusLabel = (accepted: boolean, status: TSingleBookingStatus, t: TranslateFn): string => {
   if (status === 'DONE') {
-    return COPY.calendar.status.done;
+    return t('calendar.status.done');
   }
-  return accepted ? COPY.calendar.status.accepted : COPY.calendar.status.pending;
+  return accepted ? t('calendar.status.accepted') : t('calendar.status.pending');
 };
 
 /** One slot rendered on the calendar. */
@@ -106,7 +106,7 @@ const facilityHour = (instant: Date): number => Number(formatFacilityTime(instan
  * `staff` selects the label. A booking with no slots yields nothing rather than an empty
  * event, which is why the caller maps over slots rather than over bookings.
  */
-const bookingToEvents = (booking: IBooking, staff: boolean): ICalendarEvent[] =>
+const bookingToEvents = (booking: IBooking, staff: boolean, t: TranslateFn): ICalendarEvent[] =>
   booking.bookedTimes
     .map((slot: IBookedTime, slotIndex: number) => ({slot, slotIndex}))
     .filter(({slot}) => !isCancelled(slot.status))
@@ -114,7 +114,7 @@ const bookingToEvents = (booking: IBooking, staff: boolean): ICalendarEvent[] =>
       id: `${booking._id}:${slotIndex}`,
       bookingId: booking._id,
       slotIndex,
-      title: eventLabel(booking, staff),
+      title: eventLabel(booking, staff, t),
       day: formatFacilityDate(new Date(slot.day)),
       start: formatFacilityTime(new Date(slot.startHours)),
       end: formatFacilityTime(new Date(slot.endHours)),
@@ -128,8 +128,8 @@ const bookingToEvents = (booking: IBooking, staff: boolean): ICalendarEvent[] =>
     }));
 
 /** Every event for a list of bookings, in slot order. */
-const bookingsToEvents = (bookings: IBooking[], staff: boolean): ICalendarEvent[] =>
-  bookings.flatMap((booking) => bookingToEvents(booking, staff));
+const bookingsToEvents = (bookings: IBooking[], staff: boolean, t: TranslateFn): ICalendarEvent[] =>
+  bookings.flatMap((booking) => bookingToEvents(booking, staff, t));
 
 /** The facility-local midnight of the Monday of the week containing `anchor` (legacy `firstDay={1}`). */
 const startOfFacilityWeek = (anchor: Date): Date => {
@@ -218,23 +218,22 @@ const shiftAnchor = (view: TCalendarView, anchor: Date, direction: 1 | -1): Date
 
 /**
  * The short weekday labels, Monday first (the legacy `locale="pl"` / `firstDay={1}`), and the
- * month names, January first. Both come from the shared copy catalogue (NFR-005, T061), so the
- * calendar's Polish is one edit away from a translation rather than a search through the file.
+ * month names, January first. Both come from the active catalogue (FR-001), so the calendar
+ * renders the selected language rather than a compiled-in Polish list.
  */
-const WEEKDAY_LABELS = COPY.calendar.weekdays;
-
-const MONTH_LABELS = COPY.calendar.months;
+const weekdayLabels = (t: TranslateFn): string[] =>
+  t('calendar.weekdays') as unknown as string[];
 
 /** The seven day labels of the week containing `anchor`, paired with their weekday label. */
-const weekColumns = (anchor: Date): Array<{day: string; label: string}> =>
-  weekDays(anchor).map((day, index) => ({day, label: WEEKDAY_LABELS[index]}));
+const weekColumns = (anchor: Date, t: TranslateFn): Array<{day: string; label: string}> =>
+  weekDays(anchor).map((day, index) => ({day, label: weekdayLabels(t)[index]}));
 
 /** The single day column for the day view: the facility-local day and its weekday label. */
-const dayColumn = (anchor: Date): {day: string; label: string} => {
+const dayColumn = (anchor: Date, t: TranslateFn): {day: string; label: string} => {
   const day = formatFacilityDate(anchor);
   // `getUTCDay` on the date part reads the same civil weekday, so no second zone conversion.
   const weekday = (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7;
-  return {day, label: WEEKDAY_LABELS[weekday]};
+  return {day, label: weekdayLabels(t)[weekday]};
 };
 
 /**
@@ -254,22 +253,20 @@ const monthDays = (anchor: Date): string[] => {
   return days;
 };
 
-/** The Polish month-and-year label of the month containing `anchor`, e.g. `marzec 2026`. */
-const monthLabel = (anchor: Date): string => {
+/** The month-and-year label of the month containing `anchor`, e.g. `marzec 2026`. */
+const monthLabel = (anchor: Date, t: TranslateFn): string => {
   const first = startOfFacilityMonth(anchor);
   const day = formatFacilityDate(first);
   const year = Number(day.slice(0, 4));
   const month = Number(day.slice(5, 7));
-  return `${MONTH_LABELS[month - 1]} ${year}`;
+  const months = t('calendar.months') as unknown as string[];
+  return `${months[month - 1]} ${year}`;
 };
 
 export {
   EVENT_COLORS,
-  DEFAULT_LABEL,
   GRID_START_HOUR,
   GRID_END_HOUR,
-  WEEKDAY_LABELS,
-  MONTH_LABELS,
   isCancelled,
   eventColor,
   eventLabel,

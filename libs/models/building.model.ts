@@ -1,22 +1,31 @@
-/** The four facilities' cities. Stored lower-case. */
-const CITIES = ['siechnice', 'radwanice', 'swieta-katarzyna', 'zerniki-wroclawskie'] as const;
-type TCity = (typeof CITIES)[number];
-
 /**
- * The display label for each city, as the legacy `CITY_OPTIONS` wrote it.
+ * The display label for a city, keyed by the value the sample data stores.
  *
- * This lives beside `CITIES` because four screens render a city selector — the public
- * calendar, the booking form, the bookings tab and the facilities tab — and a copy per
- * screen is exactly the drift the shared model exists to prevent: a renamed city would
- * appear correctly on one screen and not another, with nothing to catch it. The stored
- * value stays the lower-case key; only the label differs.
+ * Cities are **data, not a compiled-in list** (spec.md §9 open question 1, FR-007): a
+ * facility's `city` is free text an administrator types, and the city selector a screen offers
+ * is the set of distinct `city` values across the facilities (`distinctCities`). This map is
+ * *display decoration only* — it exists so the sample facilities, whose `city` values are the
+ * legacy slugs, render with their proper Polish spelling instead of `swieta-katarzyna`. It does
+ * **not** enumerate the cities a deployment may use and it is not a validation list: a city the
+ * map does not name renders verbatim (see `cityLabel`), so an operator is free to add any city.
+ *
+ * It is deliberately a `Record<string, string>` rather than the closed union it used to be,
+ * because a closed union is exactly the compiled-in list the decision removes.
  */
-const CITY_LABELS: Record<TCity, string> = {
+const CITY_LABELS: Record<string, string> = {
   siechnice: 'Siechnice',
   radwanice: 'Radwanice',
   'swieta-katarzyna': 'Święta Katarzyna',
   'zerniki-wroclawskie': 'Żerniki Wrocławskie',
 };
+
+/** The label to show for a stored city: the known sample label, or the value as typed. */
+const cityLabel = (city: string): string => CITY_LABELS[city] ?? city;
+
+/** The distinct cities present in a facility list, in the order the facilities carry them. */
+const distinctCities = (buildings: readonly Pick<IBuilding, 'city'>[]): string[] => [
+  ...new Set(buildings.map((building) => building.city)),
+];
 
 /** Sizes are `1/1` … `3/4`, as fractions of a hall. */
 const SIZES = ['1/1', '1/2', '1/3', '2/3', '1/4', '3/4'] as const;
@@ -27,7 +36,13 @@ interface IBuilding {
   name: string;
   /** Facility key, unique per city. */
   property: string;
-  city: TCity;
+  /**
+   * The city the facility sits in, as free text (spec.md §9 open question 1, FR-007). It is not
+   * a closed union: an administrator adds a city by adding a facility that names it, and the
+   * city selectors read the distinct values back (`distinctCities`). It is bounded only by
+   * length, at the DTO and the schema.
+   */
+  city: string;
   sizes: TSize[];
   lighting: boolean;
   toilets: boolean;
@@ -69,4 +84,36 @@ const PUBLIC_BUILDING_REDACTIONS = ['email', 'phone', 'employees', 'street', 'zi
 /** A facility as a public caller receives it: contact details and the employee list removed. */
 type IPublicBuilding = Omit<IBuilding, (typeof PUBLIC_BUILDING_REDACTIONS)[number]>;
 
-export {CITIES, TCity, CITY_LABELS, SIZES, TSize, PUBLIC_BUILDING_REDACTIONS, IBuilding, IPublicBuilding};
+/**
+ * The body for creating a facility, mirroring the server's `BuildingDto` (FR-010, T272).
+ *
+ * `name`, `property`, `city`, `email`, `phone` and `sizes` are required — the server's
+ * `BuildingDto` marks them so — and the rest are optional because the schema supplies a
+ * default (`lighting`, `toilets`, `employees`) or the contract does (`street`, `zipCode`).
+ * `city` is a plain `string`, not a union: cities are data (spec.md §9 open question 1), so
+ * the form offers a free-text field and the server bounds the length rather than a value set.
+ *
+ * The update body is the same shape with every field optional. A `Partial` is safe here: this
+ * is a client-side type only, and the server's `UpdateBuildingDto` is the concrete class that
+ * the global `ValidationPipe` actually validates.
+ */
+interface IFacilityRequest {
+  name: string;
+  property: string;
+  city: string;
+  email: string;
+  phone: string;
+  sizes: TSize[];
+  street?: string;
+  zipCode?: string;
+  lighting?: boolean;
+  toilets?: boolean;
+  employees?: string[];
+  active?: boolean;
+}
+
+/** The body for updating a facility: every field optional, mirroring `UpdateBuildingDto`. */
+type IFacilityUpdateRequest = Partial<IFacilityRequest>;
+
+export {CITY_LABELS, cityLabel, distinctCities, SIZES, TSize, PUBLIC_BUILDING_REDACTIONS, IBuilding, IPublicBuilding};
+export type {IFacilityRequest, IFacilityUpdateRequest};

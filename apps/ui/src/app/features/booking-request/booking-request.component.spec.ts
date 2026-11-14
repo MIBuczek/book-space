@@ -3,6 +3,7 @@ import {provideHttpClient} from '@angular/common/http';
 import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
 import {IPublicBuilding} from '@models/building.model';
 import {IBookingRequest} from '@models/booking.model';
+import {provideTestI18n} from '../../../testing/i18n-testing';
 import {BookingRequestComponent} from './booking-request.component';
 
 const facility = (
@@ -40,7 +41,7 @@ describe('BookingRequestComponent', () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [BookingRequestComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideTestI18n()],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });

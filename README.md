@@ -170,7 +170,7 @@ loudly rather than stamping a wrong build number.
 
 ```bash
 yarn lint                                      # ESLint across every project (flat config)
-yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,copy --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,i18n --configuration=ci
 yarn build:all                                 # production build of every affected project
 yarn nx e2e server-e2e                         # API end-to-end tests
 yarn nx e2e ui-e2e                             # UI end-to-end tests (Cypress)
@@ -237,7 +237,7 @@ notifications.
 | `libs/date-time`                     | Facility-time conversion (`@booking/date-time`)               |
 | `libs/booking-rules`                 | Slot overlap and cyclical expansion (`@booking/rules`)        |
 | `libs/reporting`                     | Report and CSV vocabulary (`@booking/reporting`)              |
-| `libs/copy`                          | The user-facing Polish copy catalogue (`@booking/copy`)       |
+| `libs/i18n`                          | Runtime translation: store, provider, catalogues (`@booking/i18n`) |
 | `libs/version`                       | The build number and application version (`@booking/version`) |
 | `tools/migration`                    | The one-off Firebase → MongoDB migration tool                 |
 | `tools/bootstrap-admin`              | Creates the first administrator in a fresh database (FR-046)  |
