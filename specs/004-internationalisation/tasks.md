@@ -120,11 +120,11 @@
 
 ## Phase 6 — Docs and conventions
 
-- [ ] **T260** `AGENTS.md`: the translation conventions (runtime JSON, key completeness, the
+- [x] **T260** `AGENTS.md`: the translation conventions (runtime JSON, key completeness, the
       retargeted guard), the tenant settings, the removal of the Summary deny-list (#195).
-- [ ] **T261** [P] `specs/001-booking-platform-rewrite/ui-conventions.md`: the i18n convention.
-- [ ] **T262** [P] `README.md`: the tenant settings and how to add a language.
-- [ ] **T263** Record the server-side Polish decision (decision 2, FR-015) in `AGENTS.md`; note
+- [x] **T261** [P] `specs/001-booking-platform-rewrite/ui-conventions.md`: the i18n convention.
+- [x] **T262** [P] `README.md`: the tenant settings and how to add a language.
+- [x] **T263** Record the server-side Polish decision (decision 2, FR-015) in `AGENTS.md`; note
       that the documentation keeps the legacy provenance (decision 3).
 
 ## Dependencies

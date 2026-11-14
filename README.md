@@ -2,12 +2,18 @@
 
 Booking platform for the municipal sports facilities run by Siechnicka Inwestycyjna Spółka
 Komunalna (SISK). The public browse a calendar of accepted bookings and submit requests;
-SISK staff approve them, manage clients and facilities, and export reports.
+staff approve them, manage clients and facilities, and export reports.
 
 This repository is the rewrite of `MIBuczek/sisk-booking-app` (React + Redux + Firebase), an
 Nx monorepo with an Angular UI, a NestJS API and MongoDB. The legacy SPA ran every business
 rule in the browser against a Firebase database that granted any authenticated user write
 access to everything; the rewrite moves those rules behind a typed, tested API.
+
+> **The product ships unbranded.** The shipped application carries no tenant's name, address
+> or URL; a deployment supplies its identity through the `TENANT_*` settings (see
+> [Configuration](#configuration)). The SISK references kept here and in `AGENTS.md` and
+> `specs/` are the legacy *provenance* of the rewrite — a deliberate exception, so the origin
+> stays traceable — not the product's identity.
 
 ## Architecture
 
@@ -58,20 +64,24 @@ credentials are still in git history):
 cp apps/server/.env.example apps/server/.env
 ```
 
-| Key                   | Required | Purpose                                                                                                                                                                  |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DB_URI`              | yes      | MongoDB connection string. Must start with `mongodb://` or `mongodb+srv://`. Use `mongodb://localhost:27017/book_space` for a local database.                            |
-| `JWT_SECRET`          | yes      | Signing key for the session token. **At least 32 characters.** Generate one with `openssl rand -base64 48`.                                                              |
-| `PORT`                | no       | Port the API listens on. Defaults to `3000`. The API always serves under the `/api` prefix.                                                                              |
-| `SEED_REFERENCE_DATA` | no       | Set to the exact string `true` to upsert the twelve reference facilities on start-up. Off by default: the seed is authoritative and overwrites an administrator's edits. |
-| `MAIL_ENDPOINT`       | no       | HTTP endpoint the outbound-mail provider is POSTed to. Unset disables sending: a notification then fails visibly (`502`) rather than silently.                           |
-| `MAIL_API_KEY`        | no       | Bearer token sent to `MAIL_ENDPOINT`.                                                                                                                                    |
-| `MAIL_FROM`           | no       | Sender address on outbound mail.                                                                                                                                         |
-| `SISK_CONTACT_EMAIL`  | no       | The SISK inbox that staff notifications and contact-form messages are delivered to (FR-033, FR-034).                                                                     |
-| `PUBLIC_RATE_LIMIT`   | no       | Requests allowed per window from one client address and per submitted e-mail on the public write routes (FR-048). Defaults to `12`; `0` disables the check.             |
-| `PUBLIC_RATE_LIMIT_WINDOW_MS` | no | The rate-limit window in milliseconds. Defaults to `600000` (10 minutes).                                                                                                |
-| `NOTIFICATION_QUOTA`  | no       | Outbound messages allowed per recipient address per window (FR-050). Defaults to `20`; `0` disables the check.                                                          |
-| `NOTIFICATION_QUOTA_WINDOW_MS` | no | The outbound-quota window in milliseconds. Defaults to `3600000` (1 hour).                                                                                              |
+| Key                            | Required | Purpose                                                                                                                                                                  |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DB_URI`                       | yes      | MongoDB connection string. Must start with `mongodb://` or `mongodb+srv://`. Use `mongodb://localhost:27017/book_space` for a local database.                            |
+| `JWT_SECRET`                   | yes      | Signing key for the session token. **At least 32 characters.** Generate one with `openssl rand -base64 48`.                                                              |
+| `PORT`                         | no       | Port the API listens on. Defaults to `3000`. The API always serves under the `/api` prefix.                                                                              |
+| `SEED_REFERENCE_DATA`          | no       | Set to the exact string `true` to upsert the twelve reference facilities on start-up. Off by default: the seed is authoritative and overwrites an administrator's edits. |
+| `MAIL_ENDPOINT`                | no       | HTTP endpoint the outbound-mail provider is POSTed to. Unset disables sending: a notification then fails visibly (`502`) rather than silently.                           |
+| `MAIL_API_KEY`                 | no       | Bearer token sent to `MAIL_ENDPOINT`.                                                                                                                                    |
+| `MAIL_FROM`                    | no       | Sender address on outbound mail.                                                                                                                                         |
+| `TENANT_STAFF_EMAIL`           | no       | The tenant inbox that staff notifications and contact-form messages are delivered to (FR-033, FR-034). Unset makes those sends fail visibly (`502`).                     |
+| `TENANT_NAME`                  | no       | The tenant name that brands outbound e-mail and the footer. Unset falls back to `Book Space`.                                                                            |
+| `TENANT_CONTACT_EMAIL`         | no       | The tenant's public contact address, served on `GET /api/tenant` and rendered by the footer and contact page. Unset hides the element.                                   |
+| `TENANT_WEBSITE_URL`           | no       | The tenant's public website URL (same read, same hiding rule).                                                                                                           |
+| `TENANT_PRIVACY_URL`           | no       | The tenant's privacy-policy URL (same read, same hiding rule).                                                                                                           |
+| `PUBLIC_RATE_LIMIT`            | no       | Requests allowed per window from one client address and per submitted e-mail on the public write routes (FR-048). Defaults to `12`; `0` disables the check.              |
+| `PUBLIC_RATE_LIMIT_WINDOW_MS`  | no       | The rate-limit window in milliseconds. Defaults to `600000` (10 minutes).                                                                                                |
+| `NOTIFICATION_QUOTA`           | no       | Outbound messages allowed per recipient address per window (FR-050). Defaults to `20`; `0` disables the check.                                                           |
+| `NOTIFICATION_QUOTA_WINDOW_MS` | no       | The outbound-quota window in milliseconds. Defaults to `3600000` (1 hour).                                                                                               |
 
 The server validates the environment at boot and refuses to start with a message naming what
 is wrong, rather than failing later inside `JwtModule` or `MongooseModule`. `DB_URI` and
@@ -81,6 +91,35 @@ specific feature rather than the whole application.
 `SEED_REFERENCE_DATA` must be exactly `true`. Any other value (including `false`) leaves the
 seed off — a boolean field would be coerced with `Boolean(value)` where `Boolean('false')` is
 `true`, so the flag is compared as a string.
+
+### Tenant settings and branding
+
+The product ships unbranded: no tenant's name, address or URL is compiled into the bundle. A
+deployment supplies its own identity through the `TENANT_*` variables, which `GET /api/tenant`
+serves to the UI (the footer and the contact page read it). The name falls back to `Book Space`;
+the contact e-mail and the two URLs have no default, and the UI **hides** the element rather than
+rendering an empty link, so a partial configuration looks deliberate rather than broken. The
+staff inbox (`TENANT_STAFF_EMAIL`) is deliberately *not* published — it is an operational address
+and stays server-side.
+
+### Languages
+
+The UI ships **Polish (default) and English**, and the choice persists in `localStorage` — there
+is no language path segment, so links stay stable and the SPA is one bundle. The strings live in
+`apps/ui/src/assets/i18n/pl.json` and `en.json`, loaded at runtime, so **adding a language is two
+edits and no code change**:
+
+1. Add an entry to `LANGUAGES` in `libs/i18n/src/lib/languages.ts` — `{code, label, default}`,
+   where `code` is the IETF tag used as the file name and the `lang` attribute and `label` is the
+   language's own name (the endonym).
+2. Add `apps/ui/src/assets/i18n/<code>.json` with every key the default language declares. The
+   completeness spec (`libs/i18n/src/lib/translations.spec.ts`) fails CI until the file is
+   complete, so a partial translation cannot ship.
+
+The language switch renders the list, so it picks up the new language with no change to the
+component. The server-side artefacts that carry Polish — the CSV export, the printable report and
+the notification e-mails — stay Polish on purpose (they are read outside the browser, in a
+spreadsheet or an inbox); only the e-mail signature becomes the configured tenant name.
 
 ## Run locally
 
@@ -122,14 +161,14 @@ hook — the same path the API uses, so the stored value is a `bcrypt` hash:
 BOOTSTRAP_ADMIN_PASSWORD='<at least 6 characters>' \
   yarn nx run bootstrap-admin:run -- \
     --target "$DB_URI" \
-    --email admin@sisk.pl \
-    --first-name Ada --last-name Sisk
+    --email admin@example.com \
+    --first-name Ada --last-name Admin
 ```
 
 `--target` is the MongoDB URI (the same value as `DB_URI`), `--email` is required, and the
 password comes from `BOOTSTRAP_ADMIN_PASSWORD` so it stays out of the shell history and the
 process listing; `--password` is accepted for a one-off local run but is not the documented
-path. `--first-name` and `--last-name` default to `Administrator` / `SISK`. The tool exits `0`
+path. `--first-name` and `--last-name` default to `Administrator` / `Administrator`. The tool exits `0`
 when an administrator now exists — including when one already did, which it reports as a
 refusal so a re-run in a deployment script does not fail the pipeline — and `1` on any other
 outcome. Sign in at `/sign-in` with the address and password you supplied.
@@ -210,8 +249,8 @@ declared on the schemas and built on first use; `nx test server` asserts the que
 picks them.
 
 Environment variables for a deployment are the same keys as [Configuration](#configuration).
-At minimum set `DB_URI` and `JWT_SECRET`; set `MAIL_*` and `SISK_CONTACT_EMAIL` to enable
-notifications.
+At minimum set `DB_URI` and `JWT_SECRET`; set `MAIL_*` and `TENANT_STAFF_EMAIL` to enable
+notifications, and the `TENANT_*` values to brand the deployment.
 
 ## Branch and release convention
 
@@ -258,6 +297,10 @@ notifications.
   the MongoDB collections and indexes.
 - [`docs/operations.md`](docs/operations.md) — the operations runbook: backup cadence, restore
   procedure, archived-booking retention, RPO/RTO and the cut-over that retires the legacy system.
+- [`specs/002-dependency-modernization`](specs/002-dependency-modernization) —
+  the toolchain-upgrade specification and plan.
+- [`specs/004-internationalisation`](specs/004-internationalisation) — the i18n and de-branding
+  specification: the translation catalogue, the language switch and the tenant settings.
 - [`AGENTS.md`](AGENTS.md) — the repository's load-bearing constraints and the traps that cost
   time during the dependency upgrade. Read it before making non-trivial changes.
 

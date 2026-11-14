@@ -329,25 +329,74 @@ Required, not optional — `spec.md` FR-039 and NFR-006:
 - Interactive elements are real `<button>`/`<a>`, keyboard reachable, visible focus.
 - Modal focus is trapped and returns to the trigger on close.
 
-## Copy catalogue (T061, NFR-005)
+## Translation catalogue (T061, T210–T240, NFR-005, FR-001–FR-013)
 
-NFR-005 requires all user-facing copy to be Polish and centralised so it can be translated
-later. The single source is `libs/copy` (`@booking/copy`), a `COPY` object of literal strings
-and a few interpolation functions (`COPY.footer.meta(version)`, `COPY.validation.nameRange(3,125)`).
-A component imports `COPY` and binds it; it never types a Polish literal into a template.
+NFR-005 required all user-facing copy to be Polish and centralised so it could be translated
+later. T061 built that catalogue as a TypeScript object (`libs/copy`, `COPY`); the
+internationalisation feature (004) then made the copy **runtime data** and translated it, so
+`libs/copy` no longer exists and there is no `@booking/copy` alias.
 
-- **The catalogue is the only source of Polish in `apps/ui`.** `no-hardcoded-copy.spec.ts`
-  walks `apps/ui/src`, skips specs and the catalogue, and fails on any Polish character outside
-  a comment. It is a *Polish-character* check, not a "looks like a sentence" check: it is exact
-  and cannot be argued with.
-- **A display vocabulary that a screen labels lives in the catalogue too** (`COPY.labels`,
-  `COPY.users.roleLabels`, the tab labels). `CITY_LABELS` is the one exception: it labels the
-  selectors and lives in `libs/models/building.model.ts`, because the server's reporting
-  vocabulary is a different audience (see `reporting/`). It is display decoration only — cities
-  are data (spec.md §9 open question 1, FR-007), so it is a `Record<string, string>` that falls
-  through to the stored value, not the compiled-in `CITIES` list it used to sit beside.
+- **The catalogue is JSON, loaded at runtime.** `apps/ui/src/assets/i18n/pl.json` and `en.json`
+  are served as static assets and loaded by `@ngx-translate/core` through
+  `provideTranslateHttpLoader({prefix: '/assets/i18n/', suffix: '.json'})`. One build serves every
+  language, so a language can be added or corrected without a rebuild (FR-001, FR-013). The
+  language list itself — the codes, the endonyms, the default — is `libs/i18n/src/lib/languages.ts`
+  (`LANGUAGES`, `DEFAULT_LANGUAGE`), the single source the switch, the store and the completeness
+  spec all read.
+- **A component reads a key, never a literal.** The template uses the pipe
+  (`{{ 'nav.calendar' | translate }}`); a `.ts` that needs a string uses `t('key')` from
+  `injectTranslate()`. A pure feature module (`bookings-table.ts`, `calendar-events.ts`) cannot
+  inject, so it takes a `TranslateFn` parameter and the component supplies `injectTranslate()` —
+  the module stays pure and the string is still the active language's.
+- **A switch re-renders without a manual subscription.** The pipe is marked dirty by
+  ngx-translate's language-change event, so the zoneless app re-renders on a switch; a derived
+  label in a `computed()` re-runs because `TranslateService.instant` reads the service's signals.
+  `LanguageStore` owns only the choice, its persistence and `<html lang>` — not the strings.
+- **`CITY_LABELS` is not a catalogue entry.** It labels the screen selectors and lives in
+  `libs/models/building.model.ts`, because the server's reporting vocabulary is a different
+  audience (see `reporting/`). It is display decoration only — cities are data (spec.md §9 open
+  question 1, FR-007), so it is a `Record<string, string>` that falls through to the stored value,
+  not the compiled-in `CITIES` list it used to sit beside.
 - **English is not caught by the guard**, but the rendered-component specs pin the strings that
   matter; a stray `Previous` is a copy defect, not a localisation one.
+
+### The two guards: completeness and the literal check
+
+The move from a TypeScript object to JSON traded a compile-time guarantee for a runtime one —
+`COPY.calendar.title` failed the build if `title` were absent, and a JSON key does not. Two specs
+replace that guarantee, and both must be understood before the catalogue is edited:
+
+- **`libs/i18n/src/lib/translations.spec.ts` is key completeness (FR-006, SC-003).** It reads the
+  *shipped* `pl.json` and `en.json`, flattens both to dotted keys, and asserts that every default
+  key is present in every other language, that no extra key exists (a translation for a string no
+  screen renders is dead data), and that every value with a `{{param}}` keeps the same parameter
+  set. A partial translation therefore fails CI rather than falling back silently. It also
+  asserts no value is empty, which would render as a blank string.
+- **`apps/ui/src/app/no-hardcoded-copy.spec.ts` is the literal check (T240, FR-012).** Its first
+  version flagged a Polish *character* outside the catalogue, which was right while every string
+  was Polish and the catalogue was TypeScript. Both have changed, so the rule is retargeted to a
+  language-agnostic **user-facing literal**: it flags a static text node (`>Some text<`) and a
+  literal for an attribute a user reads or hears (`aria-label`, `placeholder`, `title`, `alt`),
+  while accepting an interpolation, a binding and a structural block (`@if`, `@for`). It reads
+  only the `template: \`...\`` regions — a whole-file scan flags TypeScript generics
+  (`Array<string>`) as text — and it is *stricter* than the character check it replaced, because
+  an English literal is exactly what the old one could not see. Specs are exempt, since a spec
+  legitimately quotes copy.
+
+### Adding a language
+
+Adding a language is **two edits and no code change** (FR-013):
+
+1. Add an entry to `LANGUAGES` in `libs/i18n/src/lib/languages.ts` (`{code, label, default}`).
+   The code is the IETF tag used as the file name and the `lang` attribute; the label is the
+   endonym, so a speaker recognises it in the switch.
+2. Add `apps/ui/src/assets/i18n/<code>.json` with every key the default language declares. The
+   completeness spec fails the build until it does.
+
+The switch (`LanguageSwitchComponent`) renders `LanguageStore.available`, which reads `LANGUAGES`,
+so it picks up the new language with no change to the component. The default language is the
+entry flagged `default`, not a scattered assumption — a spec asserts the flag and
+`DEFAULT_LANGUAGE` agree.
 
 ### API error localisation: the UI owns the wording
 
@@ -356,18 +405,18 @@ a `409` answers a single English sentence. The UI must not render either.
 
 - **A `422` message is used to locate the field, not to render it.** `mapServerErrors` matches
   the English message to the field it names (`city must be longer...` → `city`) and shows the
-  UI's own Polish (`COPY.errors.fieldInvalid`); a message that names no field becomes the
-  generic prompt (`COPY.errors.generic`). The server's sentence is discarded.
+  UI's own copy (`errors.fieldInvalid`); a message that names no field becomes the generic prompt
+  (`errors.generic`). The server's sentence is discarded.
 - **A `409` is keyed by its status, not its body.** The clients delete conflict and the
-  last-administrator rule both show a Polish message chosen from the status; the English body is
+  last-administrator rule both show a message chosen from the status; the English body is
   ignored.
 - **The server-error page shows the HTTP status text, never a cause.** That is deliberate: a
   `5xx` is opaque by contract (`ErrorExceptionFilter`), and the page's own prompt and fallback
-  are Polish.
+  are from the catalogue.
 
 So the strategy is: **the API returns English and a status code; the UI maps the status (or the
-named field) to Polish copy.** The API is never asked to produce Polish, and a Polish sentence
-never travels in a response body.
+named field) to a catalogue key.** The API is never asked to produce Polish, and a Polish
+sentence never travels in a response body.
 
 ### CSV labels and e-mail subjects live server-side, on purpose
 
