@@ -1150,6 +1150,76 @@ Three things that are easy to get wrong:
   retired facilities for the same reason: withholding them would make a deactivation invisible in
   the admin area.
 
+## Internationalisation and translation (T210–T263)
+
+The copy is **runtime data**, not a compiled-in catalogue: `apps/ui/src/assets/i18n/pl.json`
+and `en.json` are served as static assets and loaded by `@ngx-translate/core`. One build serves
+every language, so a language can be corrected or added without a rebuild. This replaced
+`libs/copy` (`@booking/copy`, the `COPY` object of T061), which no longer exists.
+
+- **The language list is `LANGUAGES` in `libs/i18n/src/lib/languages.ts`** — the codes, the
+  endonyms and the `default` flag — and it is the single source the switch, `LanguageStore` and
+  the completeness spec all read. `DEFAULT_LANGUAGE` (`'pl'`) is a literal so callers can pass it
+  to `TranslateService.use` without a non-null assertion, and a spec asserts it is the entry
+  flagged `default`, so the two cannot drift.
+- **Adding a language is two edits and no code change (FR-013).** One entry in `LANGUAGES`, one
+  `<code>.json` with every key the default language declares. The switch renders
+  `LanguageStore.available`, so it picks the language up with no component change.
+- **A component reads a key, never a literal.** The template uses the pipe
+  (`{{ 'nav.calendar' | translate }}`); a `.ts` that needs a string uses `t('key')` from
+  `injectTranslate()`. A pure feature module (`bookings-table.ts`, `calendar-events.ts`) cannot
+  inject, so it takes a `TranslateFn` parameter and the component supplies `injectTranslate()` —
+  the module stays pure and the string is still the active language's. `TranslateService.instant`
+  reads the service's signals, so a `computed()` that calls the `TranslateFn` re-runs when the
+  language loads; that is why a derived label updates on a switch without a manual subscription.
+- **`LanguageStore` owns the choice, not the strings.** `set(code)` writes the signal, persists
+  to `localStorage` under `book-space.language`, mirrors the code onto `<html lang>` and awaits
+  the file load; the translation strings are read through the pipe, which ngx-translate marks
+  dirty on the change event (the zoneless requirement, satisfied without a manual signal). A
+  failed load is swallowed, like `AuthService.restore()`: the app stays usable on the fallback
+  language rather than aborting bootstrap. An unsupported stored code falls back to the default
+  rather than requesting a `<code>.json` that does not exist.
+- **Two specs are the guarantee a JSON catalogue cannot give at compile time.** The move from a
+  TypeScript object to JSON traded `COPY.calendar.title`-fails-the-build for a runtime check, and
+  these are the replacement:
+  - `libs/i18n/src/lib/translations.spec.ts` is **key completeness (FR-006, SC-003)**. It reads
+    the *shipped* `pl.json` and `en.json`, flattens both to dotted keys, and asserts every
+    default key is present in every other language, that no extra key exists (a translation for a
+    string no screen renders is dead data), and that every `{{param}}` set survives. It also
+    asserts no value is empty. A partial translation fails CI rather than falling back silently.
+  - `apps/ui/src/app/no-hardcoded-copy.spec.ts` is the **retargeted literal guard (T240,
+    FR-012)** — see the Angular-UI section above for the shape.
+- **The `i18n` project is a shared library and CI must name it.** Like `date-time` and
+  `booking-rules`, a change to `libs/i18n` is *not* covered by `run-many --projects=server,ui`;
+  `ci.yml`'s unit-test and coverage steps name `i18n` explicitly, so a change to the language
+  store or the catalogue cannot pass unnoticed.
+- **The server-side artefacts that carry Polish stay Polish (decision 2, FR-015).** The CSV
+  export, the printable report and the notification e-mail bodies are read outside the browser
+  (a spreadsheet, an inbox), so they cannot use the UI's translation layer; translating them
+  would need a server-side catalogue and a per-request locale for no user benefit. The UI's
+  translation layer is the only i18n surface — there is no server-side translation file and no
+  `Accept-Language` negotiation. The one exception is the e-mail **signature**, which becomes the
+  configured `TENANT_NAME` (a hardcoded brand is a de-branding defect regardless of language).
+  This is documented in `ui-conventions.md` and `README.md` so the next reader does not "fix" it
+  by translating the CSV.
+- **The documentation keeps the legacy provenance (decision 3).** The product is de-branded
+  (FR-007), but `README.md`, `AGENTS.md` and `specs/` still name the legacy origin and the
+  previous tenant — the two are different audiences and are treated differently on purpose.
+  `tools/scan-brand.js` scans `apps`/`libs`/`tools` and deliberately **not** those three, so the
+  provenance is allowed to stay while a brand in shipped source fails CI.
+- **The tenant identity is configuration, and the UI hides an absent value.** The product carries
+  no tenant's name, address or URL: `GET /api/tenant` serves `ITenant` from the `TENANT_*`
+  settings (`libs/models/tenant.model.ts`, `DEFAULT_TENANT_NAME = 'Book Space'`). An absent or
+  blank value is `null` and the UI hides the element rather than rendering an empty link, and
+  `TENANT_STAFF_EMAIL` is server-only — the public read never publishes the staff inbox. See the
+  tenant bullet in the UI conventions section for the store's fail-open initializer.
+- **The Summary deny-list is gone with the de-branding (#195), not merely emptied.** The legacy
+  default named a real person at the previous tenant, so a per-account Summary exception is both
+  a privacy leak in a generic product and a privilege decision that cannot be reasoned about from
+  the role alone. `canSeeSummaryTab` is office/administrator and nothing else,
+  `capabilitiesFor(role)` takes no second argument, and `reporting/deny-list.ts` no longer exists
+  — the full rationale is in the constraints section below. Do not reintroduce it as a setting.
+
 ## Operations, backup and retention (T060)
 
 - **`docs/operations.md` is the runbook; `tools/backup` is the tool.** The cadence (daily full
