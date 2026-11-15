@@ -70,7 +70,7 @@ public registration:
 
 ```bash
 BOOTSTRAP_ADMIN_PASSWORD='<at least 6 characters>' \
-  yarn nx run bootstrap-admin:run -- --target "$DB_URI" --email admin@sisk.pl
+  npx nx run bootstrap-admin:run -- --target "$DB_URI" --email admin@example.com
 ```
 
 The tool hashes the password through the users schema's `pre('save')` hook, the same path the

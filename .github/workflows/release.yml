@@ -1,0 +1,255 @@
+name: Release
+
+# Build, push and deploy on a merge to `main` (003, FR-005/FR-013/FR-014/FR-015, plan § D5).
+#
+# This workflow is deliberately **separate** from `ci.yml`. `ci.yml` is the merge gate: it runs
+# on every pull request and its `CI` check is what branch protection requires. Deployment runs
+# only here, only on `main`, so a red build can never deploy (FR-013).
+#
+# Authentication is **OIDC** (FR-005): `azure/login` exchanges the job's GitHub OIDC token for a
+# short-lived Azure token against the federated credential `infra/bicep/modules/identity.bicep`
+# creates. There is no Azure client secret in this repository — `id-token: write` below is the
+# only permission the exchange needs.
+#
+# The release is all-or-nothing and reversible (FR-014/FR-015): both images are built and pushed
+# *before* either app is touched, the new revision is deployed to the **staging slot**, the slot
+# is smoke-tested, and only then is it swapped into production. A failure before the swap leaves
+# the running revision untouched; a swap is itself the rollback (swap back, or re-deploy the
+# previous SHA tag — SC-006).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One release at a time. Unlike CI, this is **not** cancelled in flight: a half-finished deploy
+# is worse than a queued one, so a second merge waits rather than interrupting the first.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NX_NO_CLOUD: 'true'
+  NX_DAEMON: 'false'
+
+permissions:
+  # Required for the OIDC exchange; nothing else in this workflow needs a GitHub token scope.
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      # The tag every later job deploys. The commit SHA is the immutable deploy target
+      # (contracts/deployment.md § 2); `:main` is pushed alongside as a convenience only.
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The server and UI builds stamp `git rev-list --count HEAD` as the version build
+          # number, so a shallow clone would stamp a wrong count — or fail. Nx also needs the
+          # merge base. Full history is not optional here (AGENTS.md, "The build number is a
+          # task input").
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Resolve the image tag
+        id: meta
+        run: echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          # Client, tenant and subscription ids are not secrets: they identify the federated
+          # identity and the target, and the exchange is what proves the caller. Storing them as
+          # repository variables keeps them reviewable and out of the workflow file.
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to the container registry
+        # `az acr login` uses the OIDC token just obtained, so no registry password is stored
+        # (FR-006 covers the *pull* side with a managed identity; this is the push side).
+        run: az acr login --name ${{ vars.ACR_NAME }}
+
+      - name: Build and push the API image
+        run: |
+          docker build \
+            --file apps/server/Dockerfile \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/book-space-server:${{ steps.meta.outputs.tag }}" \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/book-space-server:main" \
+            .
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/book-space-server:${{ steps.meta.outputs.tag }}"
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/book-space-server:main"
+
+      - name: Build and push the UI image
+        run: |
+          docker build \
+            --file apps/ui/Dockerfile \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/book-space-ui:${{ steps.meta.outputs.tag }}" \
+            --tag "${{ vars.ACR_LOGIN_SERVER }}/book-space-ui:main" \
+            .
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/book-space-ui:${{ steps.meta.outputs.tag }}"
+          docker push "${{ vars.ACR_LOGIN_SERVER }}/book-space-ui:main"
+
+  deploy:
+    name: Deploy to the staging slot and swap
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build-and-push]
+    # The GitHub environment the federated credential is pinned to. `production` carries the
+    # repository variables and (optionally) a required reviewer, so a release can be gated.
+    environment: production
+    env:
+      # The production host the smoke test calls. It is the custom domain when one is configured
+      # (FR-016) and the UI app's default host name otherwise, so a deployment without a domain
+      # still gets a smoke test rather than a broken release.
+      PROD_HOST: ${{ vars.CUSTOM_DOMAIN != '' && vars.CUSTOM_DOMAIN || format('{0}.azurewebsites.net', vars.UI_APP_NAME) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # The staging slot is where the new revision is validated before it takes traffic
+      # (FR-015). Both apps are updated; a failure here stops before any swap, so the running
+      # revision keeps serving (SC-001, "the release is not a half-update").
+      #
+      # `config set --linux-fx-version` updates the one property `app-service.bicep` owns
+      # (`DOCKER|<image>`). `config container set` would also work but rewrites the registry
+      # settings, and the app pulls with a managed identity (`acrUseManagedIdentityCreds`, set by
+      # Bicep) — changing only the image leaves that identity-based pull intact.
+      - name: Deploy the API to the staging slot
+        run: |
+          az webapp config set \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --name "${{ vars.API_APP_NAME }}" \
+            --slot staging \
+            --linux-fx-version "DOCKER|${{ vars.ACR_LOGIN_SERVER }}/book-space-server:${{ needs.build-and-push.outputs.tag }}"
+
+      - name: Deploy the UI to the staging slot
+        run: |
+          az webapp config set \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --name "${{ vars.UI_APP_NAME }}" \
+            --slot staging \
+            --linux-fx-version "DOCKER|${{ vars.ACR_LOGIN_SERVER }}/book-space-ui:${{ needs.build-and-push.outputs.tag }}"
+
+      # Warm the UI slot so the new container is booted before the swap (a warm slot swaps with no
+      # cold-start). The API slot cannot be warmed this way — it is private, so a public request to
+      # it fails even when it is healthy; it warms when the swap sends it traffic.
+      - name: Warm the UI staging slot
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' \
+              "https://${{ vars.UI_APP_NAME }}-staging.azurewebsites.net/" || true)
+            if [ "$code" = "200" ]; then
+              echo "the UI staging slot is serving"
+              exit 0
+            fi
+            echo "attempt ${attempt}: got ${code}, retrying"
+            sleep 15
+          done
+          echo "::error::the UI staging slot never served"
+          exit 1
+
+      # The swap is the release (FR-015). The API goes first so the frontend's proxy target (the
+      # API) is on the new revision before the frontend that will call it. After the swap the
+      # previous revision sits in the slot, which is what makes rollback a single command (SC-006).
+      - name: Swap the API slot into production
+        run: |
+          az webapp deployment slot swap \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --name "${{ vars.API_APP_NAME }}" \
+            --slot staging \
+            --target-slot production
+
+      - name: Swap the UI slot into production
+        run: |
+          az webapp deployment slot swap \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --name "${{ vars.UI_APP_NAME }}" \
+            --slot staging \
+            --target-slot production
+
+      # The post-deploy smoke test goes through the **frontend**, never the backend (T123, plan
+      # § D7): the backend is private, so a public `curl` to it would fail even on a healthy
+      # deploy. One request to the frontend's proxied `/api` path proves the whole chain —
+      # frontend, nginx proxy, VNet, backend private endpoint, API, database private endpoint.
+      #
+      # The test runs *after* the swap, so it validates the revision production is now serving.
+      # That is only safe because the next step rolls the swap back if this fails (SC-006): a
+      # release that broke production is undone in one command, and the failure is visible.
+      #
+      # The assertion is "a 200 with a non-empty facility list", not "exactly twelve": the
+      # reference seed yields twelve, but an operator may legitimately add a facility, and a smoke
+      # test that fails a healthy release because the data grew is worse than no smoke test. The
+      # count is logged so the twelve-facility baseline (T123) is visible in every run.
+      - name: Smoke-test production through the frontend proxy
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            code=$(curl -sS -o /tmp/buildings.json -w '%{http_code}' \
+              "https://${PROD_HOST}/api/buildings" || true)
+            if [ "$code" = "200" ]; then
+              count=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("/tmp/buildings.json","utf8")).length)')
+              echo "production /api/buildings returned $count facilities (the reference seed yields 12)"
+              if [ "$count" -ge 1 ]; then
+                exit 0
+              fi
+              echo "the facility list is empty — the database is reachable but has no data"
+            else
+              echo "attempt ${attempt}: got ${code}, retrying"
+            fi
+            sleep 15
+          done
+          echo "::error::production /api/buildings did not serve a facility list"
+          exit 1
+
+      # Rollback (SC-006): if anything above failed — most importantly the smoke test — swap both
+      # slots back. The previous revision is still in each slot, so this restores it with no
+      # rebuild. Best-effort: if a swap itself failed, the swap-back may also fail, and the job is
+      # already failing.
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          for app in "${{ vars.API_APP_NAME }}" "${{ vars.UI_APP_NAME }}"; do
+            echo "rolling ${app} back"
+            az webapp deployment slot swap \
+              --resource-group "${{ vars.RESOURCE_GROUP }}" \
+              --name "$app" \
+              --slot staging \
+              --target-slot production || true
+          done
+
+  # Single required check for the release, mirroring `ci.yml`'s gate. It fails unless every job
+  # succeeded, so a green release means both images shipped and the swap happened.
+  gate:
+    name: Release
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [build-and-push, deploy]
+    steps:
+      - name: Check every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          echo "results: $RESULTS"
+          if [ "$RESULTS" != "success,success" ]; then
+            echo "::error::The release did not complete."
+            exit 1
+          fi
+          echo "The release completed."

@@ -92,6 +92,15 @@ describe('ClientSchema validation', () => {
     expect(indexes).toEqual(expect.arrayContaining([[{name: 1}, expect.anything()]]));
   });
 
+  it('declares the {name, _id} index the clients list sorts by', () => {
+    // The list read sorts by `{name: 1, _id: 1}` (`client.service.ts`). An index on `{name: 1}`
+    // alone cannot serve that sort — the `_id` tie-break is missing — so MongoDB blocks with an
+    // in-memory SORT over a COLLSCAN (verified against a real `mongod` with `explain`). This
+    // pins the compound key, which is what `data-model.md` § 2 names.
+    const indexes = ClientSchema.indexes();
+    expect(indexes).toEqual(expect.arrayContaining([[{name: 1, _id: 1}, expect.anything()]]));
+  });
+
   it('stamps createdAt and updatedAt when timestamps are enabled', async () => {
     // `@Schema({timestamps: true})` is what the audit fields depend on. Mongoose applies
     // them on save; without a database the document still carries the path definitions.

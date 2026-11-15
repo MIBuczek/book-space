@@ -7,7 +7,7 @@
     "run": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "ts-node --transpile-only --project tools/backup/tsconfig.json tools/backup/src/main.ts"
+        "command": "ts-node --transpile-only -r tsconfig-paths/register --project tools/backup/tsconfig.json tools/backup/src/main.ts"
       }
     },
     "test": {

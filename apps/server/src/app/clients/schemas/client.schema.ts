@@ -130,3 +130,14 @@ export const ClientSchema = SchemaFactory.createForClass(Client);
  * index or it is a collection scan once the client count grows.
  */
 ClientSchema.index({name: 1});
+
+/**
+ * The clients-list read shape (FR-043, data-model.md § 2): the list sorts by
+ * `{name: 1, _id: 1}` (`client.service.ts`), so the index has to carry the sort key in that
+ * order or MongoDB falls back to a blocking in-memory `SORT` over a `COLLSCAN`. `name` alone
+ * is not enough — an index on `{name: 1}` cannot supply the `_id` tie-break, which was
+ * verified against a real `mongod` with `explain('queryPlanner')`. The `_id` is the same
+ * total-order tie-break the booking recency index uses: two clients with the same name must
+ * not swap between pages.
+ */
+ClientSchema.index({name: 1, _id: 1});

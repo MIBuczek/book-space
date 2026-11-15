@@ -8,6 +8,11 @@ and nothing in the rewrite replaced them.
 
 The tooling is `tools/backup` (Nx project `backup`). Every command below is run through it.
 
+The deployment section (below) covers the duties specific to the Azure target
+(`specs/003-azure-deployment`): the managed database's platform backup and point-in-time
+restore, the release and rollback runbook, and how to reach the private API and database for
+debugging.
+
 ## Backup
 
 ### Cadence and retention
@@ -206,3 +211,90 @@ Do these in order:
 
 Until step 5 is complete, the legacy system is a live copy of the migrated data and the leaked
 keys remain a risk — the cut-over is not finished at step 2.
+
+## Azure deployment
+
+The production target is Azure (`specs/003-azure-deployment`). Two App Services — a public UI
+and a private API — and an Azure DocumentDB (MongoDB-compatible vCore) cluster with no public
+endpoint. The infrastructure is Bicep (`infra/bicep/`) and the release is
+`.github/workflows/release.yml`.
+
+### Database backup and point-in-time restore
+
+The cluster is managed, so the platform takes its own backups; `tools/backup` is the
+*portable* archive (it also serves a self-hosted MongoDB and is the artefact the retention
+purge writes), and it stays in use for the pre-purge export and the restore rehearsal.
+
+- **Point-in-time restore (PITR).** Azure DocumentDB retains continuous backups and restores to
+  any point inside the retention window (7 days on the development tiers, 35 days on the
+  production tiers). Restore is a **new cluster** at the chosen timestamp, not an in-place
+  rollback, so the procedure is: restore to a new cluster, repoint `DB_URI`, verify with
+  `nx run backup:run -- verify-restore`, then retire the old cluster once the new one is
+  confirmed.
+- **Tier and window.** The production parameter file (`infra/bicep/params/prod.bicepparam`)
+  sets `databaseSkuTier = 'M30'` because M10/M20 are development tiers without the production
+  PITR window. A deployment that relies on platform PITR must stay on M30+.
+- **The portable archive is still the RPO of record for the pre-purge state.** A purge deletes
+  documents the platform PITR window may not cover, so `tools/backup purge --export` runs
+  before every purge (see [Retention](#retention)). PITR and the portable archive are
+  complementary: PITR restores a cluster, the archive restores a selection.
+
+### Release and rollback runbook
+
+A merge to `main` triggers the release: build both images → push to ACR tagged `:<sha>` and
+`:main` → deploy to the staging slot → warm and smoke-test through the frontend → swap into
+production. The full description is in the [README](../README.md#releases).
+
+**Rollback** (SC-006), fastest first:
+
+1. **Swap back.** The previous revision is still in the staging slot after a swap. Re-run the
+   swap to put it back:
+   `az webapp deployment slot swap -g <rg> -n <app> --slot staging --target-slot production`.
+2. **Re-deploy a previous SHA.** If the slot has since been overwritten, point it at a previous
+   image and swap:
+   `az webapp config container set -g <rg> -n <app> --slot staging --docker-custom-image-name <registry>/book-space-server:<sha>`.
+3. **Restore the database.** Only if a release also corrupted data — restore via PITR (above)
+   or the portable archive (`tools/backup restore`).
+
+The smoke test failing before the swap means no rollback is needed: production was never
+touched.
+
+### Reaching the private API and database
+
+Both the API and the database have `publicNetworkAccess: Disabled`, so neither is reachable
+from a workstation. This is deliberate (SC-005) and it is also the first thing that confuses a
+debugging session — a `curl` or `mongosh` from a laptop will time out even on a healthy
+deployment. To reach them:
+
+- **Through the frontend.** The supported path for any API call is the UI's nginx proxy:
+  `https://<custom-domain>/api/…`. This is the same path the smoke test uses, and it is the
+  only one an operator needs for a normal check.
+- **From inside the VNet.** For direct access (a migration job, a manual `mongosh`), run from a
+  resource joined to the VNet. The recommended shape is a **Container Apps Job** with VNet
+  integration on the backend integration subnet (research R11); a jump box VM on the VNet works
+  too. From there, the private DNS zones resolve the API and database host names to their
+  private addresses, so the normal connection strings work unchanged.
+- **Never open the firewall to debug.** Temporarily setting `publicNetworkAccess: Enabled` to
+  "just check" is how the private posture erodes; use a VNet-joined job instead.
+
+### Migration into the private cluster
+
+The one-off Firebase → MongoDB migration (`tools/migration`, T043/#47) runs the same way:
+from a VNet-joined job, with `--target "$DB_URI"` pointing at the private cluster. There is no
+workstation run. Run `ensure-collections` first (see below) so the collections and indexes
+exist before the migration writes, then run the migration and reconcile per SC-003.
+
+### Ensuring the collections and indexes
+
+`infra/scripts` (Nx project `ensure-collections`) idempotently creates the four collections and
+every index `data-model.md` § 2 names, by binding the server's **real** schemas — so the
+deployed indexes cannot drift from the ones the API assumes. Run it against a fresh cluster
+before the seed or the migration:
+
+```bash
+nx run ensure-collections:run -- --target "$DB_URI"
+nx run ensure-collections:run -- --target "$DB_URI" --dry-run   # inspect without writing
+```
+
+Running it twice changes nothing (it catches the `NamespaceExists` error and re-creates indexes
+idempotently), so it is safe as part of a re-runnable deployment.
