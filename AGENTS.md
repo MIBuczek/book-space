@@ -1268,6 +1268,104 @@ every language, so a language can be corrected or added without a rebuild. This 
   (the same trap `apps/server/src/testing/` documents). The spec's injected `connect` passes the
   escape hatch; `main.ts` uses the plain one.
 
+## Azure deployment (003)
+
+`specs/003-azure-deployment/` is the specification (spec, plan, research, contracts). The
+infrastructure is `infra/bicep/` and the release is `.github/workflows/release.yml`.
+
+- **The database is "Azure DocumentDB" (vCore), not the RU-based "Cosmos DB for MongoDB".** The
+  two are separate services: DocumentDB uses dedicated vCore clusters, the RU service uses
+  request-unit throughput. The API's data code is unchanged — only `DB_URI` (and the migration's
+  `--target`) point at it — because the connection string is a normal `mongodb+srv://` URI the
+  existing `env.validation.ts` regex already accepts. Do not reintroduce the RU service's
+  constraints (the "unique index only on an empty collection" rule, the `$regex` scan penalty):
+  vCore does not have them, and the earlier draft of the plan was shaped by them (research R2).
+- **The private topology is the point, not a hardening option.** The API and the database both
+  have `publicNetworkAccess: Disabled` and are reached only through private endpoints; the UI is
+  the only public surface and its nginx proxy is the only caller of the API. Three subnet types
+  are involved and Azure forbids sharing them: VNet integration, private endpoint, and — because
+  a slot is a separate app — one integration subnet **per slot** as well. `network.bicep` splits
+  them; a deployment that reuses a subnet is rejected at apply time, which is why the split is in
+  the module rather than left to the portal (research R4).
+- **A private backend cannot be smoke-tested directly.** The release's post-deploy check goes
+  through the **frontend** (`GET <host>/api/buildings`), because a public `curl` to the API host
+  name fails even on a healthy deploy (SC-005). If a smoke test is ever "fixed" to hit the API
+  host name, it will fail forever.
+- **Slots require Standard or higher, and a slot needs its own outbound path.** The plan SKU is
+  a parameter (`appServicePlanSku`, `P0v3` in dev, `P1v3` in prod); a `B1` plan cannot have slots,
+  so a dev deployment on `B1` would not exercise the release path. A slot starts its own
+  container and the API container connects to the private database on boot, so each slot has its
+  own VNet integration subnet and its own private endpoint if it needs one (research R7).
+- **GitHub → Azure is OIDC, and there is no Azure secret in the repository.** `release.yml` uses
+  `azure/login` with `id-token: write` against the federated credential `identity.bicep` creates.
+  The client/tenant/subscription ids are repository **variables**, not secrets — they identify the
+  federated identity and the exchange is what proves the caller (research R5, FR-005). A stored
+  client secret would not fail `tools/scan-bundle.js`, but it contradicts the posture the spec
+  chose, so do not add one "for simplicity".
+- **`release.yml` is separate from `ci.yml`.** `ci.yml` is the merge gate and its single `CI`
+  check is what branch protection requires (FR-013); deployment runs only on a `push` to `main`.
+  Merging them would let a release path be skipped by a check that is not required, or make the
+  merge gate depend on Azure credentials. The release has its own `Release` gate job that
+  aggregates both jobs with `if: always()`.
+- **Region defaults to Poland Central, and it is a parameter.** `location` in `main.bicep` (and
+  the params files) defaults to `polandcentral`; the data is personal data and the users are in
+  Poland, so the region is a data-residency decision the operator can review and change without
+  editing a module (FR-017, research R9).
+- **`infra/scripts` (`ensure-collections`) binds the server's real schemas; it is not a
+  hand-written index list.** The tool creates the collections and every index by importing
+  `SchemaFactory.createForClass(...)` through the `@server/*` aliases and calling
+  `createIndexes()`, so the deployed indexes cannot drift from the ones the API assumes. Like
+  `tools/migration`, it needs the `@nx/enforce-module-boundaries` exception scoped to its own
+  `eslint.config.mjs`, and its `connect` is injected so a spec can pass
+  `runtimeAdapters: {os}` under Jest's `vm` sandbox.
+- **A tool's `run` target needs `-r tsconfig-paths/register`, and a unit test does not prove it.**
+  The `@server/*` aliases are a TypeScript feature; `ts-node` leaves the specifier in the emitted
+  `require`, so without `tsconfig-paths/register` the tool dies with `Cannot find module
+  '@server/…'`. `nx test` runs through `ts-jest`, whose `moduleNameMapper` resolves the aliases —
+  so **the unit suite passes while `nx run <tool>:run` is broken**, which is how the bug shipped
+  once. `infra/scripts/src/lib/run-target.spec.ts` guards it two ways: it asserts every tool's
+  `run` command carries the flag, and it spawns `ts-node` with and without the flag to prove the
+  flag is load-bearing (not decoration).
+- **A new `infra/` project is an Nx project, and CI must name it.** `ensure-collections` declares
+  `run`/`test`/`lint` and is named in `ci.yml`'s `run-many --projects=` list **and** the coverage
+  summary table (`coverage/infra/scripts/coverage-summary.json`) — the same trap `migration`,
+  `backup`, `bootstrap-admin`, `date-time`, `booking-rules`, `reporting` and `version` document.
+  A project added to one list and not the other either never runs in CI or never reports.
+- **`yarn nx run <tool>:run -- --target …` silently drops `--target`; use `npx nx` or bare `nx`.**
+  Yarn 1 removes the `--` separator before it runs the `nx` binary, and `--target` is then read as
+  Nx's *own* option (`nx run-many --target=…`) and consumed, so the tool never sees it and exits
+  with `Usage: … --target <mongodb-uri>`. `--source`, `--dry-run` and every other flag are
+  forwarded normally — only `--target` collides, and every tool here takes one. The documented
+  form is therefore `npx nx run ensure-collections:run -- --target "$DB_URI"` (or bare `nx run
+  …`); a `yarn nx run … -- --target …` line looks identical and fails. This was latent in the
+  README, both quickstarts and the bootstrap-admin/migration/backup examples — a unit test cannot
+  catch it, because `nx test` never runs the `run` target's CLI. When adding a tool, invoke it
+  once by hand through the documented command before writing the docs.
+- **The `{name, _id}` client index is required, and `{name}` alone is not it.** The clients list
+  sorts by `{name: 1, _id: 1}`; an index on `{name: 1}` cannot supply the `_id` tie-break, so
+  MongoDB blocks with an in-memory `SORT` over a `COLLSCAN` — verified with
+  `explain('queryPlanner')` against a real `mongod`. `data-model.md` § 2 and `AGENTS.md` both
+  named the compound index while the schema declared only `{name: 1}`; `client.schema.ts` now
+  declares both, and the tool's spec asserts the compound key is created.
+- **Mongoose writes on connect: `autoCreate`/`autoIndex` default to `true`, so a "read-only"
+  tool must turn both off.** Compiling a model builds its indexes in the background, and building
+  an index on a collection that does not exist *creates the collection* — so a connection that
+  only binds models still writes. `ensure-collections`' `--dry-run` was therefore not read-only,
+  and the background build raced the tool's explicit `createIndexes()`, which made the dry-run
+  assertion flake (it failed roughly one run in several, and passed alone). `openConnection`
+  (`infra/scripts/src/lib/models.ts`) sets `{autoCreate: false, autoIndex: false}` on the
+  connection; both are required — `autoIndex` alone still leaves `autoCreate`, and vice versa. The
+  per-model options (`connection.model(name, schema, collection, {autoIndex: false})`) do **not**
+  take effect for this in Mongoose 9; the connection-level option does. `cli.spec.ts`'s "binding
+  the models creates nothing on its own" pins it, and it fails if the option is dropped. The same
+  trap applies to `tools/migration` and `tools/backup` if either ever grows a dry-run.
+- **A `.bicepparam` reads secrets from the environment, never from the file.** `dev`/`prod`
+  parameter files use `readEnvironmentVariable('DOCUMENTDB_ADMIN_PASSWORD')` and the GitHub
+  coordinates, because a committed password is the leak the private topology exists to avoid. The
+  app settings (`DB_URI`, `JWT_SECRET`, `MAIL_*`) are applied by the release as settings, not
+  written into a parameter file, so the connection string (which carries the password) never
+  enters a committed file.
+
 ## Logging
 
 `LoggingModule` is registered once in `AppModule` and applies to every route, so a new

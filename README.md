@@ -159,7 +159,7 @@ hook — the same path the API uses, so the stored value is a `bcrypt` hash:
 
 ```bash
 BOOTSTRAP_ADMIN_PASSWORD='<at least 6 characters>' \
-  yarn nx run bootstrap-admin:run -- \
+  npx nx run bootstrap-admin:run -- \
     --target "$DB_URI" \
     --email admin@example.com \
     --first-name Ada --last-name Admin
@@ -209,7 +209,7 @@ loudly rather than stamping a wrong build number.
 
 ```bash
 yarn lint                                      # ESLint across every project (flat config)
-yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,i18n --configuration=ci
+yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,ensure-collections,i18n --configuration=ci
 yarn build:all                                 # production build of every affected project
 yarn nx e2e server-e2e                         # API end-to-end tests
 yarn nx e2e ui-e2e                             # UI end-to-end tests (Cypress)
@@ -252,6 +252,88 @@ Environment variables for a deployment are the same keys as [Configuration](#con
 At minimum set `DB_URI` and `JWT_SECRET`; set `MAIL_*` and `TENANT_STAFF_EMAIL` to enable
 notifications, and the `TENANT_*` values to brand the deployment.
 
+### Azure (the production target)
+
+The supported production target is Azure, described by Bicep in `infra/bicep/` and driven by
+`.github/workflows/release.yml`. The specification and its decisions are in
+[`specs/003-azure-deployment`](specs/003-azure-deployment) (spec, plan, research, contracts).
+
+The topology is **private by default**:
+
+- **Two App Services.** The UI is public and the API is not — the API has
+  `publicNetworkAccess: Disabled` and is reachable only through its private endpoint. The UI's
+  nginx is the only thing that talks to it (`API_UPSTREAM` = the API's private host name), so a
+  request to the API's public host name does not reach the app.
+- **Azure DocumentDB (MongoDB-compatible vCore).** The database has no public endpoint either;
+  it is reached through its own private endpoint, which the API uses from its VNet-integration
+  subnet. This is why the API is not simply a public App Service with a connection string.
+- **Private DNS zones.** `privatelink.azurewebsites.net` and
+  `privatelink.mongocluster.cosmos.azure.com` are linked to the VNet, so the private host names
+  resolve to the private addresses from inside the network and the TLS certificate still
+  matches.
+- **Region.** Poland Central is the default (`location` in `main.bicep`, FR-017); it is a
+  parameter, so moving regions is a one-line edit in the parameter file, not a module change.
+
+Apply the infrastructure with the Bicep CLI or `az`:
+
+```bash
+export DOCUMENTDB_ADMIN_LOGIN=bookspaceadmin
+export DOCUMENTDB_ADMIN_PASSWORD='…'      # read from the environment, never committed
+export GITHUB_OWNER=<owner> GITHUB_REPO=<repo>
+
+az deployment group create \
+  --resource-group <rg> \
+  --template-file infra/bicep/main.bicep \
+  --parameters infra/bicep/params/prod.bicepparam
+```
+
+`infra/bicep/params/dev.bicepparam` is the smaller, cheaper non-production variant (a
+single-node database on the smallest tier, no custom domain). Both parameter files read the
+database password and the GitHub coordinates from the environment, because a committed
+password is the leak the whole private topology exists to avoid.
+
+### Releases
+
+`.github/workflows/release.yml` deploys on a merge to `main`. It is **separate** from
+`ci.yml`, which stays the merge gate (FR-013): a red build never deploys.
+
+1. Both images are built and pushed to Azure Container Registry, tagged with the commit SHA
+   and `:main`. The SHA tag is the immutable deploy target; `:main` is a convenience.
+2. Both apps are deployed to their **staging slot**, warmed, and smoke-tested.
+3. Only then is each slot **swapped** into production.
+
+Authentication is **OIDC**: `azure/login` exchanges the workflow's GitHub OIDC token for a
+short-lived Azure token against a federated credential (`infra/bicep/modules/identity.bicep`).
+There is no Azure client secret in the repository — the workflow needs `id-token: write` and
+nothing else.
+
+The smoke test goes **through the frontend**, never the API directly: the API is private, so a
+public `curl` to it would fail even on a healthy deploy. `GET <host>/api/buildings` exercises
+the whole chain — frontend, nginx proxy, VNet, API private endpoint, API, database private
+endpoint.
+
+### Rollback
+
+A release is reversible in two ways (SC-006):
+
+- **Swap back.** The previous revision is still in the staging slot after a swap, so
+  `az webapp deployment slot swap --slot staging --target-slot production` (run again) puts it
+  back. This is the fast path and needs no rebuild.
+- **Re-deploy a previous image.** Point the slot at a previous SHA tag with
+  `az webapp config container set --docker-custom-image-name <registry>/book-space-server:<sha>`
+  and swap it in. The ACR keeps the SHA tags, so any shipped commit is recoverable.
+
+Both are documented in [`docs/operations.md`](docs/operations.md) with the disaster-recovery
+targets.
+
+### Custom domain
+
+The UI's custom domain and managed certificate are parameters (`customDomain` in
+`infra/bicep/main.bicep`, FR-016). Set `customDomain` to the operator's host name, point a
+CNAME at the UI app's default host name, and Azure issues and renews the managed certificate.
+An empty `customDomain` skips the binding, which is what a non-production environment without
+DNS control wants.
+
 ## Branch and release convention
 
 - **Branches.** Work happens on a topic branch off `main`, named `feat/tNNN-short-slug` (the
@@ -281,9 +363,12 @@ notifications, and the `TENANT_*` values to brand the deployment.
 | `tools/migration`                    | The one-off Firebase → MongoDB migration tool                 |
 | `tools/bootstrap-admin`              | Creates the first administrator in a fresh database (FR-046)  |
 | `tools/backup`                       | Backup, restore and archived-booking retention (T060)         |
+| `infra/bicep`                        | Azure infrastructure as code (VNet, App Services, DocumentDB)  |
+| `infra/scripts`                      | The `ensure-collections` deployment tool (003 T116)           |
 | `docs/operations.md`                 | Backup cadence, retention, RPO/RTO and the legacy cut-over    |
 | `specs/001-booking-platform-rewrite` | Specification, plan and task backlog for the rewrite          |
 | `specs/002-dependency-modernization` | Specification and plan for the toolchain upgrade              |
+| `specs/003-azure-deployment`         | Specification, plan and contracts for the Azure deployment    |
 
 ## Documentation
 
@@ -301,6 +386,8 @@ notifications, and the `TENANT_*` values to brand the deployment.
   the toolchain-upgrade specification and plan.
 - [`specs/004-internationalisation`](specs/004-internationalisation) — the i18n and de-branding
   specification: the translation catalogue, the language switch and the tenant settings.
+- [`specs/003-azure-deployment`](specs/003-azure-deployment) — the Azure deployment
+  specification, plan, research and contracts (private topology, release workflow, DocumentDB).
 - [`AGENTS.md`](AGENTS.md) — the repository's load-bearing constraints and the traps that cost
   time during the dependency upgrade. Read it before making non-trivial changes.
 

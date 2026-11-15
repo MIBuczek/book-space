@@ -77,7 +77,7 @@ jobs:
       - run: yarn install --frozen-lockfile --non-interactive
 
       - name: Run unit tests
-        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,i18n --configuration=ci
+        run: yarn nx run-many --target=test --projects=server,ui,date-time,booking-rules,reporting,version,migration,bootstrap-admin,backup,ensure-collections,i18n --configuration=ci
 
       # The threshold makes the build fail; this makes the number visible. The
       # original defect was that the reported figure (63.9%) was not the figure
@@ -97,7 +97,8 @@ jobs:
                               ["i18n", "coverage/libs/i18n/coverage-summary.json"],
                               ["migration", "coverage/tools/migration/coverage-summary.json"],
                               ["bootstrap-admin", "coverage/tools/bootstrap-admin/coverage-summary.json"],
-                              ["backup", "coverage/tools/backup/coverage-summary.json"]];
+                              ["backup", "coverage/tools/backup/coverage-summary.json"],
+                              ["ensure-collections", "coverage/infra/scripts/coverage-summary.json"]];
             const keys = ["statements", "branches", "functions", "lines"];
             const rows = [];
             for (const [name, path] of projects) {

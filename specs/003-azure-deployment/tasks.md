@@ -32,27 +32,27 @@ Central**. These are inputs, not tasks.
 **Purpose**: the Azure resources, including the private topology. Independently testable:
 `az deployment` succeeds and the resources exist.
 
-- [ ] **T110** `infra/bicep/main.bicep` + `modules/`: registry, App Service plan (**Standard+**,
+- [x] **T110** `infra/bicep/main.bicep` + `modules/`: registry, App Service plan (**Standard+**,
       slots), two web apps, user-assigned identities, the DocumentDB cluster, the network.
-- [ ] **T111** [P] `infra/bicep/modules/network.bicep`: the VNet and its subnets
+- [x] **T111** [P] `infra/bicep/modules/network.bicep`: the VNet and its subnets
       (`snet-fe-integration` delegated to `Microsoft.Web/serverFarms`, `snet-pe-backend`,
       `snet-pe-database`), and the two private DNS zones (`privatelink.azurewebsites.net`,
       `privatelink.mongocluster.cosmos.azure.com`) with their VNet links.
-- [ ] **T112** [P] `infra/bicep/modules/private-endpoint.bicep`: the backend's private endpoint and
+- [x] **T112** [P] `infra/bicep/modules/private-endpoint.bicep`: the backend's private endpoint and
       `publicNetworkAccess: Disabled` (FR-008), and the **database's** private endpoint with public
       access disabled (FR-002a).
-- [ ] **T113** [P] `infra/bicep/modules/app-service.bicep`: the frontend's VNet integration on the
+- [x] **T113** [P] `infra/bicep/modules/app-service.bicep`: the frontend's VNet integration on the
       integration subnet (FR-009); `API_UPSTREAM` = the backend's private host name; the **staging
       slot** (FR-015); the **custom domain + managed certificate** (FR-016).
-- [ ] **T114** [P] `infra/bicep/modules/identity.bicep`: the `AcrPull` role assignment and the
+- [x] **T114** [P] `infra/bicep/modules/identity.bicep`: the `AcrPull` role assignment and the
       **federated credential** for GitHub OIDC.
-- [ ] **T115** [P] `infra/bicep/modules/documentdb.bicep`: the `Microsoft.DocumentDB/mongoClusters`
+- [x] **T115** [P] `infra/bicep/modules/documentdb.bicep`: the `Microsoft.DocumentDB/mongoClusters`
       cluster, the `book_space` database and the collections (research R1/R2).
-- [ ] **T116** `infra/scripts/ensure-collections.ts`: idempotently create the collections and the
+- [x] **T116** `infra/scripts/ensure-collections.ts`: idempotently create the collections and the
       indexes in `data-model.md` § 2. Add its Nx target.
-- [ ] **T117** A test for `ensure-collections.ts` against `mongodb-memory-server` (proves it is
+- [x] **T117** A test for `ensure-collections.ts` against `mongodb-memory-server` (proves it is
       idempotent and creates every index).
-- [ ] **T118** [P] `infra/bicep/params/dev.bicepparam`, `prod.bicepparam`: region (default Poland
+- [x] **T118** [P] `infra/bicep/params/dev.bicepparam`, `prod.bicepparam`: region (default Poland
       Central — FR-017), tier, host name, custom domain.
 
 ## Phase 2 — Release workflow (User Story 1)
@@ -60,15 +60,15 @@ Central**. These are inputs, not tasks.
 **Purpose**: build → push → deploy to a slot → swap, with no stored secret. Independently
 testable: a merge deploys both apps.
 
-- [ ] **T120** `.github/workflows/release.yml`: on `push: main`, build both images, push to ACR
+- [x] **T120** `.github/workflows/release.yml`: on `push: main`, build both images, push to ACR
       tagged `:<sha>` and `:main`.
-- [ ] **T121** The OIDC login step (`azure/login` with `id-token: write`); **no** stored secret
+- [x] **T121** The OIDC login step (`azure/login` with `id-token: write`); **no** stored secret
       (FR-005, research R5).
-- [ ] **T122** [P] Deploy to the **staging slot**, then **swap** into production (FR-015).
-- [ ] **T123** [P] A post-deploy smoke test **through the frontend** (plan § D7):
+- [x] **T122** [P] Deploy to the **staging slot**, then **swap** into production (FR-015).
+- [x] **T123** [P] A post-deploy smoke test **through the frontend** (plan § D7):
       `GET <custom-domain>/api/buildings` returns twelve facilities.
-- [ ] **T124** Confirm `ci.yml` is unchanged and remains the merge gate (FR-013).
-- [ ] **T125** Document rollback (slot swap, or re-deploy a previous SHA tag) in `README.md` §
+- [x] **T124** Confirm `ci.yml` is unchanged and remains the merge gate (FR-013).
+- [x] **T125** Document rollback (slot swap, or re-deploy a previous SHA tag) in `README.md` §
       Deployment and `docs/operations.md` (SC-006).
 
 ## Phase 3 — Migration into Azure DocumentDB (User Story 2)
@@ -110,13 +110,13 @@ without `DB_URI`.
 
 ## Phase 6 — Documentation and ops
 
-- [ ] **T160** `AGENTS.md`: the DocumentDB constraints and the private topology (R1–R4), the
+- [x] **T160** `AGENTS.md`: the DocumentDB constraints and the private topology (R1–R4), the
       release workflow, the region default.
-- [ ] **T161** [P] `README.md` § Deployment: the Azure target, the release workflow, the private
+- [x] **T161** [P] `README.md` § Deployment: the Azure target, the release workflow, the private
       topology, rollback, the custom domain.
-- [ ] **T162** [P] `docs/operations.md`: DocumentDB backup/DR (PITR), the release/rollback runbook,
+- [x] **T162** [P] `docs/operations.md`: DocumentDB backup/DR (PITR), the release/rollback runbook,
       and the private-network runbook (how to reach the API and the database for debugging).
-- [ ] **T163** Update `specs/001-booking-platform-rewrite/tasks.md` (T043) to note the Azure
+- [x] **T163** Update `specs/001-booking-platform-rewrite/tasks.md` (T043) to note the Azure
       DocumentDB target, and comment on #47.
 
 ## Dependencies
